@@ -208,13 +208,14 @@ def generate_graph_data(
     year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(i_nids)))
 
     genre_nids = []
-    gen_i_nids = []
+    i_nids = []
     for genre in unique_genres:
         iids = items.iid[items[genre]]
-        gen_i_nids += [e2nid_dict['iid'][iid] for iid in iids]
+        i_nids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
-    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(gen_i_nids)))
+    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(i_nids)))
 
+    i_nids = [e2nid_dict['iid'][iid] for iid in items.iid]
     directors_list = [
         [director for director in directors.split(',') if director != '']
         for directors in items.directors
