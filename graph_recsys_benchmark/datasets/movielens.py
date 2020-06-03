@@ -208,13 +208,14 @@ def generate_graph_data(
     year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(i_nids)))
 
     genre_nids = []
-    gen_i_nids = []
+    i_nids = []
     for genre in unique_genres:
         iids = items.iid[items[genre]]
-        gen_i_nids += [e2nid_dict['iid'][iid] for iid in iids]
+        i_nids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
-    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(gen_i_nids)))
+    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(i_nids)))
 
+    i_nids = [e2nid_dict['iid'][iid] for iid in items.iid]
     directors_list = [
         [director for director in directors.split(',') if director != '']
         for directors in items.directors
@@ -308,11 +309,12 @@ class MovieLens(Dataset):
 
         self.name = name.lower()
         assert self.name in ['1m']
-        self.num_core = kwargs.get('num_core', 10)
-        self.num_feat_core = kwargs.get('num_feat_core', 10)
-        self.seed = kwargs.get('seed')
-        self.num_negative_samples = kwargs.get('num_negative_samples', 5)
+        self.num_core = kwargs['num_core']
+        self.num_feat_core = kwargs['num_feat_core']
+        self.seed = kwargs['seed']
+        self.num_negative_samples = kwargs['num_negative_samples']
         self.suffix = self.build_suffix()
+        self.loss_type = kwargs['loss_type']
         self._negative_sampling = kwargs['_negative_sampling']
 
         super(MovieLens, self).__init__(root, transform, pre_transform, pre_filter)
@@ -322,6 +324,12 @@ class MovieLens(Dataset):
         for k, v in dataset_property_dict.items():
             self[k] = v
         self.train_edge_index = torch.from_numpy(self.edge_index_nps['user2item'].T).long()
+        self.num_pos_train_edges = self.train_edge_index.shape[0]
+
+        if self.loss_type == 'BCE':
+            self.length = self.num_pos_train_edges * (self.num_negative_samples + 1)
+        elif self.loss_type == 'BPR':
+            self.length = self.num_pos_train_edges * self.num_negative_samples
 
         print('Dataset loaded!')
 
@@ -422,26 +430,73 @@ class MovieLens(Dataset):
             suffix = '_'.join(suffixes)
         return '_' + suffix
 
-    def negative_sampling(self, u_nids):
-        negative_inids = np.vstack(
-            [
-                self._negative_sampling(
-                    u_nid,
-                    self.num_negative_samples,
-                    (
-                        self.train_pos_unid_inid_map,
-                        self.test_pos_unid_inid_map,
-                        self.neg_unid_inid_map
-                    ),
-                    self.item_nid_occs
-                ) for u_nid in u_nids
-            ]
-        )
-        negative_inids = torch.from_numpy(negative_inids)
-        return negative_inids
+    def negative_sampling(self):
+        if self.loss_type == 'BCE':
+            pos_train_edge = torch.cat(
+                [
+                    self.train_edge_index,
+                    torch.ones((self.num_pos_train_edges, 1)).long()
+                ],
+                dim=-1
+            )
+
+            u_nids = self.train_edge_index[:, 0].tolist()
+            negative_inids = []
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                negative_inids.append(
+                    self._negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            self.train_pos_unid_inid_map,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+                p_bar.set_description('Negative sampling...')
+            negative_inids_t = torch.from_numpy(np.vstack(negative_inids).reshape(-1, 1))
+            negative_train_edges = torch.cat(
+                [
+                    self.train_edge_index[:, 0].repeat(self.num_negative_samples).reshape(-1, 1),
+                    negative_inids_t,
+                    torch.zeros((self.num_pos_train_edges * self.num_negative_samples, 1)).long()
+                ],
+                dim=-1
+            )
+
+            train_data = torch.cat([pos_train_edge, negative_train_edges], dim=0)
+        elif self.loss_type == 'BPR':
+            u_nids = self.train_edge_index[:, 0].tolist()
+            negative_inids = []
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                negative_inids.append(
+                    self._negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            self.train_pos_unid_inid_map,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+                p_bar.set_description('Negative sampling...')
+            negative_inids_t = torch.from_numpy(np.vstack(negative_inids).reshape(-1, 1))
+
+            train_edge_index_t = self.train_edge_index.repeat(1, self.num_negative_samples).view(-1, 2)
+            train_data = torch.cat([train_edge_index_t, negative_inids_t], dim=-1)
+        else:
+            raise NotImplementedError('No negateive sampling for model type: {}.'.format(self.loss_type))
+        shuffle_idx = torch.randperm(train_data.shape[0])
+        self.train_data = train_data[shuffle_idx]
 
     def __len__(self):
-        return self.train_edge_index.shape[0]
+        return self.length
 
     def __getitem__(self, idx):
         r"""Gets the data object at index :obj:`idx` and transforms it (in case
@@ -453,10 +508,8 @@ class MovieLens(Dataset):
             return getattr(self, idx, None)
         else:
             idx = idx.to_list() if torch.is_tensor(idx) else idx
-            train_edge_index = self.train_edge_index[idx].reshape(-1, 2)
-            neg_i_nids_t = self.negative_sampling(train_edge_index[:, 0].tolist()).reshape(-1, 1)
-            unids_pos_inids = train_edge_index.repeat(1, self.num_negative_samples).view(-1, 2)
-            return torch.cat([unids_pos_inids, neg_i_nids_t], dim=1)
+            return self.train_data[idx]
+
 
     def __setitem__(self, key, value):
         """Sets the attribute :obj:`key` to :obj:`value`."""

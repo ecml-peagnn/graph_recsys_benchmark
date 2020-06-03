@@ -8,42 +8,51 @@ class NMFRecsysModel(MFRecsysModel):
         super(NMFRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
-        self.embedding_user_mlp = torch.nn.Embedding(num_embeddings=kwargs['num_users'], embedding_dim=kwargs['latent_dim_mlp'])
-        self.embedding_item_mlp = torch.nn.Embedding(num_embeddings=kwargs['num_items'], embedding_dim=kwargs['latent_dim_mlp'])
-        self.embedding_user_mf = torch.nn.Embedding(num_embeddings=kwargs['num_users'], embedding_dim=kwargs['latent_dim_mf'])
-        self.embedding_item_mf = torch.nn.Embedding(num_embeddings=kwargs['num_items'], embedding_dim=kwargs['latent_dim_mf'])
+        self.dropout = kwargs['dropout']
 
-        self.fc_layers = torch.nn.ModuleList()
-        for idx, (in_size, out_size) in enumerate(zip(kwargs['layers'][:-1], kwargs['layers'][1:])):
-            self.fc_layers.append(torch.nn.Linear(in_size, out_size))
+        self.embed_user_GMF = torch.nn.Embedding(kwargs['num_users'], kwargs['factor_num'])
+        self.embed_item_GMF = torch.nn.Embedding(kwargs['num_items'], kwargs['factor_num'])
+        self.embed_user_MLP = torch.nn.Embedding(kwargs['num_users'], kwargs['factor_num'] * (2 ** (kwargs['num_layers'] - 1)))
+        self.embed_item_MLP = torch.nn.Embedding(kwargs['num_items'], kwargs['factor_num'] * (2 ** (kwargs['num_layers'] - 1)))
 
-        self.affine_output = torch.nn.Linear(in_features=kwargs['layers'][-1] + kwargs['latent_dim_mf'], out_features=1)
-        self.logistic = torch.nn.Sigmoid()
+        MLP_modules = []
+        for i in range(kwargs['num_layers']):
+            input_size = kwargs['factor_num'] * (2 ** (kwargs['num_layers'] - i))
+            MLP_modules.append(torch.nn.Dropout(p=self.dropout))
+            MLP_modules.append(torch.nn.Linear(input_size, input_size // 2))
+            MLP_modules.append(torch.nn.ReLU())
+        self.MLP_layers = torch.nn.Sequential(*MLP_modules)
+
+        predict_size = kwargs['factor_num'] * 2
+        self.predict_layer = torch.nn.Linear(predict_size, 1)
 
     def reset_parameters(self):
-        torch.nn.init.normal_(self.embedding_user_mlp.weight, -1, 1)
-        torch.nn.init.normal_(self.embedding_item_mlp.weight, -1, 1)
-        torch.nn.init.normal_(self.embedding_user_mf.weight, -1, 1)
-        torch.nn.init.normal_(self.embedding_item_mf.weight, -1, 1)
-        for layer in self.fc_layers:
-            torch.nn.init.normal_(layer.weight, -1, 1)
-        torch.nn.init.normal_(self.affine_output.weight, -1, 1)
+        torch.nn.init.normal_(self.embed_user_GMF.weight, std=0.01)
+        torch.nn.init.normal_(self.embed_user_MLP.weight, std=0.01)
+        torch.nn.init.normal_(self.embed_item_GMF.weight, std=0.01)
+        torch.nn.init.normal_(self.embed_item_MLP.weight, std=0.01)
+
+        for m in self.MLP_layers:
+            if isinstance(m, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight)
+        torch.nn.init.kaiming_uniform_(self.predict_layer.weight,
+                                 a=1, nonlinearity='sigmoid')
+
+        for m in self.modules():
+            if isinstance(m, torch.nn.Linear) and m.bias is not None:
+                m.bias.data.zero_()
 
     def forward(self, user_indices, item_indices):
-        user_embedding_mlp = self.embedding_user_mlp(user_indices)
-        item_embedding_mlp = self.embedding_item_mlp(item_indices)
-        user_embedding_mf = self.embedding_user_mf(user_indices)
-        item_embedding_mf = self.embedding_item_mf(item_indices)
+        embed_user_GMF = self.embed_user_GMF(user_indices)
+        embed_item_GMF = self.embed_item_GMF(item_indices)
+        output_GMF = embed_user_GMF * embed_item_GMF
 
-        mlp_vector = torch.cat([user_embedding_mlp, item_embedding_mlp], dim=-1)  # the concat latent vector
-        mf_vector =torch.mul(user_embedding_mf, item_embedding_mf)
+        embed_user_MLP = self.embed_user_MLP(user_indices)
+        embed_item_MLP = self.embed_item_MLP(item_indices)
+        interaction = torch.cat((embed_user_MLP, embed_item_MLP), -1)
+        output_MLP = self.MLP_layers(interaction)
 
-        for idx, _ in enumerate(range(len(self.fc_layers))):
-            mlp_vector = self.fc_layers[idx](mlp_vector)
-            mlp_vector = torch.nn.ReLU()(mlp_vector)
+        concat = torch.cat((output_GMF, output_MLP), -1)
 
-        vector = torch.cat([mlp_vector, mf_vector], dim=-1)
-        logits = self.affine_output(vector)
-        rating = self.logistic(logits)
-        return rating
-
+        prediction = self.predict_layer(concat)
+        return prediction.view(-1)

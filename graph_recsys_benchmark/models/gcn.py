@@ -16,22 +16,27 @@ class GCNRecsysModel(GraphRecsysModel):
 
         if not self.if_use_features:
             self.x = torch.nn.Embedding(kwargs['dataset']['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
-            self.edge_index = self.update_graph_input(kwargs['dataset'])
         else:
             raise NotImplementedError('Feature not implemented!')
+        self.x, self.edge_index = self.update_graph_input(kwargs['dataset'])
 
         self.conv1 = GCNConv(kwargs['emb_dim'], kwargs['hidden_size'])
         self.conv2 = GCNConv(kwargs['hidden_size'], kwargs['repr_dim'])
+
+        self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
+        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
 
     def reset_parameters(self):
         if not self.if_use_features:
             torch.nn.init.uniform_(self.x, -1.0, 1.0)
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
+        torch.nn.init.uniform_(self.fc1.weight, -1.0, 1.0)
+        torch.nn.init.uniform_(self.fc2.weight, -1.0, 1.0)
 
-    def forward(self, x, edge_index):
-        x = F.relu(self.conv1(x, edge_index))
+    def forward(self):
+        x = F.relu(self.conv1(self.x, self.edge_index))
         x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.conv2(x, edge_index)
+        x = self.conv2(x, self.edge_index)
         x = F.normalize(x)
         return x

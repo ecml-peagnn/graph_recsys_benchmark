@@ -62,6 +62,7 @@ class BaseSolver(object):
             ).to(self.train_args['device'])
 
             if self.model_args['model_type'] == 'MF':
+                pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
                 pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
             loss = model.loss(pos_neg_pair_t).detach().cpu().item()
 
@@ -70,6 +71,9 @@ class BaseSolver(object):
             neg_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(neg_i_nids))])).to(self.train_args['device'])
             neg_i_nids_t = torch.from_numpy(np.array(neg_i_nids)).to(self.train_args['device'])
             if self.model_args['model_type'] == 'MF':
+                pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
+                neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
+
                 pos_i_nids_t -= dataset.e2nid_dict['iid'][0]
                 neg_i_nids_t -= dataset.e2nid_dict['iid'][0]
             pos_pred = model.predict(pos_u_nids_t, pos_i_nids_t).reshape(-1)
@@ -117,12 +121,6 @@ class BaseSolver(object):
                     # Create the dataset
                     self.dataset_args['seed'] = seed
                     dataset = load_dataset(self.dataset_args)
-                    recsys_train_dataloader = DataLoader(
-                        dataset,
-                        shuffle=True,
-                        batch_size=self.train_args['batch_size'],
-                        num_workers=self.train_args['num_workers']
-                    )
 
                     # Create model and optimizer
                     if self.model_args['model_type'] == 'Graph':
@@ -133,9 +131,11 @@ class BaseSolver(object):
                     elif self.model_args['model_type'] == 'MF':
                         self.model_args['num_users'] = dataset.num_users
                         self.model_args['num_items'] = dataset.num_items
+
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
 
-                    optimizer = torch.optim.Adam(
+                    opt_class = get_opt_class(self.train_args['opt'])
+                    optimizer = opt_class(
                         params=model.parameters(),
                         lr=self.train_args['lr'],
                         weight_decay=self.train_args['weight_decay']
@@ -157,12 +157,9 @@ class BaseSolver(object):
                     start_epoch = last_epoch + 1
                     if start_epoch == 1 and self.train_args['init_eval']:
                         model.eval()
-                        HRs_before_np, NDCGs_before_np, AUC_before_np, eval_loss_before_np = self.metrics(
-                            run,
-                            0,
-                            model,
-                            dataset
-                        )
+                        HRs_before_np, NDCGs_before_np, AUC_before_np, eval_loss_before_np = \
+                            self.metrics(run, 0, model, dataset)
+
                         print(
                             'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
@@ -183,18 +180,29 @@ class BaseSolver(object):
                             loss_per_batch = []
 
                             model.train()
+                            dataset.negative_sampling()
+                            recsys_train_dataloader = DataLoader(
+                                dataset,
+                                shuffle=True,
+                                batch_size=self.train_args['batch_size'],
+                                num_workers=self.train_args['num_workers']
+                            )
                             train_bar = tqdm.tqdm(recsys_train_dataloader, total=len(recsys_train_dataloader))
-                            for num_batch, pos_neg_pair_t in enumerate(train_bar):
-                                pos_neg_pair_t = pos_neg_pair_t.reshape(-1, 3)
+
+                            for _, batch in enumerate(train_bar):
                                 if self.model_args['model_type'] == 'MF':
-                                    pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
-                                pos_neg_pair_t = pos_neg_pair_t.to(self.train_args['device'])
+                                    if self.model_args['loss_type'] == 'BCE':
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1] -= dataset.e2nid_dict['iid'][0]
+                                    elif self.model_args['loss_type'] == 'BPR':
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1:] -= dataset.e2nid_dict['iid'][0]
+                                batch = batch.to(self.train_args['device'])
 
-                                loss = model.loss(pos_neg_pair_t)
-
+                                optimizer.zero_grad()
+                                loss = model.loss(batch)
                                 loss.backward()
                                 optimizer.step()
-                                optimizer.zero_grad()
 
                                 loss_per_batch.append(loss.detach().cpu().item())
                                 train_loss = np.mean(loss_per_batch)
@@ -203,12 +211,8 @@ class BaseSolver(object):
                                 )
 
                             model.eval()
-                            HRs, NDCGs, AUC, eval_loss = self.metrics(
-                                run,
-                                epoch,
-                                model,
-                                dataset
-                            )
+                            HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
+
                             HRs_per_epoch_np = np.vstack([HRs_per_epoch_np, HRs])
                             NDCGs_per_epoch_np = np.vstack([NDCGs, HRs])
                             AUC_per_epoch_np = np.vstack([AUC_per_epoch_np, AUC])

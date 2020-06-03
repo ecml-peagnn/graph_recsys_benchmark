@@ -7,19 +7,27 @@ import numpy as np
 from ..datasets import MovieLens
 
 
-def get_folder_path(model, dataset):
+def get_folder_path(model, dataset, loss_type):
     data_folder = osp.join(
         osp.dirname(osp.realpath(__file__)), '..', '..', 'checkpoint', 'data', dataset)
     weights_folder = osp.join(
-        osp.dirname(osp.realpath(__file__)), '..', '..', 'checkpoint', 'weights', dataset, model)
+        osp.dirname(osp.realpath(__file__)), '..', '..', 'checkpoint', 'weights', dataset, model, loss_type)
     logger_folder = osp.join(
-        osp.dirname(osp.realpath(__file__)), '..', '..', 'checkpoint', 'logger', dataset, model)
+        osp.dirname(osp.realpath(__file__)), '..', '..', 'checkpoint', 'logger_zhiwei', dataset, model, loss_type)
+
     data_folder = osp.expanduser(osp.normpath(data_folder))
     weights_folder = osp.expanduser(osp.normpath(weights_folder))
     logger_folder = osp.expanduser(osp.normpath(logger_folder))
 
     return data_folder, weights_folder, logger_folder
 
+def get_opt_class(opt):
+    if opt == 'adam':
+        return torch.optim.Adam
+    elif opt == 'sgd':
+        return torch.optim.SGD
+    else:
+        raise NotImplementedError('No such optims!')
 
 def save_model(file_path, model, optim, epoch, rec_metrics, silent=False):
     model_states = {'model': model.state_dict()}
@@ -74,7 +82,8 @@ def load_global_logger(global_logger_filepath):
         with open(global_logger_filepath, 'rb') as f:
             HRs_per_run, NDCGs_per_run, AUC_per_run, train_loss_per_run, eval_loss_per_run = pickle.load(f)
     else:
-        print("No logger found at '{}'".format(global_logger_filepath))
+        print("No logger_zhiwei found at '{}'".format(global_logger_filepath))
+
         HRs_per_run, NDCGs_per_run, AUC_per_run, train_loss_per_run, eval_loss_per_run = \
             np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
 
