@@ -10,7 +10,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'PAPAGCN'
+MODEL = 'PAGAGCN'
 
 parser = argparse.ArgumentParser()
 
