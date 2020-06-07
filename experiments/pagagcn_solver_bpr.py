@@ -3,14 +3,16 @@ import torch
 import os
 import numpy as np
 import random as rd
+import sys
 
+sys.path.append('..')
 from graph_recsys_benchmark.models import PAGAGCNRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
-LOSS_TYPE = 'BCE'
-MODEL = 'PAPAGCN'
+LOSS_TYPE = 'BPR'
+MODEL = 'PAGAGCN'
 
 parser = argparse.ArgumentParser()
 
@@ -35,7 +37,7 @@ parser.add_argument("--num_negative_samples", type=int, default=4, help="")
 parser.add_argument("--num_neg_candidates", type=int, default=99, help="")
 
 parser.add_argument("--device", type=str, default='cuda', help="")
-parser.add_argument("--gpu_idx", type=str, default='6', help="")
+parser.add_argument("--gpu_idx", type=str, default='7', help="")
 parser.add_argument("--runs", type=int, default=100, help="")
 parser.add_argument("--epochs", type=int, default=50, help="")
 parser.add_argument("--batch_size", type=int, default=4096, help="")
@@ -109,20 +111,14 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
 
 
 class PAGAGCNRecsysModel(PAGAGCNRecsysModel):
-    loss_func = torch.nn.BCEWithLogitsLoss()
-
     def loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
-            pred = self.predict(batch[:, 0], batch[:, 1]).reshape(-1)
-            label = batch[:, -1].float()
-        else:
-            pos_pred = self.predict(batch[:, 0], batch[:, 1])[:1].reshape(-1)
-            neg_pred = self.predict(batch[:, 0], batch[:, 2]).reshape(-1)
-            pred = torch.cat([pos_pred, neg_pred])
-            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
+        pos_pred = self.predict(batch[:, 0], batch[:, 1])
+        neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
-        loss = self.loss_func(pred, label)
+        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+
         return loss
 
     def update_graph_input(self, dataset):

@@ -3,14 +3,16 @@ import torch
 import os
 import numpy as np
 import random as rd
+import sys
 
-from graph_recsys_benchmark.models import PAGAGCNRecsysModel
+sys.path.append('..')
+from graph_recsys_benchmark.models import NMFRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
-MODEL_TYPE = 'Graph'
+MODEL_TYPE = 'MF'
 LOSS_TYPE = 'BPR'
-MODEL = 'PAPAGCN'
+MODEL = 'NMF'
 
 parser = argparse.ArgumentParser()
 
@@ -22,12 +24,9 @@ parser.add_argument("--num_core", type=int, default=10, help="")
 parser.add_argument("--num_feat_core", type=int, default=10, help="")
 
 # Model params
+parser.add_argument("--factor_num", type=int, default=64, help="")
 parser.add_argument("--dropout", type=float, default=0, help="")
-parser.add_argument("--emb_dim", type=int, default=64, help="")
-parser.add_argument("--repr_dim", type=int, default=16, help="")
-parser.add_argument("--hidden_size", type=int, default=64, help="")
-parser.add_argument("--meta_path_steps", type=list, default=[2, 2, 2, 2, 2, 2, 2], help="")
-parser.add_argument("--aggr", type=str, default='concat', help="")
+parser.add_argument("--num_layers", type=list, default=3, help="")
 
 # Train params
 parser.add_argument("--init_eval", type=bool, default=True, help="")
@@ -35,10 +34,10 @@ parser.add_argument("--num_negative_samples", type=int, default=4, help="")
 parser.add_argument("--num_neg_candidates", type=int, default=99, help="")
 
 parser.add_argument("--device", type=str, default='cuda', help="")
-parser.add_argument("--gpu_idx", type=str, default='7', help="")
+parser.add_argument("--gpu_idx", type=str, default='5', help="")
 parser.add_argument("--runs", type=int, default=100, help="")
 parser.add_argument("--epochs", type=int, default=50, help="")
-parser.add_argument("--batch_size", type=int, default=4096, help="")
+parser.add_argument("--batch_size", type=int, default=256, help="")
 parser.add_argument("--num_workers", type=int, default=4, help="")
 parser.add_argument("--opt", type=str, default='adam', help="")
 parser.add_argument("--lr", type=float, default=0.001, help="")
@@ -48,6 +47,7 @@ parser.add_argument("--save_epochs", type=list, default=[10, 15, 20], help="")
 parser.add_argument("--save_every_epoch", type=int, default=20, help="")
 
 args = parser.parse_args()
+
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
@@ -67,11 +67,9 @@ dataset_args = {
     'loss_type': LOSS_TYPE
 }
 model_args = {
-    'model_type': MODEL_TYPE,
-    'if_use_features': args.if_use_features,
-    'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'meta_path_steps': args.meta_path_steps, 'aggr': args.aggr
+    'model_type': MODEL_TYPE, 'dropout': args.dropout,
+    'factor_num': args.factor_num, 'if_use_features': False,
+    'num_layers': args.num_layers, 'loss_type': LOSS_TYPE
 }
 train_args = {
     'init_eval': args.init_eval,
@@ -108,10 +106,8 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return negative_inids
 
 
-class PAGAGCNRecsysModel(PAGAGCNRecsysModel):
+class BCENMFRecsysModel(NMFRecsysModel):
     def loss(self, batch):
-        if self.training:
-            self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
@@ -119,39 +115,10 @@ class PAGAGCNRecsysModel(PAGAGCNRecsysModel):
 
         return loss
 
-    def update_graph_input(self, dataset):
-        user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
-        year2item_edge_index = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(train_args['device'])
-        actor2item_edge_index = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(train_args['device'])
-        director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
-        writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
-        genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
-        age2user_edge_index = torch.from_numpy(dataset.edge_index_nps['age2user']).long().to(train_args['device'])
-        gender2user_edge_index = torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(train_args['device'])
-        occ2user_edge_index = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
-        meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-        meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
 
-        meta_path_edge_index_list = [
-            meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
-            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-            meta_path_edge_indicis_10
-        ]
-        return self.x, meta_path_edge_index_list
-
-
-class PAGAGCNSolver(BaseSolver):
+class NMFSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(PAGAGCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(NMFSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -164,5 +131,5 @@ class PAGAGCNSolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_negative_sampling'] = _negative_sampling
-    solver = PAGAGCNSolver(PAGAGCNRecsysModel, dataset_args, model_args, train_args)
+    solver = NMFSolver(BCENMFRecsysModel, dataset_args, model_args, train_args)
     solver.run()
