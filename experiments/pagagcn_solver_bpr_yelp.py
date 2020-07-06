@@ -22,9 +22,9 @@ parser.add_argument("--if_use_features", type=bool, default=False, help="")
 parser.add_argument("--num_core", type=int, default=10, help="")
 # Model params
 parser.add_argument("--dropout", type=float, default=0, help="")
-parser.add_argument("--emb_dim", type=int, default=16, help="")
-parser.add_argument("--repr_dim", type=int, default=8, help="")
-parser.add_argument("--hidden_size", type=int, default=16, help="")
+parser.add_argument("--emb_dim", type=int, default=64, help="")
+parser.add_argument("--repr_dim", type=int, default=16, help="")
+parser.add_argument("--hidden_size", type=int, default=64, help="")
 parser.add_argument("--meta_path_steps", type=list, default=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], help="")
 parser.add_argument("--aggr", type=str, default='concat', help="")
 
@@ -122,7 +122,8 @@ class PAGAGCNRecsysModel(PAGAGCNRecsysModel):
         names2user_edge_index = torch.from_numpy(dataset.edge_index_nps['names2user']).long().to(train_args['device'])
         reviewcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2user']).long().to(train_args['device'])
         startdate2user_edge_index = torch.from_numpy(dataset.edge_index_nps['startdate2user']).long().to(train_args['device'])
-        friends2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friends2user']).long().to(train_args['device'])
+        friendcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(train_args['device'])
+        # friends2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friends2user']).long().to(train_args['device'])
         fans2user_edge_index = torch.from_numpy(dataset.edge_index_nps['fans2user']).long().to(train_args['device'])
         elite2user_edge_index = torch.from_numpy(dataset.edge_index_nps['elite2user']).long().to(train_args['device'])
         averagestars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['averagestars2user']).long().to(train_args['device'])
@@ -141,7 +142,8 @@ class PAGAGCNRecsysModel(PAGAGCNRecsysModel):
         meta_path_edge_indicis_3 = [names2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_4 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_5 = [startdate2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [friends2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        # meta_path_edge_indicis_6 = [friends2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_7 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_8 = [elite2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_9 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]

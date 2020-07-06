@@ -149,7 +149,10 @@ def generate_graph_data(
     unique_user_startdate = set(list(stdt[:4] for stdt in user.yelping_since))
     num_user_startdate = len(unique_user_startdate)
 
-    unique_user_friends, num_user_friends = get_concept_num_from_str(user, 'friends')
+    # unique_user_friends, num_user_friends = get_concept_num_from_str(user, 'friends')
+
+    unique_user_friendcount = list(user.friends_count.unique())
+    num_user_friendcount = len(unique_user_friendcount)
 
     unique_user_fans = list(user.fans.unique())
     num_user_fans = len(unique_user_fans)
@@ -185,8 +188,10 @@ def generate_graph_data(
     dataset_property_dict['num_user_reviewcount'] = num_user_reviewcount
     dataset_property_dict['unique_user_startdate'] = unique_user_startdate
     dataset_property_dict['num_user_startdate'] = num_user_startdate
-    dataset_property_dict['unique_user_friends'] = unique_user_friends
-    dataset_property_dict['num_user_friends'] = num_user_friends
+    dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
+    dataset_property_dict['num_user_friendcount'] = num_user_friendcount
+    # dataset_property_dict['unique_user_friends'] = unique_user_friends
+    # dataset_property_dict['num_user_friends'] = num_user_friends
     dataset_property_dict['unique_user_fans'] = unique_user_fans
     dataset_property_dict['num_user_fans'] = num_user_fans
     dataset_property_dict['unique_user_elite'] = unique_user_elite
@@ -197,7 +202,7 @@ def generate_graph_data(
     #########################  Define number of entities  #########################
     num_nodes = num_bus + num_users + num_bus_names + num_bus_city + num_bus_state + num_bus_stars + num_bus_reviewcount + \
                 num_bus_isopen + num_bus_attributes + num_bus_categories + num_bus_time + num_bus_checkincount + \
-                num_user_names + num_user_reviewcount + num_user_startdate + num_user_friends + \
+                num_user_names + num_user_reviewcount + num_user_startdate + num_user_friendcount + \
                 num_user_fans + num_user_elite + num_user_averagestars
     num_node_types = 19
     dataset_property_dict['num_nodes'] = num_nodes
@@ -266,10 +271,14 @@ def generate_graph_data(
     for i, userstartdate in enumerate(unique_user_startdate):
         nid2e_dict[i + acc] = ('userstartdate', userstartdate)
     acc += num_user_startdate
-    userfriends2nid = {userfriends: i + acc for i, userfriends in enumerate(unique_user_friends)}
-    for i, userfriends in enumerate(unique_user_friends):
-        nid2e_dict[i + acc] = ('userfriends', userfriends)
-    acc += num_user_friends
+    userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcount)}
+    for i, userfriendcount in enumerate(unique_user_friendcount):
+        nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
+    acc += num_user_friendcount
+    # userfriends2nid = {userfriends: i + acc for i, userfriends in enumerate(unique_user_friends)}
+    # for i, userfriends in enumerate(unique_user_friends):
+    #     nid2e_dict[i + acc] = ('userfriends', userfriends)
+    # acc += num_user_friends
     userfans2nid = {userfans: i + acc for i, userfans in enumerate(unique_user_fans)}
     for i, userfans in enumerate(unique_user_fans):
         nid2e_dict[i + acc] = ('userfans', userfans)
@@ -288,7 +297,7 @@ def generate_graph_data(
                   'buscategories': buscategories2nid,
                   'bustime': bustime2nid, 'buscheckincount': buscheckincount2nid, 'usernames': usernames2nid,
                   'userreviewcount': userreviewcount2nid,
-                  'userstartdate': userstartdate2nid, 'userfriends': userfriends2nid,
+                  'userstartdate': userstartdate2nid, 'userfriendcount': userfriendcount2nid,
                   'userfans': userfans2nid, 'userelite': userelite2nid, 'useraveragestars': useraveragestars2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
 
@@ -362,25 +371,27 @@ def generate_graph_data(
     reviewcount2user_edge_index_np = np.vstack((np.array(userreviewcount_nids), np.array(u_nids)))
     userstartdate_nids = [e2nid_dict['userstartdate'][userstartdate[:4]] for userstartdate in user.yelping_since]
     startdate2user_edge_index_np = np.vstack((np.array(userstartdate_nids), np.array(u_nids)))
+    userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in user.friends_count]
+    friendcount2user_edge_index_np = np.vstack((np.array(userfriendcount_nids), np.array(u_nids)))
 
-    friends_list = [
-        [friend for friend in friends.split(', ') if friend != '']
-        for friends in user.friends
-    ]
-    userfriends_nids = [
-        [e2nid_dict['uid'][friend] if friend in e2nid_dict['uid'] else e2nid_dict['userfriends'][friend] for friend in
-         friends] for friends in friends_list]
-    userfriends_nids = list(itertools.chain.from_iterable(userfriends_nids))
-    f_u_nids = [[u_nid for _ in range(len(friends_list[idx]))] for idx, u_nid in enumerate(u_nids)]
-    f_u_nids = list(itertools.chain.from_iterable(f_u_nids))
-    friends2user_edge_index_pair = [[userfriends_nids[j], f_u_nids[j]] for j in range(len(userfriends_nids))]
-    friends2user_edge_index_pair_unique = list(unique_everseen(friends2user_edge_index_pair, key=frozenset))
-    friends_edge_index_pair = []
-    user_edge_index_pair = []
-    for i in range(len(friends2user_edge_index_pair_unique)):
-        friends_edge_index_pair.append(friends2user_edge_index_pair_unique[i][0])
-        user_edge_index_pair.append(friends2user_edge_index_pair_unique[i][1])
-    friends2user_edge_index_np = np.vstack((np.array(friends_edge_index_pair), np.array(user_edge_index_pair)))
+    # friends_list = [
+    #     [friend for friend in friends.split(', ') if friend != '']
+    #     for friends in user.friends
+    # ]
+    # userfriends_nids = [
+    #     [e2nid_dict['uid'][friend] if friend in e2nid_dict['uid'] else e2nid_dict['userfriends'][friend] for friend in
+    #      friends] for friends in friends_list]
+    # userfriends_nids = list(itertools.chain.from_iterable(userfriends_nids))
+    # f_u_nids = [[u_nid for _ in range(len(friends_list[idx]))] for idx, u_nid in enumerate(u_nids)]
+    # f_u_nids = list(itertools.chain.from_iterable(f_u_nids))
+    # friends2user_edge_index_pair = [[userfriends_nids[j], f_u_nids[j]] for j in range(len(userfriends_nids))]
+    # friends2user_edge_index_pair_unique = list(unique_everseen(friends2user_edge_index_pair, key=frozenset))
+    # friends_edge_index_pair = []
+    # user_edge_index_pair = []
+    # for i in range(len(friends2user_edge_index_pair_unique)):
+    #     friends_edge_index_pair.append(friends2user_edge_index_pair_unique[i][0])
+    #     user_edge_index_pair.append(friends2user_edge_index_pair_unique[i][1])
+    # friends2user_edge_index_np = np.vstack((np.array(friends_edge_index_pair), np.array(user_edge_index_pair)))
 
     userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in user.fans]
     fans2user_edge_index_np = np.vstack((np.array(userfans_nids), np.array(u_nids)))
@@ -402,7 +413,8 @@ def generate_graph_data(
     edge_index_nps['names2user'] = names2user_edge_index_np
     edge_index_nps['reviewcount2user'] = reviewcount2user_edge_index_np
     edge_index_nps['startdate2user'] = startdate2user_edge_index_np
-    edge_index_nps['friends2user'] = friends2user_edge_index_np
+    edge_index_nps['friendcount2user'] = friendcount2user_edge_index_np
+    # edge_index_nps['friends2user'] = friends2user_edge_index_np
     edge_index_nps['fans2user'] = fans2user_edge_index_np
     edge_index_nps['elite2user'] = elite2user_edge_index_np
     edge_index_nps['averagestars2user'] = averagestars2user_edge_index_np

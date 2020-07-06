@@ -22,10 +22,10 @@ parser.add_argument("--if_use_features", type=bool, default=False, help="")
 parser.add_argument("--num_core", type=int, default=10, help="")
 # Model params
 parser.add_argument("--dropout", type=float, default=0, help="")
-parser.add_argument("--emb_dim", type=int, default=16, help="")
+parser.add_argument("--emb_dim", type=int, default=62, help="")
 parser.add_argument("--num_heads", type=int, default=1, help="")
 parser.add_argument("--repr_dim", type=int, default=16, help="")
-parser.add_argument("--hidden_size", type=int, default=16, help="")
+parser.add_argument("--hidden_size", type=int, default=62, help="")
 # Train params
 parser.add_argument("--init_eval", type=bool, default=True, help="")
 parser.add_argument("--num_negative_samples", type=int, default=4, help="")
