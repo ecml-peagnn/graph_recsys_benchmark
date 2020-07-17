@@ -34,5 +34,3 @@ def ndcg(hit_vec_np):
 def auc(preds_pos, preds_neg):
     product_comp = [1 if p_pred > n_pred else 0 for p_pred, n_pred in product(preds_pos, preds_neg)]
     return np.mean(product_comp)
-
-

@@ -87,6 +87,7 @@ def generate_graph_data(
     Entitiy node include (business, user, review, tip)
     num_nodes = num_users + num_items + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
     """
+
     def get_concept_num_from_str(df, concept_name):
         if (concept_name == 'friends'):
             concept_strs = [concept_str.split(', ') for concept_str in df[concept_name]]
@@ -101,11 +102,7 @@ def generate_graph_data(
         return list(concepts), num_concepts
 
     #########################  Create dataset property dict  #########################
-    dataset_property_dict = {}
-    dataset_property_dict['business'] = business
-    dataset_property_dict['user'] = user
-    dataset_property_dict['review'] = review
-    dataset_property_dict['tip'] = tip
+    dataset_property_dict = {'business': business, 'user': user, 'review': review, 'tip': tip}
 
     #########################  Define entities  #########################
     num_bus = business.shape[0]
@@ -149,8 +146,6 @@ def generate_graph_data(
     unique_user_startdate = set(list(stdt[:4] for stdt in user.yelping_since))
     num_user_startdate = len(unique_user_startdate)
 
-    # unique_user_friends, num_user_friends = get_concept_num_from_str(user, 'friends')
-
     unique_user_friendcount = list(user.friends_count.unique())
     num_user_friendcount = len(unique_user_friendcount)
 
@@ -190,8 +185,6 @@ def generate_graph_data(
     dataset_property_dict['num_user_startdate'] = num_user_startdate
     dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
     dataset_property_dict['num_user_friendcount'] = num_user_friendcount
-    # dataset_property_dict['unique_user_friends'] = unique_user_friends
-    # dataset_property_dict['num_user_friends'] = num_user_friends
     dataset_property_dict['unique_user_fans'] = unique_user_fans
     dataset_property_dict['num_user_fans'] = num_user_fans
     dataset_property_dict['unique_user_elite'] = unique_user_elite
@@ -275,10 +268,6 @@ def generate_graph_data(
     for i, userfriendcount in enumerate(unique_user_friendcount):
         nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
     acc += num_user_friendcount
-    # userfriends2nid = {userfriends: i + acc for i, userfriends in enumerate(unique_user_friends)}
-    # for i, userfriends in enumerate(unique_user_friends):
-    #     nid2e_dict[i + acc] = ('userfriends', userfriends)
-    # acc += num_user_friends
     userfans2nid = {userfans: i + acc for i, userfans in enumerate(unique_user_fans)}
     for i, userfans in enumerate(unique_user_fans):
         nid2e_dict[i + acc] = ('userfans', userfans)
@@ -374,25 +363,6 @@ def generate_graph_data(
     userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in user.friends_count]
     friendcount2user_edge_index_np = np.vstack((np.array(userfriendcount_nids), np.array(u_nids)))
 
-    # friends_list = [
-    #     [friend for friend in friends.split(', ') if friend != '']
-    #     for friends in user.friends
-    # ]
-    # userfriends_nids = [
-    #     [e2nid_dict['uid'][friend] if friend in e2nid_dict['uid'] else e2nid_dict['userfriends'][friend] for friend in
-    #      friends] for friends in friends_list]
-    # userfriends_nids = list(itertools.chain.from_iterable(userfriends_nids))
-    # f_u_nids = [[u_nid for _ in range(len(friends_list[idx]))] for idx, u_nid in enumerate(u_nids)]
-    # f_u_nids = list(itertools.chain.from_iterable(f_u_nids))
-    # friends2user_edge_index_pair = [[userfriends_nids[j], f_u_nids[j]] for j in range(len(userfriends_nids))]
-    # friends2user_edge_index_pair_unique = list(unique_everseen(friends2user_edge_index_pair, key=frozenset))
-    # friends_edge_index_pair = []
-    # user_edge_index_pair = []
-    # for i in range(len(friends2user_edge_index_pair_unique)):
-    #     friends_edge_index_pair.append(friends2user_edge_index_pair_unique[i][0])
-    #     user_edge_index_pair.append(friends2user_edge_index_pair_unique[i][1])
-    # friends2user_edge_index_np = np.vstack((np.array(friends_edge_index_pair), np.array(user_edge_index_pair)))
-
     userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in user.fans]
     fans2user_edge_index_np = np.vstack((np.array(userfans_nids), np.array(u_nids)))
 
@@ -414,7 +384,6 @@ def generate_graph_data(
     edge_index_nps['reviewcount2user'] = reviewcount2user_edge_index_np
     edge_index_nps['startdate2user'] = startdate2user_edge_index_np
     edge_index_nps['friendcount2user'] = friendcount2user_edge_index_np
-    # edge_index_nps['friends2user'] = friends2user_edge_index_np
     edge_index_nps['fans2user'] = fans2user_edge_index_np
     edge_index_nps['elite2user'] = elite2user_edge_index_np
     edge_index_nps['averagestars2user'] = averagestars2user_edge_index_np
@@ -456,13 +425,16 @@ def generate_graph_data(
     dataset_property_dict['neg_bnid_unid_map'] = \
         train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map
 
+    print('Building edge type map...')
+    edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
+    dataset_property_dict['edge_type_dict'] = edge_type_dict
+    dataset_property_dict['num_edge_types'] = len(list(edge_index_nps.keys()))
+
     print('Building the user occurrence map...')
     user_nid_occs = {}
     for uid in user.user_id:
-        try:
-            user_nid_occs[e2nid_dict['uid'][uid]] = review[review.user_id == uid].iloc[0]['user_count'] + tip[tip.user_id == uid].iloc[0]['user_count']
-        except:
-            pass
+        user_nid_occs[e2nid_dict['uid'][uid]] = review[review.user_id == uid].iloc[0]['user_count'] + \
+                                                    tip[tip.user_id == uid].iloc[0]['user_count']
     dataset_property_dict['user_nid_occs'] = user_nid_occs
 
     return dataset_property_dict
@@ -481,8 +453,9 @@ class Yelp(Dataset):
         self.seed = kwargs['seed']
         self.num_negative_samples = kwargs['num_negative_samples']
         self.suffix = self.build_suffix()
-        self.loss_type = kwargs['loss_type']
-        self._negative_sampling = kwargs['_negative_sampling']
+        self.cf_loss_type = kwargs['cf_loss_type']
+        self._cf_negative_sampling = kwargs['_cf_negative_sampling']
+        self.kg_loss_type = kwargs.get('kg_loss_type', None)
         self.dataset = kwargs['dataset']
 
         super(Yelp, self).__init__(root, transform, pre_transform, pre_filter)
@@ -491,13 +464,6 @@ class Yelp(Dataset):
             dataset_property_dict = pickle.load(f)
         for k, v in dataset_property_dict.items():
             self[k] = v
-        self.train_edge_index = torch.from_numpy(self.edge_index_nps['bus2user'].T).long()
-        self.num_pos_train_edges = self.train_edge_index.shape[0]
-
-        if self.loss_type == 'BCE':
-            self.length = self.num_pos_train_edges * (self.num_negative_samples + 1)
-        elif self.loss_type == 'BPR':
-            self.length = self.num_pos_train_edges * self.num_negative_samples
 
         print('Dataset loaded!')
 
@@ -519,7 +485,7 @@ class Yelp(Dataset):
 
         tar_file_path = join(Path(__file__).parents[2], 'datasets', self.dataset, self.raw_file_names)
         copy(tar_file_path, self.raw_dir)
-        extract_tar(join(self.raw_dir, self.raw_file_names), self.untar_file_path )
+        extract_tar(join(self.raw_dir, self.raw_file_names), self.untar_file_path)
 
     def process(self):
         # parser files
@@ -561,12 +527,13 @@ class Yelp(Dataset):
                 if attr_list != None:
                     for a, b in attr_list.items():
                         if (b.lower() == 'true' or ''.join(re.findall(r"'(.*?)'", b)).lower() in (
-                        'outdoor', 'yes', 'allages', '21plus', '19plus', '18plus', 'full_bar', 'beer_and_wine',
-                        'yes_free', 'yes_corkage', 'free', 'paid', 'quiet', 'average', 'loud', 'very_loud', 'casual',
-                        'formal', 'dressy')):
+                                'outdoor', 'yes', 'allages', '21plus', '19plus', '18plus', 'full_bar', 'beer_and_wine',
+                                'yes_free', 'yes_corkage', 'free', 'paid', 'quiet', 'average', 'loud', 'very_loud',
+                                'casual',
+                                'formal', 'dressy')):
                             attr_dict[a.strip()] = True
                         elif (b.lower() in ('false', 'none') or ''.join(re.findall(r"'(.*?)'", b)).lower() in (
-                        'no', 'none')):
+                                'no', 'none')):
                             attr_dict[a.strip()] = False
                         elif (b[0] != '{'):
                             attr_dict[a.strip()] = True
@@ -678,7 +645,7 @@ class Yelp(Dataset):
             tip = tip[tip.user_count > self.num_core]
 
             # Sync the business and user dataframe
-            for i in range(0,4):
+            for i in range(0, 4):
                 business = business[business.business_id.isin(review['business_id'].unique())]
                 user = user[user.user_id.isin(review['user_id'].unique())]
                 review = review[review.user_id.isin(user['user_id'].unique())]
@@ -705,82 +672,103 @@ class Yelp(Dataset):
             pickle.dump(dataset_property_dict, f)
 
     def build_suffix(self):
-        suffixes = []
-        suffixes.append('core_{}'.format(self.num_core))
-        suffixes.append('seed_{}'.format(self.seed))
+        suffixes = [
+            'core_{}'.format(self.num_core),
+            'seed_{}'.format(self.seed)
+        ]
         if not suffixes:
             suffix = ''
         else:
             suffix = '_'.join(suffixes)
         return '_' + suffix
 
-    def negative_sampling(self):
-        if self.loss_type == 'BCE':
-            pos_train_edge = torch.cat(
-                [
-                    self.train_edge_index,
-                    torch.ones((self.num_pos_train_edges, 1)).long()
-                ],
-                dim=-1
-            )
-
-            b_nids = self.train_edge_index[:, 0].tolist()
-            negative_unids = []
-            p_bar = tqdm.tqdm(b_nids)
-            for b_nid in p_bar:
-                negative_unids.append(
-                    self._negative_sampling(
-                        b_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_bnid_unid_map,
-                            self.test_pos_bnid_unid_map,
-                            self.neg_bnid_unid_map
-                        ),
-                        self.user_nid_occs
-                    )
-                )
-                p_bar.set_description('Negative sampling...')
-            negative_unids_t = torch.from_numpy(np.vstack(negative_unids).reshape(-1, 1))
-            negative_train_edges = torch.cat(
-                [
-                    self.train_edge_index[:, 0].repeat(self.num_negative_samples).reshape(-1, 1),
-                    negative_unids_t,
-                    torch.zeros((self.num_pos_train_edges * self.num_negative_samples, 1)).long()
-                ],
-                dim=-1
-            )
-
-            train_data = torch.cat([pos_train_edge, negative_train_edges], dim=0)
-        elif self.loss_type == 'BPR':
-            b_nids = self.train_edge_index[:, 0].tolist()
-            negative_unids = []
-            p_bar = tqdm.tqdm(b_nids)
-            for b_nid in p_bar:
-                negative_unids.append(
-                    self._negative_sampling(
-                        b_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_bnid_unid_map,
-                            self.test_pos_bnid_unid_map,
-                            self.neg_bnid_unid_map
-                        ),
-                        self.user_nid_occs
-                    )
-                )
-                p_bar.set_description('Negative sampling...')
-            negative_unids_t = torch.from_numpy(np.vstack(negative_unids).reshape(-1, 1))
-
-            train_edge_index_t = self.train_edge_index.repeat(1, self.num_negative_samples).view(-1, 2)
-            train_data = torch.cat([train_edge_index_t, negative_unids_t], dim=-1)
+    def kg_negative_sampling(self):
+        print('KG negative sampling...')
+        pos_edge_index_r_nps = [
+            (edge_index, np.ones((edge_index.shape[1], 1)) * self.edge_type_dict[edge_type])
+            for edge_type, edge_index in self.edge_index_nps.items()
+        ]
+        pos_edge_index_trans_np = np.hstack([_[0] for _ in pos_edge_index_r_nps]).T
+        pos_r_np = np.vstack([_[1] for _ in pos_edge_index_r_nps])
+        neg_t_np = np.random.randint(low=0, high=self.num_nodes, size=(pos_edge_index_trans_np.shape[0], 1))
+        if self.cf_loss_type == 'BCE':
+            pos_samples_np = np.hstack([pos_edge_index_trans_np, pos_r_np])
+            neg_samples_np = np.hstack([pos_edge_index_trans_np[:, 0], neg_t_np, pos_r_np])
+            train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'BPR':
+            train_data_np = np.hstack([pos_edge_index_trans_np, neg_t_np, pos_r_np])
         else:
-            raise NotImplementedError('No negative sampling for model type: {}.'.format(self.loss_type))
-        shuffle_idx = torch.randperm(train_data.shape[0])
-        self.train_data = train_data[shuffle_idx]
+            raise NotImplementedError('KG loss type not specified or not implemented!')
+        train_data_t = torch.from_numpy(train_data_np).long()
+        shuffle_idx = torch.randperm(train_data_t.shape[0])
+        self.train_data = train_data_t[shuffle_idx]
+        self.train_data_length = train_data_t.shape[0]
+
+    def cf_negative_sampling(self):
+        print('CF negative sampling...')
+        pos_edge_index_trans_np = self.edge_index_nps['bus2user'].T
+        if self.cf_loss_type == 'BCE':
+            pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+
+            neg_unids = []
+            b_nids = pos_samples_np[:, 0]
+            p_bar = tqdm.tqdm(b_nids)
+            for b_nid in p_bar:
+                neg_unids.append(
+                    self._cf_negative_sampling(
+                        b_nid,
+                        self.num_negative_samples,
+                        (
+                            self.train_pos_bnid_unid_map,
+                            self.test_pos_bnid_unid_map,
+                            self.neg_bnid_unid_map
+                        ),
+                        self.user_nid_occs
+                    )
+                )
+            neg_unids_np = np.vstack(neg_unids)
+            neg_samples_np = np.hstack(
+                [
+                    np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                    neg_unids_np,
+                    torch.zeros((neg_unids_np.shape[0], 1)).long()
+                ]
+            )
+
+            train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'BPR':
+            neg_unids = []
+            b_nids = pos_edge_index_trans_np[:, 0]
+            p_bar = tqdm.tqdm(b_nids)
+            for b_nid in p_bar:
+                neg_unids.append(
+                    self._cf_negative_sampling(
+                        b_nid,
+                        self.num_negative_samples,
+                        (
+                            self.train_pos_bnid_unid_map,
+                            self.test_pos_bnid_unid_map,
+                            self.neg_bnid_unid_map
+                        ),
+                        self.user_nid_occs
+                    )
+                )
+
+            train_data_np = np.hstack(
+                [
+                    np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
+                    np.vstack(neg_unids)
+                ]
+            )
+        else:
+            raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
+        train_data_t = torch.from_numpy(train_data_np).long()
+        shuffle_idx = torch.randperm(train_data_t.shape[0])
+        self.train_data = train_data_t[shuffle_idx]
+        self.train_data_length = train_data_t.shape[0]
 
     def __len__(self):
-        return self.length
+        return self.train_data_length
 
     def __getitem__(self, idx):
         r"""Gets the data object at index :obj:`idx` and transforms it (in case
