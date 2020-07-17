@@ -6,13 +6,13 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import NMFRecsysModel
+from graph_recsys_benchmark.models import MPAGATRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
-MODEL_TYPE = 'MF'
-LOSS_TYPE = 'BCE'
-MODEL = 'NMF'
+MODEL_TYPE = 'Graph'
+LOSS_TYPE = 'BPR'
+MODEL = 'MPAGAT'
 
 parser = argparse.ArgumentParser()
 
@@ -24,9 +24,13 @@ parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
 
 # Model params
-parser.add_argument('--factor_num', type=int, default=8, help='')
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--num_layers', type=list, default=3, help='')
+parser.add_argument('--emb_dim', type=int, default=32, help='')
+parser.add_argument('--num_heads', type=int, default=1, help='')
+parser.add_argument('--repr_dim', type=int, default=4, help='')
+parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2', help='')
+parser.add_argument('--aggr', type=str, default='att', help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -67,9 +71,12 @@ dataset_args = {
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {
-    'model_type': MODEL_TYPE, 'dropout': args.dropout,
-    'factor_num': args.factor_num, 'if_use_features': args.if_use_features.lower() == 'true',
-    'num_layers': args.num_layers, 'loss_type': LOSS_TYPE
+    'model_type': MODEL_TYPE,
+    'if_use_features': args.if_use_features.lower() == 'true',
+    'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
+    'repr_dim': args.repr_dim, 'dropout': args.dropout,
+    'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
+    'aggr': args.aggr
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -106,26 +113,50 @@ def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class BCENMFRecsysModel(NMFRecsysModel):
-    loss_func = torch.nn.BCEWithLogitsLoss()
-
+class MPAGATRecsysModel(MPAGATRecsysModel):
     def cf_loss(self, batch):
         if self.training:
-            pred = self.predict(batch[:, 0], batch[:, 1])
-            label = batch[:, -1].float()
-        else:
-            pos_pred = self.predict(batch[:, 0], batch[:, 1])[:1]
-            neg_pred = self.predict(batch[:, 0], batch[:, 2])
-            pred = torch.cat([pos_pred, neg_pred])
-            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
+            self.cached_repr = self.forward()
+        pos_pred = self.predict(batch[:, 0], batch[:, 1])
+        neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
-        loss = self.loss_func(pred, label)
+        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+
         return loss
 
+    def update_graph_input(self, dataset):
+        user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
+        year2item_edge_index = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(train_args['device'])
+        actor2item_edge_index = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(train_args['device'])
+        director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
+        writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
+        genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
+        age2user_edge_index = torch.from_numpy(dataset.edge_index_nps['age2user']).long().to(train_args['device'])
+        gender2user_edge_index = torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(train_args['device'])
+        occ2user_edge_index = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
+        meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+        meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
 
-class NMFSolver(BaseSolver):
+        meta_path_edge_index_list = [
+            meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
+            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+            meta_path_edge_indicis_10
+        ]
+        self.meta_path_edge_index_list = meta_path_edge_index_list
+
+
+class MPAGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(NMFSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -138,5 +169,5 @@ class NMFSolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
-    solver = NMFSolver(BCENMFRecsysModel, dataset_args, model_args, train_args)
+    solver = MPAGATSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

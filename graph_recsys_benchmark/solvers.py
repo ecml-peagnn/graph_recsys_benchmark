@@ -7,7 +7,6 @@ import pandas as pd
 import tqdm
 from torch.utils.data import DataLoader
 from GPUtil import showUtilization as gpu_usage
-import gc
 
 from graph_recsys_benchmark.utils import *
 
@@ -28,16 +27,6 @@ class BaseSolver(object):
         """
         raise NotImplementedError
 
-    def instantwrite (self, filename):
-        filename.flush()
-        os.fsync(filename.fileno())
-
-    def clearcache (self):
-        gc.collect()
-        torch.cuda.empty_cache()
-        print("GPU Usage after emptying cache")
-        gpu_usage()
-
     def metrics(
             self,
             run,
@@ -46,12 +35,12 @@ class BaseSolver(object):
             dataset
     ):
         """
-
+        Generate the positive and negative candidates for the recsys evaluation
         :param run:
         :param epoch:
         :param model:
         :param dataset:
-        :return:
+        :return: a tuple (pos_i_nids, neg_i_nids), two entries should be both list
         """
         HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
 
@@ -77,7 +66,7 @@ class BaseSolver(object):
                 if self.model_args['model_type'] == 'MF':
                     pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
                     pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
-                loss = model.loss(pos_neg_pair_t).detach().cpu().item()
+                loss = model.cf_loss(pos_neg_pair_t).detach().cpu().item()
 
                 pos_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(pos_i_nids))])).to(
                     self.train_args['device'])
@@ -132,7 +121,7 @@ class BaseSolver(object):
                 if self.model_args['model_type'] == 'MF':
                     pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['bid'][0]
                     pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['uid'][0]
-                loss = model.loss(pos_neg_pair_t).detach().cpu().item()
+                loss = model.cf_loss(pos_neg_pair_t).detach().cpu().item()
 
                 pos_b_nids_t = torch.from_numpy(np.array([b_nid for _ in range(len(pos_u_nids))])).to(
                     self.train_args['device'])
@@ -166,7 +155,7 @@ class BaseSolver(object):
                 )
         print("GPU Usage after each epoch")
         gpu_usage()
-        return HRs.mean(axis=0), NDCGs.mean(axis=0), AUC.mean(axis=0)[0], eval_losses.mean(axis=0)[0]
+        return np.mean(HRs, axis=0), np.mean(NDCGs, axis=0), np.mean(AUC, axis=0), np.mean(eval_losses, axis=0)
 
     def run(self):
         global_logger_path = self.train_args['logger_folder']
@@ -177,7 +166,6 @@ class BaseSolver(object):
             load_global_logger(global_logger_file_path)
 
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
-        print('logger_file_path',logger_file_path)
         with open(logger_file_path, 'a') as logger_file:
             start_run = last_run + 1
             if start_run <= self.train_args['runs']:
@@ -237,22 +225,22 @@ class BaseSolver(object):
                     start_epoch = last_epoch + 1
                     if start_epoch == 1 and self.train_args['init_eval']:
                         model.eval()
-                        HRs_before_np, NDCGs_before_np, AUC_before_np, eval_loss_before_np = \
+                        HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
                             self.metrics(run, 0, model, dataset)
                         print(
                             'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np, eval_loss_before_np
+                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         logger_file.write(
                             'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np, eval_loss_before_np
+                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
-                        self.instantwrite(logger_file)
-                        self.clearcache()
+                        instantwrite(logger_file)
+                        clearcache()
 
                     t_start = time.perf_counter()
                     if start_epoch <= self.train_args['epochs']:
@@ -260,15 +248,14 @@ class BaseSolver(object):
                         for epoch in range(start_epoch, self.train_args['epochs'] + 1):
                             loss_per_batch = []
                             model.train()
-                            dataset.negative_sampling()
-                            recsys_train_dataloader = DataLoader(
+                            dataset.cf_negative_sampling()
+                            train_dataloader = DataLoader(
                                 dataset,
                                 shuffle=True,
                                 batch_size=self.train_args['batch_size'],
                                 num_workers=self.train_args['num_workers']
                             )
-
-                            train_bar = tqdm.tqdm(recsys_train_dataloader, total=len(recsys_train_dataloader))
+                            train_bar = tqdm.tqdm(train_dataloader, total=len(train_dataloader))
 
                             for _, batch in enumerate(train_bar):
                                 if self.model_args['model_type'] == 'MF':
@@ -289,7 +276,7 @@ class BaseSolver(object):
                                 batch = batch.to(self.train_args['device'])
 
                                 optimizer.zero_grad()
-                                loss = model.loss(batch)
+                                loss = model.cf_loss(batch)
                                 loss.backward()
                                 optimizer.step()
 
@@ -326,22 +313,21 @@ class BaseSolver(object):
                             logger_file.write(
                                 'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs[5], NDCGs[5], AUC, train_loss, eval_loss
+                                    run, epoch, HRs[5], NDCGs[5], AUC[0], train_loss, eval_loss[0]
                                 )
                             )
-                            self.instantwrite(logger_file)
-
-                            self.clearcache()
+                            instantwrite(logger_file)
+                            clearcache()
 
                         if torch.cuda.is_available():
                             torch.cuda.synchronize()
                     t_end = time.perf_counter()
 
-                    HRs_per_run_np = np.vstack([HRs_per_run_np, HRs_per_epoch_np[-1]])
-                    NDCGs_per_run_np = np.vstack([NDCGs_per_run_np, NDCGs_per_epoch_np[-1]])
-                    AUC_per_run_np = np.vstack([AUC_per_run_np, AUC_per_epoch_np[-1]])
-                    train_loss_per_run_np = np.vstack([train_loss_per_run_np, train_loss_per_epoch_np[-1]])
-                    eval_loss_per_run_np = np.vstack([eval_loss_per_run_np, eval_loss_per_epoch_np[-1]])
+                    HRs_per_run_np = np.vstack([HRs_per_run_np, np.max(HRs_per_epoch_np, axis=0)])
+                    NDCGs_per_run_np = np.vstack([NDCGs_per_run_np, np.max(NDCGs_per_epoch_np, axis=0)])
+                    AUC_per_run_np = np.vstack([AUC_per_run_np, np.max(AUC_per_epoch_np, axis=0)])
+                    train_loss_per_run_np = np.vstack([train_loss_per_run_np, np.mean(train_loss_per_epoch_np, axis=0)])
+                    eval_loss_per_run_np = np.vstack([eval_loss_per_run_np, np.mean(eval_loss_per_epoch_np, axis=0)])
 
                     save_global_logger(
                         global_logger_file_path,
@@ -360,13 +346,13 @@ class BaseSolver(object):
                             run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
                             AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
-                    self.instantwrite(logger_file)
+                    instantwrite(logger_file)
 
                     print("GPU Usage after each run")
                     gpu_usage()
 
                     del model, optimizer, loss, loss_per_batch, rec_metrics
-                    self.clearcache()
+                    clearcache()
 
             print(
                 'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
@@ -380,4 +366,4 @@ class BaseSolver(object):
                     eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
-            self.instantwrite(logger_file)
+            instantwrite(logger_file)

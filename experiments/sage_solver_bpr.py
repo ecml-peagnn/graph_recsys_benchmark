@@ -6,28 +6,26 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import NMFRecsysModel
+from graph_recsys_benchmark.models import SAGERecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
-MODEL_TYPE = 'MF'
-LOSS_TYPE = 'BCE'
-MODEL = 'NMF'
+MODEL_TYPE = 'Graph'
+LOSS_TYPE = 'BPR'
+MODEL = 'SAGE'
 
 parser = argparse.ArgumentParser()
-
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='1m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
-
 # Model params
-parser.add_argument('--factor_num', type=int, default=8, help='')
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--num_layers', type=list, default=3, help='')
-
+parser.add_argument('--emb_dim', type=int, default=32, help='')
+parser.add_argument('--repr_dim', type=int, default=4, help='')
+parser.add_argument('--hidden_size', type=int, default=64, help='')
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
@@ -67,9 +65,10 @@ dataset_args = {
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {
-    'model_type': MODEL_TYPE, 'dropout': args.dropout,
-    'factor_num': args.factor_num, 'if_use_features': args.if_use_features.lower() == 'true',
-    'num_layers': args.num_layers, 'loss_type': LOSS_TYPE
+    'model_type': MODEL_TYPE,
+    'if_use_features': args.if_use_features.lower() == 'true',
+    'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
+    'repr_dim': args.repr_dim, 'dropout': args.dropout
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -106,26 +105,27 @@ def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class BCENMFRecsysModel(NMFRecsysModel):
-    loss_func = torch.nn.BCEWithLogitsLoss()
-
+class SAGERecsysModel(SAGERecsysModel):
     def cf_loss(self, batch):
         if self.training:
-            pred = self.predict(batch[:, 0], batch[:, 1])
-            label = batch[:, -1].float()
-        else:
-            pos_pred = self.predict(batch[:, 0], batch[:, 1])[:1]
-            neg_pred = self.predict(batch[:, 0], batch[:, 2])
-            pred = torch.cat([pos_pred, neg_pred])
-            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
+            self.cached_repr = self.forward()
+        pos_pred = self.predict(batch[:, 0], batch[:, 1])
+        neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
-        loss = self.loss_func(pred, label)
+        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+
         return loss
 
+    def update_graph_input(self, dataset):
+        edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
+        edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
+        edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
+        return self.x, edge_index
 
-class NMFSolver(BaseSolver):
+
+class SAGESolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(NMFSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(SAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -138,5 +138,5 @@ class NMFSolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
-    solver = NMFSolver(BCENMFRecsysModel, dataset_args, model_args, train_args)
+    solver = SAGESolver(SAGERecsysModel, dataset_args, model_args, train_args)
     solver.run()
