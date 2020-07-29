@@ -110,41 +110,20 @@ def generate_graph_data(
     dataset_property_dict['num_bus'] = num_bus
     dataset_property_dict['num_users'] = num_users
 
-    unique_bus_names = list(business.name.unique())
-    num_bus_names = len(unique_bus_names)
-
-    unique_bus_city = list(business.city.unique())
-    num_bus_city = len(unique_bus_city)
-
-    unique_bus_state = list(business.state.unique())
-    num_bus_state = len(unique_bus_state)
-
     unique_bus_stars = list(business.stars.unique())
     num_bus_stars = len(unique_bus_stars)
 
     unique_bus_reviewcount = list(business.review_count.unique())
     num_bus_reviewcount = len(unique_bus_reviewcount)
 
-    unique_bus_isopen = list(business.is_open.unique())
-    num_bus_isopen = len(unique_bus_isopen)
-
     unique_bus_attributes, num_bus_attributes = get_concept_num_from_str(business, 'attributes')
     unique_bus_categories, num_bus_categories = get_concept_num_from_str(business, 'categories')
-
-    unique_bus_time = list(business.keys()[13:19])
-    num_bus_time = len(unique_bus_time)
 
     unique_bus_checkincount = list(business.checkin_count.unique())
     num_bus_checkincount = len(unique_bus_checkincount)
 
-    unique_user_names = list(user.name.unique())
-    num_user_names = len(unique_user_names)
-
     unique_user_reviewcount = list(user.review_count.unique())
     num_user_reviewcount = len(unique_user_reviewcount)
-
-    unique_user_startdate = set(list(stdt[:4] for stdt in user.yelping_since))
-    num_user_startdate = len(unique_user_startdate)
 
     unique_user_friendcount = list(user.friends_count.unique())
     num_user_friendcount = len(unique_user_friendcount)
@@ -152,52 +131,34 @@ def generate_graph_data(
     unique_user_fans = list(user.fans.unique())
     num_user_fans = len(unique_user_fans)
 
-    unique_user_elite, num_user_elite = get_concept_num_from_str(user, 'elite')
-
     unique_user_averagestars = list(user.average_stars.unique())
     num_user_averagestars = len(unique_user_averagestars)
 
-    dataset_property_dict['unique_bus_names'] = unique_bus_names
-    dataset_property_dict['num_bus_names'] = num_bus_names
-    dataset_property_dict['unique_bus_city'] = unique_bus_city
-    dataset_property_dict['num_bus_city'] = num_bus_city
-    dataset_property_dict['unique_bus_state'] = unique_bus_state
-    dataset_property_dict['num_bus_state'] = num_bus_state
     dataset_property_dict['unique_bus_stars'] = unique_bus_stars
     dataset_property_dict['num_bus_stars'] = num_bus_stars
     dataset_property_dict['unique_bus_reviewcount'] = unique_bus_reviewcount
     dataset_property_dict['num_bus_reviewcount'] = num_bus_reviewcount
-    dataset_property_dict['unique_bus_isopen'] = unique_bus_isopen
-    dataset_property_dict['num_bus_isopen'] = num_bus_isopen
     dataset_property_dict['unique_bus_attributes'] = unique_bus_attributes
     dataset_property_dict['num_bus_attributes'] = num_bus_attributes
     dataset_property_dict['unique_bus_categories'] = unique_bus_categories
     dataset_property_dict['num_bus_categories'] = num_bus_categories
-    dataset_property_dict['unique_bus_time'] = unique_bus_time
-    dataset_property_dict['num_bus_time'] = num_bus_time
     dataset_property_dict['unique_bus_checkincount'] = unique_bus_checkincount
     dataset_property_dict['num_bus_checkincount'] = num_bus_checkincount
-    dataset_property_dict['unique_user_names'] = unique_user_names
-    dataset_property_dict['num_user_names'] = num_user_names
     dataset_property_dict['unique_user_reviewcount'] = unique_user_reviewcount
     dataset_property_dict['num_user_reviewcount'] = num_user_reviewcount
-    dataset_property_dict['unique_user_startdate'] = unique_user_startdate
-    dataset_property_dict['num_user_startdate'] = num_user_startdate
     dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
     dataset_property_dict['num_user_friendcount'] = num_user_friendcount
     dataset_property_dict['unique_user_fans'] = unique_user_fans
     dataset_property_dict['num_user_fans'] = num_user_fans
-    dataset_property_dict['unique_user_elite'] = unique_user_elite
-    dataset_property_dict['num_user_elite'] = num_user_elite
     dataset_property_dict['unique_user_averagestars'] = unique_user_averagestars
     dataset_property_dict['num_user_averagestars'] = num_user_averagestars
 
     #########################  Define number of entities  #########################
-    num_nodes = num_bus + num_users + num_bus_names + num_bus_city + num_bus_state + num_bus_stars + num_bus_reviewcount + \
-                num_bus_isopen + num_bus_attributes + num_bus_categories + num_bus_time + num_bus_checkincount + \
-                num_user_names + num_user_reviewcount + num_user_startdate + num_user_friendcount + \
-                num_user_fans + num_user_elite + num_user_averagestars
-    num_node_types = 19
+    num_nodes = num_bus + num_users + num_bus_stars + num_bus_reviewcount + \
+                num_bus_attributes + num_bus_categories + num_bus_checkincount + \
+                num_user_reviewcount + num_user_friendcount + \
+                num_user_fans + num_user_averagestars
+    num_node_types = 11
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
 
@@ -212,18 +173,6 @@ def generate_graph_data(
     for i, uid in enumerate(user['user_id']):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_users
-    busname2nid = {busname: i + acc for i, busname in enumerate(unique_bus_names)}
-    for i, busname in enumerate(unique_bus_names):
-        nid2e_dict[i + acc] = ('busname', busname)
-    acc += num_bus_names
-    buscity2nid = {buscity: i + acc for i, buscity in enumerate(unique_bus_city)}
-    for i, buscity in enumerate(unique_bus_city):
-        nid2e_dict[i + acc] = ('buscity', buscity)
-    acc += num_bus_city
-    busstate2nid = {busstate: i + acc for i, busstate in enumerate(unique_bus_state)}
-    for i, busstate in enumerate(unique_bus_state):
-        nid2e_dict[i + acc] = ('busstate', busstate)
-    acc += num_bus_state
     busstars2nid = {busstars: i + acc for i, busstars in enumerate(unique_bus_stars)}
     for i, busstars in enumerate(unique_bus_stars):
         nid2e_dict[i + acc] = ('busstars', busstars)
@@ -232,10 +181,6 @@ def generate_graph_data(
     for i, busreviewcount in enumerate(unique_bus_reviewcount):
         nid2e_dict[i + acc] = ('busreviewcount', busreviewcount)
     acc += num_bus_reviewcount
-    busisopen2nid = {busisopen: i + acc for i, busisopen in enumerate(unique_bus_isopen)}
-    for i, busisopen in enumerate(unique_bus_isopen):
-        nid2e_dict[i + acc] = ('busisopen', busisopen)
-    acc += num_bus_isopen
     busattributes2nid = {busattributes: i + acc for i, busattributes in enumerate(unique_bus_attributes)}
     for i, busattributes in enumerate(unique_bus_attributes):
         nid2e_dict[i + acc] = ('busattributes', busattributes)
@@ -244,26 +189,14 @@ def generate_graph_data(
     for i, buscategories in enumerate(unique_bus_categories):
         nid2e_dict[i + acc] = ('buscategories', buscategories)
     acc += num_bus_categories
-    bustime2nid = {bustime: i + acc for i, bustime in enumerate(unique_bus_time)}
-    for i, bustime in enumerate(unique_bus_time):
-        nid2e_dict[i + acc] = ('bustime', bustime)
-    acc += num_bus_time
     buscheckincount2nid = {buscheckincount: i + acc for i, buscheckincount in enumerate(unique_bus_checkincount)}
     for i, buscheckincount in enumerate(unique_bus_checkincount):
         nid2e_dict[i + acc] = ('buscheckincount', buscheckincount)
     acc += num_bus_checkincount
-    usernames2nid = {usernames: i + acc for i, usernames in enumerate(unique_user_names)}
-    for i, usernames in enumerate(unique_user_names):
-        nid2e_dict[i + acc] = ('usernames', usernames)
-    acc += num_user_names
     userreviewcount2nid = {userreviewcount: i + acc for i, userreviewcount in enumerate(unique_user_reviewcount)}
     for i, userreviewcount in enumerate(unique_user_reviewcount):
         nid2e_dict[i + acc] = ('userreviewcount', userreviewcount)
     acc += num_user_reviewcount
-    userstartdate2nid = {userstartdate: i + acc for i, userstartdate in enumerate(unique_user_startdate)}
-    for i, userstartdate in enumerate(unique_user_startdate):
-        nid2e_dict[i + acc] = ('userstartdate', userstartdate)
-    acc += num_user_startdate
     userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcount)}
     for i, userfriendcount in enumerate(unique_user_friendcount):
         nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
@@ -272,40 +205,25 @@ def generate_graph_data(
     for i, userfans in enumerate(unique_user_fans):
         nid2e_dict[i + acc] = ('userfans', userfans)
     acc += num_user_fans
-    userelite2nid = {userelite: i + acc for i, userelite in enumerate(unique_user_elite)}
-    for i, userelite in enumerate(unique_user_elite):
-        nid2e_dict[i + acc] = ('userelite', userelite)
-    acc += num_user_elite
     useraveragestars2nid = {useraveragestars: i + acc for i, useraveragestars in enumerate(unique_user_averagestars)}
     for i, useraveragestars in enumerate(unique_user_averagestars):
         nid2e_dict[i + acc] = ('useraveragestars', useraveragestars)
 
-    e2nid_dict = {'bid': bid2nid, 'uid': uid2nid, 'busname': busname2nid, 'buscity': buscity2nid,
-                  'busstate': busstate2nid, 'busstars': busstars2nid,
-                  'busreviewcount': busreviewcount2nid, 'busisopen': busisopen2nid, 'busattributes': busattributes2nid,
-                  'buscategories': buscategories2nid,
-                  'bustime': bustime2nid, 'buscheckincount': buscheckincount2nid, 'usernames': usernames2nid,
-                  'userreviewcount': userreviewcount2nid,
-                  'userstartdate': userstartdate2nid, 'userfriendcount': userfriendcount2nid,
-                  'userfans': userfans2nid, 'userelite': userelite2nid, 'useraveragestars': useraveragestars2nid}
+    e2nid_dict = {'bid': bid2nid, 'uid': uid2nid, 'busstars': busstars2nid,
+                  'busreviewcount': busreviewcount2nid, 'busattributes': busattributes2nid,
+                  'buscategories': buscategories2nid, 'buscheckincount': buscheckincount2nid,
+                  'userreviewcount': userreviewcount2nid, 'userfriendcount': userfriendcount2nid,
+                  'userfans': userfans2nid, 'useraveragestars': useraveragestars2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
     print('Creating business property edges...')
     b_nids = [e2nid_dict['bid'][bid] for bid in business.business_id]
-    busname_nids = [e2nid_dict['busname'][busname] for busname in business.name]
-    name2bus_edge_index_np = np.vstack((np.array(busname_nids), np.array(b_nids)))
-    buscity_nids = [e2nid_dict['buscity'][buscity] for buscity in business.city]
-    city2bus_edge_index_np = np.vstack((np.array(buscity_nids), np.array(b_nids)))
-    busstate_nids = [e2nid_dict['busstate'][busstate] for busstate in business.state]
-    state2bus_edge_index_np = np.vstack((np.array(busstate_nids), np.array(b_nids)))
     busstars_nids = [e2nid_dict['busstars'][busstars] for busstars in business.stars]
     stars2bus_edge_index_np = np.vstack((np.array(busstars_nids), np.array(b_nids)))
     busreviewcount_nids = [e2nid_dict['busreviewcount'][busreviewcount] for busreviewcount in business.review_count]
     reviewcount2bus_edge_index_np = np.vstack((np.array(busreviewcount_nids), np.array(b_nids)))
-    busisopen_nids = [e2nid_dict['busisopen'][busisopen] for busisopen in business.is_open]
-    isopen2bus_edge_index_np = np.vstack((np.array(busisopen_nids), np.array(b_nids)))
 
     attributes_list = [
         [attribute for attribute in attributes.split(',') if attribute != '']
@@ -329,63 +247,33 @@ def generate_graph_data(
     c_b_nids = list(itertools.chain.from_iterable(c_b_nids))
     categories2bus_edge_index_np = np.vstack((np.array(buscategories_nids), np.array(c_b_nids)))
 
-    bustime_nids = []
-    time_b_nids = []
-    for time in unique_bus_time:
-        bids = business.business_id[business[time]]
-        time_b_nids += [e2nid_dict['bid'][bid] for bid in bids]
-        bustime_nids += [e2nid_dict['bustime'][time] for _ in range(bids.shape[0])]
-    time2bus_edge_index_np = np.vstack((np.array(bustime_nids), np.array(time_b_nids)))
-
     buscheckincount_nids = [e2nid_dict['buscheckincount'][buscheckincount] for buscheckincount in
                             business.checkin_count]
     checkincount2bus_edge_index_np = np.vstack((np.array(buscheckincount_nids), np.array(b_nids)))
 
-    edge_index_nps['name2bus'] = name2bus_edge_index_np
-    edge_index_nps['city2bus'] = city2bus_edge_index_np
-    edge_index_nps['state2bus'] = state2bus_edge_index_np
     edge_index_nps['stars2bus'] = stars2bus_edge_index_np
     edge_index_nps['reviewcount2bus'] = reviewcount2bus_edge_index_np
-    edge_index_nps['isopen2bus'] = isopen2bus_edge_index_np
     edge_index_nps['attributes2bus'] = attributes2bus_edge_index_np
     edge_index_nps['categories2bus'] = categories2bus_edge_index_np
-    edge_index_nps['time2bus'] = time2bus_edge_index_np
     edge_index_nps['checkincount2bus'] = checkincount2bus_edge_index_np
 
     print('Creating user property edges...')
     u_nids = [e2nid_dict['uid'][uid] for uid in user.user_id]
-    usernames_nids = [e2nid_dict['usernames'][usernames] for usernames in user.name]
-    names2user_edge_index_np = np.vstack((np.array(usernames_nids), np.array(u_nids)))
     userreviewcount_nids = [e2nid_dict['userreviewcount'][userreviewcount] for userreviewcount in user.review_count]
     reviewcount2user_edge_index_np = np.vstack((np.array(userreviewcount_nids), np.array(u_nids)))
-    userstartdate_nids = [e2nid_dict['userstartdate'][userstartdate[:4]] for userstartdate in user.yelping_since]
-    startdate2user_edge_index_np = np.vstack((np.array(userstartdate_nids), np.array(u_nids)))
     userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in user.friends_count]
     friendcount2user_edge_index_np = np.vstack((np.array(userfriendcount_nids), np.array(u_nids)))
 
     userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in user.fans]
     fans2user_edge_index_np = np.vstack((np.array(userfans_nids), np.array(u_nids)))
 
-    elites_list = [
-        [elite for elite in elites.split(',') if elite != '']
-        for elites in user.elite
-    ]
-    userelite_nids = [[e2nid_dict['userelite'][elite] for elite in elites] for elites in elites_list]
-    userelite_nids = list(itertools.chain.from_iterable(userelite_nids))
-    e_u_nids = [[u_nid for _ in range(len(elites_list[idx]))] for idx, u_nid in enumerate(u_nids)]
-    e_u_nids = list(itertools.chain.from_iterable(e_u_nids))
-    elite2user_edge_index_np = np.vstack((np.array(userelite_nids), np.array(e_u_nids)))
-
     useraveragestars_nids = [e2nid_dict['useraveragestars'][useraveragestars] for useraveragestars in
                              user.average_stars]
     averagestars2user_edge_index_np = np.vstack((np.array(useraveragestars_nids), np.array(u_nids)))
 
-    edge_index_nps['names2user'] = names2user_edge_index_np
     edge_index_nps['reviewcount2user'] = reviewcount2user_edge_index_np
-    edge_index_nps['startdate2user'] = startdate2user_edge_index_np
     edge_index_nps['friendcount2user'] = friendcount2user_edge_index_np
     edge_index_nps['fans2user'] = fans2user_edge_index_np
-    edge_index_nps['elite2user'] = elite2user_edge_index_np
     edge_index_nps['averagestars2user'] = averagestars2user_edge_index_np
 
     print('Creating review and tip property edges...')
@@ -615,6 +503,7 @@ class Yelp(Dataset):
             review = review.drop_duplicates()
             tip = tip.drop_duplicates()
             checkin = checkin.drop_duplicates()
+
             if business.shape[0] != business.business_id.unique().shape[0] or user.shape[0] != \
                     user.user_id.unique().shape[0] or review.shape[0] != review.review_id.unique().shape[0] \
                     or checkin.shape[0] != checkin.business_id.unique().shape[0]:

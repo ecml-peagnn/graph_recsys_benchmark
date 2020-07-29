@@ -26,7 +26,7 @@ parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2', help='')
+parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2,2', help='')
 parser.add_argument('--aggr', type=str, default='att', help='')
 
 # Train params
@@ -37,7 +37,7 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--epochs', type=int, default=50, help='')
+parser.add_argument('--epochs', type=int, default=20, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
@@ -122,51 +122,32 @@ class MPAGATRecsysModel(MPAGATRecsysModel):
 
     def update_graph_input(self, dataset):
         bus2user_edge_index = torch.from_numpy(dataset.edge_index_nps['bus2user']).long().to(train_args['device'])
-        names2user_edge_index = torch.from_numpy(dataset.edge_index_nps['names2user']).long().to(train_args['device'])
         reviewcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2user']).long().to(train_args['device'])
-        startdate2user_edge_index = torch.from_numpy(dataset.edge_index_nps['startdate2user']).long().to(train_args['device'])
         friendcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(train_args['device'])
-        # friends2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friends2user']).long().to(train_args['device'])
         fans2user_edge_index = torch.from_numpy(dataset.edge_index_nps['fans2user']).long().to(train_args['device'])
-        elite2user_edge_index = torch.from_numpy(dataset.edge_index_nps['elite2user']).long().to(train_args['device'])
         averagestars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['averagestars2user']).long().to(train_args['device'])
-        name2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['name2bus']).long().to(train_args['device'])
-        city2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['city2bus']).long().to(train_args['device'])
-        state2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['state2bus']).long().to(train_args['device'])
         stars2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2bus']).long().to(train_args['device'])
         reviewcount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2bus']).long().to(train_args['device'])
-        isopen2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['isopen2bus']).long().to(train_args['device'])
         attributes2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['attributes2bus']).long().to(train_args['device'])
         categories2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['categories2bus']).long().to(train_args['device'])
-        time2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['time2bus']).long().to(train_args['device'])
         checkincount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['checkincount2bus']).long().to(train_args['device'])
+
         meta_path_edge_indicis_1 = [bus2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_2 = [torch.flip(bus2user_edge_index, dims=[0]), bus2user_edge_index]
-        meta_path_edge_indicis_3 = [names2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [startdate2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        # meta_path_edge_indicis_6 = [friends2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_8 = [elite2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_9 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_10 = [name2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_11 = [city2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_12 = [state2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_13 = [stars2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_14 = [reviewcount2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_15 = [isopen2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_16 = [attributes2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_17 = [categories2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_18 = [time2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_19 = [checkincount2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_3 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [stars2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_8 = [reviewcount2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_9 = [attributes2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_10 = [categories2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_11 = [checkincount2bus_edge_index, bus2user_edge_index]
 
         meta_path_edge_index_list = [
             meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3, meta_path_edge_indicis_4,
             meta_path_edge_indicis_5, meta_path_edge_indicis_6, meta_path_edge_indicis_7, meta_path_edge_indicis_8,
-            meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11, meta_path_edge_indicis_12,
-            meta_path_edge_indicis_13, meta_path_edge_indicis_14, meta_path_edge_indicis_15, meta_path_edge_indicis_16,
-            meta_path_edge_indicis_17, meta_path_edge_indicis_18, meta_path_edge_indicis_19
+            meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11
         ]
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
