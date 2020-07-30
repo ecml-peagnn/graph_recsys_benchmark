@@ -78,6 +78,7 @@ def generate_graph_data(
     Entitiy node include (gender, occupation, genres)
     num_nodes = num_users + num_items + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
     """
+
     def get_concept_num_from_str(df, concept_name):
         concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
         concepts = set(itertools.chain.from_iterable(concept_strs))
@@ -129,7 +130,6 @@ def generate_graph_data(
     dataset_property_dict['num_actors'] = num_actors
     dataset_property_dict['unique_writers'] = unique_writers
     dataset_property_dict['num_writers'] = num_writers
-
 
     #########################  Define number of entities  #########################
     num_nodes = num_users + num_items + num_genders + num_occupations + num_ages + num_genres + num_years + \

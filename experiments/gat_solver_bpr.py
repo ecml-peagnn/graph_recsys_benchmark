@@ -24,10 +24,9 @@ parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
 
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--emb_dim', type=int, default=32, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
+parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
-parser.add_argument('--repr_dim', type=int, default=4, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -35,8 +34,8 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=10, help='')
+parser.add_argument('--gpu_idx', type=str, default='1', help='')
+parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=4, help='')
@@ -45,7 +44,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=20, help='')
+parser.add_argument('--save_every_epoch', type=int, default=1, help='')
 
 args = parser.parse_args()
 
@@ -71,7 +70,7 @@ model_args = {
     'model_type': MODEL_TYPE,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'repr_dim': args.repr_dim, 'dropout': args.dropout,
+    'dropout': args.dropout,
     'num_heads': args.num_heads
 }
 train_args = {
@@ -90,7 +89,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
+def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
     :param u_nid:
@@ -124,7 +123,7 @@ class GATRecsysModel(GATRecsysModel):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
         edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
-        self.edge_index = edge_index
+        return edge_index
 
 
 class GATSolver(BaseSolver):
@@ -141,6 +140,6 @@ class GATSolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
+    dataset_args['_cf_negative_sampling'] = _negative_sampling
     solver = GATSolver(GATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

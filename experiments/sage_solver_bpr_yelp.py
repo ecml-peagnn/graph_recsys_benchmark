@@ -10,22 +10,20 @@ from graph_recsys_benchmark.models import SAGERecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
-
 MODEL_TYPE = 'Graph'
-LOSS_TYPE = 'BCE'
+LOSS_TYPE = 'BPR'
 MODEL = 'SAGE'
 
 parser = argparse.ArgumentParser()
+
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='1m', help='')
+parser.add_argument('--dataset', type=str, default='Yelp', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--emb_dim', type=int, default=32, help='')
-parser.add_argument('--repr_dim', type=int, default=4, help='')
+parser.add_argument('--emb_dim', type=int, default=64, help='')
+parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -34,23 +32,23 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=10, help='')
-parser.add_argument('--epochs', type=int, default=30, help='')
+parser.add_argument('--runs', type=int, default=5, help='')
+parser.add_argument('--epochs', type=int, default=20, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
-parser.add_argument('--num_workers', type=int, default=4, help='')
+parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=20, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
+parser.add_argument('--save_every_epoch', type=int, default=15, help='')
 
 args = parser.parse_args()
 
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
-    get_folder_path(model=MODEL, dataset=args.dataset + args.dataset_name, loss_type=LOSS_TYPE)
+    get_folder_path(model=MODEL, dataset=args.dataset, loss_type=LOSS_TYPE)
 
 # Setup device
 if not torch.cuda.is_available() or args.device == 'cpu':
@@ -60,10 +58,9 @@ else:
 
 # Setup args
 dataset_args = {
-    'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
+    'root': data_folder, 'dataset': args.dataset,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'cf_loss_type': LOSS_TYPE
+    'num_core': args.num_core, 'cf_loss_type': LOSS_TYPE
 }
 model_args = {
     'model_type': MODEL_TYPE,
@@ -87,40 +84,34 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
+def _negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
-    :param u_nid:
+    :param b_nid:
     :return:
     '''
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
+    train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map = train_splition
     # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
     # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
     # nid_occs = nid_occs / np.sum(nid_occs)
     # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
     # negative_inids = negative_inids
 
-    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
+    negative_unids = test_pos_bnid_unid_map[b_nid] + neg_bnid_unid_map[b_nid]
+    negative_unids = rd.choices(population=negative_unids, k=num_negative_samples)
 
-    return np.array(negative_inids).reshape(-1, 1)
+    return np.array(negative_unids).reshape(-1, 1)
 
 
 class SAGERecsysModel(SAGERecsysModel):
-    loss_func = torch.nn.BCEWithLogitsLoss()
-
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
-            pred = self.predict(batch[:, 0], batch[:, 1]).reshape(-1)
-            label = batch[:, -1].float()
-        else:
-            pos_pred = self.predict(batch[:, 0], batch[:, 1])[:1].reshape(-1)
-            neg_pred = self.predict(batch[:, 0], batch[:, 2]).reshape(-1)
-            pred = torch.cat([pos_pred, neg_pred])
-            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
+        pos_pred = self.predict(batch[:, 0], batch[:, 1])
+        neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
-        loss = self.loss_func(pred, label)
+        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+
         return loss
 
     def update_graph_input(self, dataset):
@@ -134,16 +125,16 @@ class SAGESolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(SAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
-    def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+    def generate_candidates(self, dataset, b_nid):
+        pos_u_nids = dataset.test_pos_bnid_unid_map[b_nid]
+        neg_u_nids = np.array(dataset.neg_bnid_unid_map[b_nid])
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
+        neg_u_nids_indices = np.array(rd.sample(range(neg_u_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
 
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_u_nids, list(neg_u_nids[neg_u_nids_indices])
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
+    dataset_args['_cf_negative_sampling'] = _negative_sampling
     solver = SAGESolver(SAGERecsysModel, dataset_args, model_args, train_args)
     solver.run()

@@ -44,8 +44,8 @@ parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25,30,35,40,45', help='')
-parser.add_argument('--save_every_epoch', type=int, default=45, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
+parser.add_argument('--save_every_epoch', type=int, default=15, help='')
 
 args = parser.parse_args()
 
@@ -90,7 +90,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
+def _negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
     :param b_nid:
@@ -166,6 +166,6 @@ class MPAGATSolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
+    dataset_args['_cf_negative_sampling'] = _negative_sampling
     solver = MPAGATSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

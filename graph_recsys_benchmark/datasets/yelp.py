@@ -67,11 +67,11 @@ def drop_infrequent_concept_from_str(df, concept_name):
     concept_strs = [concept_str if concept_str != None else '' for concept_str in df[concept_name]]
     duplicated_concept = [concept_str.split(', ') for concept_str in concept_strs]
     duplicated_concept = list(itertools.chain.from_iterable(duplicated_concept))
-    writer_counter_dict = Counter(duplicated_concept)
-    del writer_counter_dict['']
-    del writer_counter_dict['N/A']
-    unique_concept = [k for k, v in writer_counter_dict.items() if
-                      v >= 0.1 * np.max(list(writer_counter_dict.values()))]
+    business_category_dict = Counter(duplicated_concept)
+    del business_category_dict['']
+    del business_category_dict['N/A']
+    unique_concept = [k for k, v in business_category_dict.items() if
+                      v >= 0.1 * np.max(list(business_category_dict.values()))]
     concept_strs = [
         ','.join([concept for concept in concept_str.split(', ') if concept in unique_concept])
         for concept_str in concept_strs

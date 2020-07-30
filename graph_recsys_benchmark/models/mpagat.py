@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from graph_recsys_benchmark.nn import MPAGATConv
+from torch_geometric.nn import GATConv
 from torch_geometric.nn.inits import glorot
 
 from .base import GraphRecsysModel
@@ -14,12 +14,12 @@ class MPAGATChannel(torch.nn.Module):
 
         self.gat_layers = torch.nn.ModuleList()
         if kwargs['num_steps'] >= 2:
-            self.gat_layers.append(MPAGATConv(kwargs['emb_dim'], kwargs['hidden_size'], heads=kwargs['num_heads'], dropout=kwargs['dropout']))
+            self.gat_layers.append(GATConv(kwargs['emb_dim'], kwargs['hidden_size'], heads=kwargs['num_heads'], dropout=kwargs['dropout']))
             for i in range(kwargs['num_steps'] - 2):
-                self.gat_layers.append(MPAGATConv(kwargs['hidden_size'] * kwargs['num_heads'], kwargs['hidden_size'], heads=kwargs['num_heads'], dropout=kwargs['dropout']))
-            self.gat_layers.append(MPAGATConv(kwargs['hidden_size'] * kwargs['num_heads'], kwargs['repr_dim'], heads=1, dropout=kwargs['dropout']))
+                self.gat_layers.append(GATConv(kwargs['hidden_size'] * kwargs['num_heads'], kwargs['hidden_size'], heads=kwargs['num_heads'], dropout=kwargs['dropout']))
+            self.gat_layers.append(GATConv(kwargs['hidden_size'] * kwargs['num_heads'], kwargs['repr_dim'], heads=1, dropout=kwargs['dropout']))
         else:
-            self.gat_layers.append(MPAGATConv(kwargs['emb_dim'], kwargs['repr_dim'], heads=1, dropout=kwargs['dropout']))
+            self.gat_layers.append(GATConv(kwargs['emb_dim'], kwargs['repr_dim'], heads=1, dropout=kwargs['dropout']))
 
         self.reset_parameters()
 
@@ -91,4 +91,12 @@ class MPAGATRecsysModel(GraphRecsysModel):
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
         x = F.normalize(x)
+        return x
+
+    def predict(self, unids, inids):
+        u_repr = self.cached_repr[unids]
+        i_repr = self.cached_repr[inids]
+        x = torch.cat([u_repr, i_repr], dim=-1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
         return x

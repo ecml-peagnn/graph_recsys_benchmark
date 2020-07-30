@@ -25,8 +25,8 @@ parser.add_argument('--num_feat_core', type=int, default=10, help='')
 
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--emb_dim', type=int, default=32, help='')
-parser.add_argument('--repr_dim', type=int, default=4, help='')
+parser.add_argument('--emb_dim', type=int, default=64, help='')
+parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2', help='')
 parser.add_argument('--aggr', type=str, default='att', help='')
@@ -38,7 +38,7 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=10, help='')
+parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=4, help='')
@@ -47,7 +47,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=20, help='')
+parser.add_argument('--save_every_epoch', type=int, default=25, help='')
 
 args = parser.parse_args()
 
@@ -74,8 +74,7 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
-    'aggr': args.aggr
+    'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')], 'aggr': args.aggr
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -93,7 +92,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
+def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
     :param u_nid:
@@ -151,7 +150,6 @@ class MPASAGERecsysModel(MPASAGERecsysModel):
             meta_path_edge_indicis_10
         ]
 
-        # meta_path_edge_index_list = [meta_path_edge_indicis_1, meta_path_edge_indicis_2]
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
 
@@ -169,6 +167,6 @@ class MPASAGESolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
+    dataset_args['_cf_negative_sampling'] = _negative_sampling
     solver = MPASAGESolver(MPASAGERecsysModel, dataset_args, model_args, train_args)
     solver.run()

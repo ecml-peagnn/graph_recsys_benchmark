@@ -99,8 +99,7 @@ def load_kgat_model(file_path, model, optim, device):
     else:
         print("No checkpoint_backup found at '{}'".format(file_path))
         epoch = 0
-        rec_metrics = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros(
-            (0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
+        rec_metrics = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
 
     return model, optim, epoch, rec_metrics
 

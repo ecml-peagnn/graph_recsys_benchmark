@@ -6,13 +6,13 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MPAGATRecsysModel
+from graph_recsys_benchmark.models import MPASAGERecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
-LOSS_TYPE = 'BCE'
-MODEL = 'MPAGAT'
+LOSS_TYPE = 'BPR'
+MODEL = 'MPASAGE'
 
 parser = argparse.ArgumentParser()
 
@@ -22,11 +22,10 @@ parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--emb_dim', type=int, default=62, help='')
-parser.add_argument('--num_heads', type=int, default=1, help='')
+parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
-parser.add_argument('--hidden_size', type=int, default=62, help='')
-parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2', help='')
+parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2,2', help='')
 parser.add_argument('--aggr', type=str, default='att', help='')
 
 # Train params
@@ -36,19 +35,18 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=20, help='')
-parser.add_argument('--epochs', type=int, default=30, help='')
-parser.add_argument('--batch_size', type=int, default=4096, help='')
+parser.add_argument('--runs', type=int, default=5, help='')
+parser.add_argument('--epochs', type=int, default=20, help='')
+parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=25, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
+parser.add_argument('--save_every_epoch', type=int, default=15, help='')
 
 args = parser.parse_args()
-
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
@@ -71,8 +69,7 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
-    'aggr': args.aggr
+    'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')], 'aggr': args.aggr
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -90,7 +87,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
+def _negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
     :param b_nid:
@@ -109,76 +106,52 @@ def _cf_negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_
     return np.array(negative_unids).reshape(-1, 1)
 
 
-class MPAGATRecsysModel(MPAGATRecsysModel):
-    loss_func = torch.nn.BCEWithLogitsLoss()
-
+class MPASAGERecsysModel(MPASAGERecsysModel):
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
-            pred = self.predict(batch[:, 0], batch[:, 1]).reshape(-1)
-            label = batch[:, -1].float()
-        else:
-            pos_pred = self.predict(batch[:, 0], batch[:, 1])[:1].reshape(-1)
-            neg_pred = self.predict(batch[:, 0], batch[:, 2]).reshape(-1)
-            pred = torch.cat([pos_pred, neg_pred])
-            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
-        loss = self.loss_func(pred, label)
+        pos_pred = self.predict(batch[:, 0], batch[:, 1])
+        neg_pred = self.predict(batch[:, 0], batch[:, 2])
+
+        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+
         return loss
 
     def update_graph_input(self, dataset):
         bus2user_edge_index = torch.from_numpy(dataset.edge_index_nps['bus2user']).long().to(train_args['device'])
-        names2user_edge_index = torch.from_numpy(dataset.edge_index_nps['names2user']).long().to(train_args['device'])
         reviewcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2user']).long().to(train_args['device'])
-        startdate2user_edge_index = torch.from_numpy(dataset.edge_index_nps['startdate2user']).long().to(train_args['device'])
         friendcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(train_args['device'])
-        # friends2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friends2user']).long().to(train_args['device'])
         fans2user_edge_index = torch.from_numpy(dataset.edge_index_nps['fans2user']).long().to(train_args['device'])
-        elite2user_edge_index = torch.from_numpy(dataset.edge_index_nps['elite2user']).long().to(train_args['device'])
         averagestars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['averagestars2user']).long().to(train_args['device'])
-        name2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['name2bus']).long().to(train_args['device'])
-        city2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['city2bus']).long().to(train_args['device'])
-        state2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['state2bus']).long().to(train_args['device'])
         stars2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2bus']).long().to(train_args['device'])
         reviewcount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2bus']).long().to(train_args['device'])
-        isopen2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['isopen2bus']).long().to(train_args['device'])
         attributes2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['attributes2bus']).long().to(train_args['device'])
         categories2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['categories2bus']).long().to(train_args['device'])
-        time2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['time2bus']).long().to(train_args['device'])
         checkincount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['checkincount2bus']).long().to(train_args['device'])
+
         meta_path_edge_indicis_1 = [bus2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
         meta_path_edge_indicis_2 = [torch.flip(bus2user_edge_index, dims=[0]), bus2user_edge_index]
-        meta_path_edge_indicis_3 = [names2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [startdate2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        # meta_path_edge_indicis_6 = [friends2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_8 = [elite2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_9 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_10 = [name2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_11 = [city2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_12 = [state2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_13 = [stars2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_14 = [reviewcount2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_15 = [isopen2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_16 = [attributes2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_17 = [categories2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_18 = [time2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_19 = [checkincount2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_3 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [stars2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_8 = [reviewcount2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_9 = [attributes2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_10 = [categories2bus_edge_index, bus2user_edge_index]
+        meta_path_edge_indicis_11 = [checkincount2bus_edge_index, bus2user_edge_index]
 
         meta_path_edge_index_list = [
             meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3, meta_path_edge_indicis_4,
             meta_path_edge_indicis_5, meta_path_edge_indicis_6, meta_path_edge_indicis_7, meta_path_edge_indicis_8,
-            meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11, meta_path_edge_indicis_12,
-            meta_path_edge_indicis_13, meta_path_edge_indicis_14, meta_path_edge_indicis_15, meta_path_edge_indicis_16,
-            meta_path_edge_indicis_17, meta_path_edge_indicis_18, meta_path_edge_indicis_19
+            meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11
         ]
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
 
-class MPAGATSolver(BaseSolver):
+class MPASAGESolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(MPASAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, b_nid):
         pos_u_nids = dataset.test_pos_bnid_unid_map[b_nid]
@@ -190,6 +163,6 @@ class MPAGATSolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
-    solver = MPAGATSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
+    dataset_args['_cf_negative_sampling'] = _negative_sampling
+    solver = MPASAGESolver(MPASAGERecsysModel, dataset_args, model_args, train_args)
     solver.run()
