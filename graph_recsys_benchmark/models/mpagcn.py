@@ -58,8 +58,6 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             kwargs_cpy['num_steps'] = num_steps
             self.mpagcn_channels.append(MPAGCNChannel(**kwargs_cpy))
 
-        # self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
-
         if self.aggr == 'concat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
         elif self.aggr == 'mean':
@@ -74,9 +72,12 @@ class MPAGCNRecsysModel(GraphRecsysModel):
     def reset_parameters(self):
         for module in self.mpagcn_channels:
             module.reset_parameters()
+        glorot(self.fc1.weight)
+        glorot(self.fc2.weight)
+        if self.aggr == 'att':
+            glorot(self.att.weight)
 
     def forward(self):
-        # xs = [module(self.x, self.meta_path_edge_index_list[idx]) for idx, module in enumerate(self.mpagcn_channels)]
         x = [module(self.x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpagcn_channels)]
         x = torch.cat(x, dim=-2)
         if self.aggr == 'concat':
@@ -89,12 +90,4 @@ class MPAGCNRecsysModel(GraphRecsysModel):
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
         x = F.normalize(x)
-        return x
-
-    def predict(self, unids, inids):
-        u_repr = self.cached_repr[unids]
-        i_repr = self.cached_repr[inids]
-        x = torch.cat([u_repr, i_repr], dim=-1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
         return x
