@@ -24,10 +24,12 @@ def get_folder_path(model, dataset, loss_type):
 
 
 def get_opt_class(opt):
-    if opt == 'adam':
+    if opt.lower() == 'adam':
         return torch.optim.Adam
-    elif opt == 'sgd':
+    elif opt.lower() == 'sgd':
         return torch.optim.SGD
+    elif opt.lower() == 'sparseadam':
+        return torch.optim.SparseAdam
     else:
         raise NotImplementedError('No such optims!')
 
@@ -56,6 +58,21 @@ def save_kgat_model(file_path, model, optim, epoch, rec_metrics, silent=False):
         'model_states': model_states,
         'optim_states': optim_states,
         'rec_metrics': rec_metrics
+    }
+
+    with open(file_path, mode='wb+') as f:
+        torch.save(states, f)
+    if not silent:
+        print("Saved checkpoint_backup '{}'".format(file_path))
+
+
+def save_random_walk_model(file_path, model, optim, epoch, silent=False):
+    model_states = {'model': model.state_dict()}
+    optim_states = {'optim': optim.state_dict()}
+    states = {
+        'epoch': epoch,
+        'model_states': model_states,
+        'optim_states': optim_states,
     }
 
     with open(file_path, mode='wb+') as f:
@@ -104,6 +121,24 @@ def load_kgat_model(file_path, model, optim, device):
     return model, optim, epoch, rec_metrics
 
 
+def load_random_walk_model(file_path, model, optim, device):
+    if os.path.isfile(file_path):
+        checkpoint = torch.load(file_path, map_location=device)
+        epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['model_states']['model'])
+        optim.load_state_dict(checkpoint['optim_states']['optim'])
+        for state in optim.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
+        print("Loaded random walk model checkpoint_backup '{}'".format(file_path))
+    else:
+        print("No random walk model checkpoint_backup found at '{}'".format(file_path))
+        epoch = 0
+
+    return model, optim, epoch
+
+
 def save_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
@@ -144,6 +179,24 @@ def load_global_logger(global_logger_filepath):
     return HRs_per_run, NDCGs_per_run, AUC_per_run, train_loss_per_run, eval_loss_per_run, HRs_per_run.shape[0]
 
 
+def load_random_walk_model(file_path, model, optim, device):
+    if os.path.isfile(file_path):
+        checkpoint = torch.load(file_path, map_location=device)
+        epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['model_states']['model'])
+        optim.load_state_dict(checkpoint['optim_states']['optim'])
+        for state in optim.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
+        print("Loaded random walk model checkpoint_backup '{}'".format(file_path))
+    else:
+        print("No random walk model checkpoint_backup found at '{}'".format(file_path))
+        epoch = 0
+
+    return model, optim, epoch
+
+
 def load_kgat_global_logger(global_logger_filepath):
     if os.path.isfile(global_logger_filepath):
         with open(global_logger_filepath, 'rb') as f:
@@ -159,6 +212,22 @@ def load_kgat_global_logger(global_logger_filepath):
     return HRs_per_run, NDCGs_per_run, AUC_per_run, \
            kg_train_loss_per_run, cf_train_loss_per_run, kg_eval_loss_per_run, cf_eval_loss_per_run, \
            HRs_per_run.shape[0]
+
+
+def load_random_walk_global_logger(global_logger_filepath):
+    if os.path.isfile(global_logger_filepath):
+        with open(global_logger_filepath, 'rb') as f:
+            HRs_per_run, NDCGs_per_run, AUC_per_run, \
+            random_walk_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run = pickle.load(f)
+    else:
+        print("No loggers found at '{}'".format(global_logger_filepath))
+        HRs_per_run, NDCGs_per_run, AUC_per_run, \
+        random_walk_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run = \
+            np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), \
+            np.zeros((0, 1)), np.zeros((0, 1))
+
+    return HRs_per_run, NDCGs_per_run, AUC_per_run, \
+           random_walk_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run, HRs_per_run.shape[0]
 
 
 def load_dataset(dataset_args):
