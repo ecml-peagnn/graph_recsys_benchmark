@@ -3,9 +3,9 @@ import torch
 from torch_geometric.nn.inits import glorot
 
 
-class Node2VecRecsysModel(GraphRecsysModel):
+class WalkBasedRecsysModel(GraphRecsysModel):
     def __init__(self, **kwargs):
-        super(Node2VecRecsysModel, self).__init__(**kwargs)
+        super(WalkBasedRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.random_walk_model = kwargs['random_walk_model']
