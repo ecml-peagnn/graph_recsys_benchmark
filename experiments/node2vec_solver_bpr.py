@@ -42,11 +42,10 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='4', help='')
+parser.add_argument('--gpu_idx', type=str, default='1', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--random_walk_epochs', type=int, default=30, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
-parser.add_argument('--random_walk_batch_size', type=int, default=64, help='')
+parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
 parser.add_argument('--batch_size', type=int, default=1028, help='')
 parser.add_argument('--num_workers', type=int, default=4, help='')
 parser.add_argument('--random_walk_opt', type=str, default='SparseAdam', help='')
@@ -81,14 +80,14 @@ dataset_args = {
 model_args = {
     'embedding_dim': args.emb_dim, 'model_type': MODEL_TYPE,
     'walk_length': args.walk_length, 'context_size': args.context_size,
-    'walks_per_node': args.walk_length, 'num_negative_samples': args.random_walk_num_negative_samples,
+    'walks_per_node': args.walks_per_node, 'num_negative_samples': args.random_walk_num_negative_samples,
     'sparse': args.sparse.lower() == 'true'
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
     'random_walk_opt': args.random_walk_opt, 'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs, 'random_walk_epochs': args.random_walk_epochs,
+    'runs': args.runs, 'epochs': args.epochs,
     'batch_size': args.batch_size, 'random_walk_batch_size': args.random_walk_batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device, 'random_walk_lr': args.random_walk_lr,
@@ -187,32 +186,39 @@ class Node2VecSolver(BaseSolver):
                     weights_path = os.path.join(self.train_args['weights_folder'], 'run_{}'.format(str(run)))
                     if not os.path.exists(weights_path):
                         os.makedirs(weights_path, exist_ok=True)
-                    weights_file = os.path.join(weights_path, 'random_walk_latest.pkl')
-                    random_walk_model, random_walk_optimizer, random_walk_last_epoch = \
-                        load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
-
-                    # Train random walk model
-                    start_epoch = random_walk_last_epoch + 1
-                    if start_epoch <= self.train_args['random_walk_epochs']:
+                    weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
+                    if os.path.isfile(weights_file):
+                        # Load random walk model
+                        random_walk_model, random_walk_optimizer = \
+                            load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
+                        print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
+                    else:
+                        print("Train new random walk model, since no random walk model checkpoint_backup found at '{}'".format(weights_file))
+                        # Train random walk model
                         random_walk_model.train()
-                        for random_walk_epoch in range(start_epoch, self.train_args['random_walk_epochs']):
-                            random_walk_loss = 0
-                            pbar = tqdm.tqdm(loader, total=len(loader))
-                            for random_walk_batch_idx, (pos_rw, neg_rw) in enumerate(pbar):
-                                random_walk_optimizer.zero_grad()
-                                loss = random_walk_model.loss(pos_rw.to(self.train_args['device']), neg_rw.to(self.train_args['device']))
-                                loss.backward()
-                                random_walk_optimizer.step()
-                                random_walk_loss += loss.item()
-                                pbar.set_description('Random walk epoch {}, random walk loss {:.4f}'.format(random_walk_epoch, random_walk_loss / (random_walk_batch_idx + 1)))
-                            print('walk loss: {:.4f}'.format(random_walk_loss / len(loader)))
+                        pbar = tqdm.tqdm(loader, total=len(loader))
+                        random_walk_loss = 0
+                        for random_walk_batch_idx, (pos_rw, neg_rw) in enumerate(pbar):
+                            random_walk_optimizer.zero_grad()
+                            loss = random_walk_model.loss(pos_rw.to(self.train_args['device']), neg_rw.to(self.train_args['device']))
+                            random_walk_loss += loss.detach().cpu().item()
+                            loss.backward()
+                            random_walk_optimizer.step()
+                            pbar.set_description('Random walk loss {:.4f}'.format(random_walk_loss / (random_walk_batch_idx + 1)))
+                        print('walk loss: {:.4f}'.format(random_walk_loss / len(loader)))
 
-                        weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(random_walk_epoch))
-                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_epoch + 1)
+                        weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
+                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer)
 
                     # Init the RecSys model
-                    model_args['random_walk_model'] = random_walk_model
-                    model = self.model_class(**model_args).to(self.train_args['device'])
+                    with torch.no_grad():
+                        random_walk_model.eval()
+                        self.model_args['embedding'] = torch.tensor(random_walk_model.embedding.weight, requires_grad=False)
+                    # Do cleaning
+                    del self.model_args['edge_index']
+                    del random_walk_model
+                    torch.cuda.empty_cache()
+                    model = self.model_class(**self.model_args).to(self.train_args['device'])
 
                     opt_class = get_opt_class(self.train_args['opt'])
                     optimizer = opt_class(

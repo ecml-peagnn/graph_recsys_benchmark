@@ -8,11 +8,7 @@ class WalkBasedRecsysModel(GraphRecsysModel):
         super(WalkBasedRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
-        self.random_walk_model = kwargs['random_walk_model']
-
-        with torch.no_grad():
-            self.random_walk_model.eval()
-            self.cached_repr = self.random_walk_model()
+        self.cached_repr = kwargs['embedding']
 
         self.fc1 = torch.nn.Linear(2 * kwargs['embedding_dim'], kwargs['embedding_dim'])
         self.fc2 = torch.nn.Linear(kwargs['embedding_dim'], 1)

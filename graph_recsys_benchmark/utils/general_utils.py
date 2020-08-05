@@ -66,11 +66,10 @@ def save_kgat_model(file_path, model, optim, epoch, rec_metrics, silent=False):
         print("Saved checkpoint_backup '{}'".format(file_path))
 
 
-def save_random_walk_model(file_path, model, optim, epoch, silent=False):
+def save_random_walk_model(file_path, model, optim, silent=False):
     model_states = {'model': model.state_dict()}
     optim_states = {'optim': optim.state_dict()}
     states = {
-        'epoch': epoch,
         'model_states': model_states,
         'optim_states': optim_states,
     }
@@ -120,25 +119,6 @@ def load_kgat_model(file_path, model, optim, device):
 
     return model, optim, epoch, rec_metrics
 
-
-def load_random_walk_model(file_path, model, optim, device):
-    if os.path.isfile(file_path):
-        checkpoint = torch.load(file_path, map_location=device)
-        epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['model_states']['model'])
-        optim.load_state_dict(checkpoint['optim_states']['optim'])
-        for state in optim.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(device)
-        print("Loaded random walk model checkpoint_backup '{}'".format(file_path))
-    else:
-        print("No random walk model checkpoint_backup found at '{}'".format(file_path))
-        epoch = 0
-
-    return model, optim, epoch
-
-
 def save_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
@@ -180,21 +160,14 @@ def load_global_logger(global_logger_filepath):
 
 
 def load_random_walk_model(file_path, model, optim, device):
-    if os.path.isfile(file_path):
-        checkpoint = torch.load(file_path, map_location=device)
-        epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['model_states']['model'])
-        optim.load_state_dict(checkpoint['optim_states']['optim'])
-        for state in optim.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(device)
-        print("Loaded random walk model checkpoint_backup '{}'".format(file_path))
-    else:
-        print("No random walk model checkpoint_backup found at '{}'".format(file_path))
-        epoch = 0
-
-    return model, optim, epoch
+    checkpoint = torch.load(file_path, map_location=device)
+    model.load_state_dict(checkpoint['model_states']['model'])
+    optim.load_state_dict(checkpoint['optim_states']['optim'])
+    for state in optim.state.values():
+        for k, v in state.items():
+            if isinstance(v, torch.Tensor):
+                state[k] = v.to(device)
+    return model, optim
 
 
 def load_kgat_global_logger(global_logger_filepath):
