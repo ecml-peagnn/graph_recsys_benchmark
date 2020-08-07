@@ -28,26 +28,27 @@ class GATRecsysModel(GraphRecsysModel):
         )
         self.conv2 = GATConv(
             kwargs['hidden_size'] * kwargs['num_heads'],
-            kwargs['repr_dim'],
+            kwargs['hidden_size'] // 2,
             heads=1,
             dropout=kwargs['dropout']
         )
-
-        self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
-        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
+        self.conv3 = GATConv(
+            kwargs['hidden_size'] // 2 * kwargs['num_heads'],
+            kwargs['hidden_size'] // 4,
+            heads=1,
+            dropout=kwargs['dropout']
+        )
 
     def reset_parameters(self):
         if not self.if_use_features:
             glorot(self.x)
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
-        glorot(self.fc1.weight)
-        glorot(self.fc2.weight)
+        self.conv3.reset_parameters()
 
     def forward(self):
         x, edge_index = self.x, self.edge_index
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = F.elu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.conv2(x, edge_index)
-        return x
+        x_1 = F.normalize(self.conv1(x, edge_index), p=2, dim=-1)
+        x_2 = F.normalize(self.conv2(x_1, edge_index), p=2, dim=-1)
+        x_3 = F.normalize(self.conv3(x_2, edge_index), p=2, dim=-1)
+        return torch.cat([x_1, x_2, x_3], dim=-1)
