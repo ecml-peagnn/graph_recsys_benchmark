@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv
+from torch_geometric.nn.inits import glorot
 
 from .base import GraphRecsysModel
 
@@ -44,7 +45,7 @@ class MPASAGERecsysModel(GraphRecsysModel):
     def _init(self, **kwargs):
         self.meta_path_steps = kwargs['meta_path_steps']
         self.if_use_features = kwargs['if_use_features']
-        self.aggr = kwargs['aggr']
+        self.channel_aggr = kwargs['channel_aggr']
 
         if not self.if_use_features:
             self.x = torch.nn.Embedding(kwargs['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
@@ -58,11 +59,11 @@ class MPASAGERecsysModel(GraphRecsysModel):
             kwargs_cpy['num_steps'] = num_steps
             self.mpasage_channels.append(MPASAGEChannel(**kwargs_cpy))
 
-        if self.aggr == 'concat':
+        if self.channel_aggr == 'concat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
-        elif self.aggr == 'mean':
+        elif self.channel_aggr == 'mean':
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
-        elif self.aggr == 'att':
+        elif self.channel_aggr == 'att':
             self.att = torch.nn.Linear(kwargs['repr_dim'], 1)
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
@@ -74,17 +75,17 @@ class MPASAGERecsysModel(GraphRecsysModel):
             module.reset_parameters()
         glorot(self.fc1.weight)
         glorot(self.fc2.weight)
-        if self.aggr == 'att':
+        if self.channel_aggr == 'att':
             glorot(self.att.weight)
 
     def forward(self):
         x = [module(self.x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpasage_channels)]
         x = torch.cat(x, dim=-2)
-        if self.aggr == 'concat':
+        if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)
-        elif self.aggr == 'mean':
+        elif self.channel_aggr == 'mean':
             x = x.mean(dim=-2)
-        elif self.aggr == 'att':
+        elif self.channel_aggr == 'att':
             atts = F.softmax(self.att(x).squeeze(-1), dim=-1).unsqueeze(-1)
             x = torch.sum(x * atts, dim=-2)
         else:

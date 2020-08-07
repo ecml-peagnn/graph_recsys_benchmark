@@ -200,6 +200,7 @@ class BaseSolver(object):
                         elif self.dataset_args['dataset'] == "Yelp":
                             self.model_args['num_users'] = dataset.num_bus
                             self.model_args['num_items'] = dataset.num_users
+
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
 
                     opt_class = get_opt_class(self.train_args['opt'])
@@ -310,6 +311,12 @@ class BaseSolver(object):
                                     rec_metrics=(
                                     HRs_per_epoch_np, NDCGs_per_epoch_np, AUC_per_epoch_np, train_loss_per_epoch_np, eval_loss_per_epoch_np)
                                 )
+                            print(
+                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                                'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                    run, epoch, HRs[5], NDCGs[5], AUC[0], train_loss, eval_loss[0]
+                                )
+                            )
                             logger_file.write(
                                 'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(

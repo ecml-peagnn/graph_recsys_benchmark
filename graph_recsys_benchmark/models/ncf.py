@@ -4,9 +4,9 @@ from torch import Tensor
 from .base import MFRecsysModel
 
 
-class NMFRecsysModel(MFRecsysModel):
+class NCFRecsysModel(MFRecsysModel):
     def __init__(self, **kwargs):
-        super(NMFRecsysModel, self).__init__(**kwargs)
+        super(NCFRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.dropout = kwargs['dropout']

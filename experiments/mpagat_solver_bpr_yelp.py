@@ -27,7 +27,7 @@ parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2,2', help='')
-parser.add_argument('--aggr', type=str, default='att', help='')
+parser.add_argument('--channel_aggr', type=str, default='att', help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -72,7 +72,7 @@ model_args = {
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
     'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
-    'aggr': args.aggr
+    'channel_aggr': args.aggr
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',

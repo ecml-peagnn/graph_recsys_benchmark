@@ -6,26 +6,32 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import SAGERecsysModel
+from graph_recsys_benchmark.models import MPAGCNRecsysModelV2
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'SAGE'
+MODEL = 'MPAGATV2'
 
 parser = argparse.ArgumentParser()
+
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='1m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
+
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
-parser.add_argument('--emb_dim', type=int, default=64, help='')
-parser.add_argument('--repr_dim', type=int, default=16, help='')
-parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--emb_dim', type=int, default=16, help='')
+parser.add_argument('--num_heads', type=int, default=1, help='')
+parser.add_argument('--repr_dim', type=int, default=8, help='')
+parser.add_argument('--hidden_size', type=int, default=16, help='')
+parser.add_argument('--activation', type=str, default='relu', help='')
+parser.add_argument('--channel_aggr', type=str, default='att', help='')
+
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
@@ -42,7 +48,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=20, help='')
+parser.add_argument('--save_every_epoch', type=int, default=25, help='')
 
 args = parser.parse_args()
 
@@ -68,7 +74,9 @@ model_args = {
     'model_type': MODEL_TYPE,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'repr_dim': args.repr_dim, 'dropout': args.dropout
+    'repr_dim': args.repr_dim, 'dropout': args.dropout,
+    'num_heads': args.num_heads, 'activation': args.activation,
+    'channel_aggr': args.channel_aggr
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -105,7 +113,7 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class SAGERecsysModel(SAGERecsysModel):
+class MPAGATRecsysModel(MPAGCNRecsysModelV2):
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
@@ -117,15 +125,58 @@ class SAGERecsysModel(SAGERecsysModel):
         return loss
 
     def update_graph_input(self, dataset):
-        edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
-        edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
-        edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
-        return self.x, edge_index
+        user2item = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
+        year2item = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(train_args['device'])
+        actor2item = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(train_args['device'])
+        director2item = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
+        writer2item = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
+        genre2item = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
+        age2user = torch.from_numpy(dataset.edge_index_nps['age2user']).long().to(train_args['device'])
+        gender2user = torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(train_args['device'])
+        occ2user = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
+
+        edge_index_dict = {
+            ('user', 'has watched', 'movie'): user2item,
+            ('movie', 'has been watched', 'user'): torch.flip(user2item, dims=[0]),
+            ('year', 'is the publish year of', 'movie'): year2item,
+            # ('movie', 'has been published in the year', 'year'): torch.flip(year2item, dims=[0]),
+            ('actor', 'acts', 'movie'): actor2item,
+            # ('movie', 'has been acted by', 'actor'): torch.flip(actor2item, dims=[0]),
+            ('director', 'directs', 'movie'): director2item,
+            # ('movie', 'has been directed by', 'director'): torch.flip(director2item, dims=[0]),
+            ('writer', 'writes', 'movie'): writer2item,
+            # ('movie', 'has been written by', 'writer'): torch.flip(writer2item, dims=[0]),
+            ('genre', 'as the genre of', 'movie'): genre2item,
+            # ('movie', 'has the genre of', 'genre'): torch.flip(genre2item, dims=[0]),
+            ('gender', 'as the gender of', 'user'): gender2user,
+            # ('user', 'has the gender of', 'gender'): torch.flip(gender2user, dims=[0]),
+            ('age', 'as the age of', 'user'): age2user,
+            # ('user', 'has the age of', 'age'): torch.flip(age2user, dims=[0]),
+            ('occ', 'as the occ of', 'user'): occ2user,
+            # ('user', 'has the occ of', 'occ'): torch.flip(occ2user, dims=[0]),
+        }
+        metapaths =[
+            # 2 step metapaths
+            [('user', 'has watched', 'movie'), ('movie', 'has been watched', 'user')],
+            [('genre', 'as the genre of', 'movie'), ('movie', 'has been watched', 'user')],
+            [('director', 'directs', 'movie'), ('movie', 'has been watched', 'user')],
+            [('actor', 'acts', 'movie'), ('movie', 'has been watched', 'user')],
+            [('year', 'is the publish year of', 'movie'), ('movie', 'has been watched', 'user')],
+            [('genre', 'as the genre of', 'movie'), ('movie', 'has been watched', 'user')],
+
+            [('movie', 'has been watched', 'user'), ('user', 'has watched', 'movie')],
+            [('age', 'as the age of', 'user'), ('user', 'has watched', 'movie')],
+            [('gender', 'as the gender of', 'user'), ('user', 'has watched', 'movie')],
+            [('occ', 'as the occ of', 'user'), ('user', 'has watched', 'movie')],
+
+        ]
+
+        return edge_index_dict, metapaths
 
 
-class SAGESolver(BaseSolver):
+class MPAGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(SAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -138,5 +189,5 @@ class SAGESolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = SAGESolver(SAGERecsysModel, dataset_args, model_args, train_args)
+    solver = MPAGATSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

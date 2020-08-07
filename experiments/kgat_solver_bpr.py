@@ -244,6 +244,8 @@ class KGATSolver(BaseSolver):
                     if start_epoch <= self.train_args['epochs']:
                         # Start training model
                         for epoch in range(start_epoch, self.train_args['epochs'] + 1):
+
+                            # Train KG part
                             model.train()
                             kg_loss_per_batch = []
                             dataset.kg_negative_sampling()
@@ -268,6 +270,7 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, kg train loss: {:.4f}'.format(run, epoch, kg_train_loss)
                                 )
 
+                            # Evaluate KG train
                             model.eval()
                             kg_loss_per_batch = []
                             dataset.kg_negative_sampling()
@@ -290,6 +293,7 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, kg eval loss: {:.4f}'.format(run, epoch, kg_eval_loss)
                                 )
 
+                            # Train CF part
                             model.train()
                             cf_loss_per_batch = []
                             dataset.cf_negative_sampling()
@@ -349,10 +353,19 @@ class KGATSolver(BaseSolver):
                                     kg_eval_loss_per_epoch_np, cf_eval_loss_per_epoch_np
                                     )
                                 )
+                            print(
+                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                                'kg train loss: {:.4f}, cf train loss: {:.4f}, kg eval loss: {:.4f}, '
+                                'cf eval loss: {:.4f} \n'.format(
+                                    run, epoch, HRs[5], NDCGs[5], AUC[0],
+                                    kg_train_loss, cf_train_loss,
+                                    kg_eval_loss, cf_eval_loss[0]
+                                )
+                            )
                             logger_file.write(
-                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                                kg train loss: {:.4f}, cf train loss: {:.4f}, \
-                                kg eval loss: {:.4f}, cf eval loss: {:.4f} \n'.format(
+                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                                'kg train loss: {:.4f}, cf train loss: {:.4f}, kg eval loss: {:.4f}, '
+                                'cf eval loss: {:.4f} \n'.format(
                                     run, epoch, HRs[5], NDCGs[5], AUC[0],
                                     kg_train_loss, cf_train_loss,
                                     kg_eval_loss, cf_eval_loss[0]
@@ -378,9 +391,9 @@ class KGATSolver(BaseSolver):
                         kg_eval_loss_per_run_np, cf_eval_loss_per_run_np
                     )
                     print(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                        kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f}\
-                        \n'.format(
+                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f},'
+                        'kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, '
+                        'cf_eval_loss: {:.4f}\n'.format(
                             run, t_end - t_start,
                             HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5], AUC_per_epoch_np[-1][0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
@@ -388,9 +401,9 @@ class KGATSolver(BaseSolver):
                         )
                     )
                     logger_file.write(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                        kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f}\
-                        \n'.format(
+                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f},'
+                        'kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, '
+                        'cf_eval_loss: {:.4f}\n'.format(
                             run, t_end - t_start,
                             HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5], AUC_per_epoch_np[-1][0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
@@ -398,18 +411,18 @@ class KGATSolver(BaseSolver):
                         )
                     )
             print(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                kg train loss: {:.4f}, cf train loss: {:.4f}, \
-                kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
+                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                'kg train loss: {:.4f}, cf train loss: {:.4f}, '
+                'kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
                     HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0],
                     kg_train_loss_per_run_np.mean(axis=0)[0], cf_train_loss_per_run_np.mean(axis=0)[0],
                     kg_eval_loss_per_run_np.mean(axis=0)[0], cf_eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
             logger_file.write(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                kg train loss: {:.4f}, cf train loss: {:.4f}, \
-                kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
+                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                'kg train loss: {:.4f}, cf train loss: {:.4f}, '
+                'kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
                     HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0],
                     kg_train_loss_per_run_np.mean(axis=0)[0], cf_train_loss_per_run_np.mean(axis=0)[0],
                     kg_eval_loss_per_run_np.mean(axis=0)[0], cf_eval_loss_per_run_np.mean(axis=0)[0]
