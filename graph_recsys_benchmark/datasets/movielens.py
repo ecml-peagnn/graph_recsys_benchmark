@@ -11,7 +11,7 @@ import pickle
 
 from .dataset import Dataset
 from torch_geometric.data import download_url, extract_zip
-from ..parser import parse_ml
+from ..parser import parse_ml1m, parse_ml25m
 
 
 def save_df(df, path):
@@ -137,46 +137,61 @@ def generate_graph_data(
     num_node_types = 10
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
+    types = ['user', 'movie', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
+    num_nodes_dict = {'user': num_users, 'movie': num_items, 'gender': num_genders, 'occupation': num_occupations,
+                      'age': num_ages, 'genre': num_genres, 'year': num_years, 'director': num_directors,
+                      'actor': num_actors, 'writer': num_writers}
 
     #########################  Define entities to node id map  #########################
+    type_accs = {}
     nid2e_dict = {}
     acc = 0
+    type_accs['user'] = acc
     uid2nid = {uid: i + acc for i, uid in enumerate(users['uid'])}
     for i, uid in enumerate(users['uid']):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_users
+    type_accs['movie'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(items['iid'])}
     for i, iid in enumerate(items['iid']):
         nid2e_dict[i + acc] = ('iid', iid)
     acc += num_items
+    type_accs['gender'] = acc
     gender2nid = {gender: i + acc for i, gender in enumerate(unique_genders)}
     for i, gender in enumerate(unique_genders):
         nid2e_dict[i + acc] = ('gender', gender)
     acc += num_genders
+    type_accs['occupation'] = acc
     occ2nid = {occupation: i + acc for i, occupation in enumerate(unique_occupations)}
     for i, occ in enumerate(unique_occupations):
         nid2e_dict[i + acc] = ('occ', occ)
     acc += num_occupations
+    type_accs['age'] = acc
     age2nid = {age: i + acc for i, age in enumerate(unique_ages)}
     for i, age in enumerate(unique_ages):
         nid2e_dict[i + acc] = ('age', age)
     acc += num_ages
+    type_accs['genre'] = acc
     genre2nid = {genre: i + acc for i, genre in enumerate(unique_genres)}
     for i, genre in enumerate(unique_genres):
         nid2e_dict[i + acc] = ('genre', genre)
     acc += num_genres
+    type_accs['year'] = acc
     year2nid = {year: i + acc for i, year in enumerate(unique_years)}
     for i, year in enumerate(unique_years):
         nid2e_dict[i + acc] = ('year', year)
     acc += num_years
+    type_accs['director'] = acc
     director2nid = {director: i + acc for i, director in enumerate(unique_directors)}
     for i, director in enumerate(unique_directors):
         nid2e_dict[i + acc] = ('director', director)
     acc += num_directors
+    type_accs['actor'] = acc
     actor2nid = {actor: i + acc for i, actor in enumerate(unique_actors)}
     for i, actor in enumerate(unique_actors):
         nid2e_dict[i + acc] = ('actor', actor)
     acc += num_actors
+    type_accs['writer'] = acc
     writer2nid = {writer: i + acc for i, writer in enumerate(unique_writers)}
     for i, writer in enumerate(unique_writers):
         nid2e_dict[i + acc] = ('writer', writer)
@@ -291,6 +306,11 @@ def generate_graph_data(
         item_nid_occs[e2nid_dict['iid'][iid]] = ratings[ratings.iid == iid].iloc[0]['movie_count']
     dataset_property_dict['item_nid_occs'] = item_nid_occs
 
+    # New functionality for pytorch geometric like dataset
+    dataset_property_dict['types'] = types
+    dataset_property_dict['num_nodes_dict'] = num_nodes_dict
+    dataset_property_dict['type_accs'] = type_accs
+
     return dataset_property_dict
 
 
@@ -306,12 +326,11 @@ class MovieLens(Dataset):
                  **kwargs):
 
         self.name = name.lower()
-        assert self.name in ['1m']
+        assert self.name in ['1m', '25m']
         self.num_core = kwargs['num_core']
         self.num_feat_core = kwargs['num_feat_core']
         self.seed = kwargs['seed']
         self.num_negative_samples = kwargs['num_negative_samples']
-        self.suffix = self.build_suffix()
         self.cf_loss_type = kwargs['cf_loss_type']
         self._cf_negative_sampling = kwargs['_cf_negative_sampling']
         self.kg_loss_type = kwargs.get('kg_loss_type', None)
@@ -331,35 +350,44 @@ class MovieLens(Dataset):
 
     @property
     def processed_file_names(self):
-        return ['dataset{}.pkl'.format(self.suffix)]
+        return ['ml_{}_{}.pkl'.format(self.name, self.build_suffix())]
 
     def download(self):
         path = download_url(self.url + self.raw_file_names, self.raw_dir)
         extract_zip(path, self.raw_dir)
 
     def process(self):
-        unzip_raw_dir = join(self.raw_dir, 'ml-{}'.format(self.name))
-
-        # parser files
-        if isfile(join(self.processed_dir, 'movies.csv')) and isfile(join(self.processed_dir, 'ratings.csv')) and isfile(join(self.processed_dir, 'users.csv')):
+        if self.name == '1m' and isfile(join(self.processed_dir, 'movies.csv')) and isfile(
+                    join(self.processed_dir, 'ratings.csv')) and isfile(join(self.processed_dir, 'users.csv')):
             print('Read data frame!')
             users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
-            items = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';')
+            movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
             ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
-            users = users.fillna('')
-            items = items.fillna('')
-            ratings = ratings.fillna('')
-        else:
-            print('Data frame not found in {}! Read from raw data!'.format(self.processed_dir))
-            users, items, ratings = parse_ml(unzip_raw_dir)
+        elif self.name == '25m' and isfile(join(self.processed_dir, 'movies.csv')) and \
+                isfile(join(self.processed_dir, 'ratings.csv')) and isfile(join(self.processed_dir, 'users.csv')) and \
+                isfile(join(self.processed_dir, 'tags.csv')) and isfile(join(self.processed_dir, 'genome_scores.csv')) \
+                and isfile(join(self.processed_dir, 'genome_tags.csv')):
+            print('Read data frame!')
+            movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';')
+            ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
+            tags = pd.read_csv(join(self.processed_dir, 'tags.csv'), sep=';')
+            genome_tags = pd.read_csv(join(self.processed_dir, 'genome_tags.csv'), sep=';')
+            genome_scores = pd.read_csv(join(self.processed_dir, 'genome_scores.csv'), sep=';')
 
-            print('Preprocessing...')
-            # remove duplications
-            users = users.drop_duplicates()
-            items = items.drop_duplicates()
+        else:
+            print('Data frame not found in {}! Read from raw data and preprocessing!'.format(self.processed_dir))
+            # Read the data from csv and remove duplicates
+            unzip_raw_dir = join(self.raw_dir, 'ml-{}'.format(self.name))
+            if self.name == '1m':
+                users, movies, ratings = parse_ml1m(unzip_raw_dir)
+                users = users.drop_duplicates()
+            elif self.name == '25m':
+                movies, ratings, genome_scores, genome_tags, tags = parse_ml25m(unzip_raw_dir)
+                genome_scores = genome_scores.drop_duplicates()
+                genome_tags = genome_tags.drop_duplicates()
+                tags = tags.drop_duplicates()
+            movies = movies.drop_duplicates()
             ratings = ratings.drop_duplicates()
-            if users.shape[0] != users.uid.unique().shape[0] or items.shape[0] != items.iid.unique().shape[0]:
-                raise ValueError('Duplicates in dfs.')
 
             # Compute the movie and user counts
             item_count = ratings['iid'].value_counts()
@@ -375,15 +403,15 @@ class MovieLens(Dataset):
 
             # Sync the user and item dataframe
             users = users[users.uid.isin(ratings['uid'].unique())]
-            items = items[items.iid.isin(ratings['iid'].unique())]
-            ratings = ratings[ratings.iid.isin(items['iid'].unique())]
+            movies = movies[movies.iid.isin(ratings['iid'].unique())]
+            ratings = ratings[ratings.iid.isin(movies['iid'].unique())]
             ratings = ratings[ratings.uid.isin(users['uid'].unique())]
 
             # Reindex the uid and iid in case of missing values
-            users, items, ratings = reindex_df(users, items, ratings)
+            users, movies, ratings = reindex_df(users, movies, ratings)
 
             # Discretized year
-            years = items.year.to_numpy()
+            years = movies.year.to_numpy()
             min_year = min(years)
             max_year = max(years)
             num_years = (max_year - min_year) // 10
@@ -393,20 +421,33 @@ class MovieLens(Dataset):
                     years[(discretized_year <= years) & (years < discretized_years[i + 1])] = str(discretized_year)
                 else:
                     years[discretized_year <= years] = str(discretized_year)
-            items['year'] = years
+            movies['year'] = years
 
             # Drop the infrequent writer, actor and directors
-            items = drop_infrequent_concept_from_str(items, 'writers', self.num_feat_core)
-            items = drop_infrequent_concept_from_str(items, 'directors', self.num_feat_core)
-            items = drop_infrequent_concept_from_str(items, 'actors', self.num_feat_core)
+            movies = drop_infrequent_concept_from_str(movies, 'writers', self.num_feat_core)
+            movies = drop_infrequent_concept_from_str(movies, 'directors', self.num_feat_core)
+            movies = drop_infrequent_concept_from_str(movies, 'actors', self.num_feat_core)
+
+            # Drop the infrequent genome tags and tags if ml-25m is used
+            if self.name == '25m':
+                tag_count = tags['tag'].value_counts()
+                tag_count.name = 'tag_count'
+                tags = tags[tags.join(tag_count, on='tag').tag_count > self.num_core]
+
+                genome_scores = genome_scores[genome_scores.relevance > 0.5]
+                genome_tag_count = genome_scores['tid'].value_counts()
+                genome_tag_count.name = 'genome_tag_count'
+                genome_scores = genome_scores[genome_scores.join(genome_tag_count, 'tid').genome_tag_count > self.num_core]
+
+                genome_tags = pd.read_csv(join(self.processed_dir, 'genome-tags.csv'), sep=';')
 
             print('Preprocessing done.')
 
             save_df(users, join(self.processed_dir, 'users.csv'))
-            save_df(items, join(self.processed_dir, 'movies.csv'))
+            save_df(movies, join(self.processed_dir, 'movies.csv'))
             save_df(ratings, join(self.processed_dir, 'ratings.csv'))
 
-        dataset_property_dict = generate_graph_data(users, items, ratings)
+        dataset_property_dict = generate_graph_data(users, movies, ratings)
 
         with open(self.processed_paths[0], 'wb') as f:
             pickle.dump(dataset_property_dict, f)
@@ -421,7 +462,7 @@ class MovieLens(Dataset):
             suffix = ''
         else:
             suffix = '_'.join(suffixes)
-        return '_' + suffix
+        return suffix
 
     def kg_negative_sampling(self):
         print('KG negative sampling...')

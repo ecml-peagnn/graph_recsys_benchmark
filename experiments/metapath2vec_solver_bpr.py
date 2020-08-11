@@ -8,7 +8,7 @@ import time
 import inspect
 from GPUtil import showUtilization as gpu_usage
 
-from torch_geometric.nn.models import MetaPath2Vec
+from graph_recsys_benchmark.models import MetaPath2Vec
 from torch.utils.data import DataLoader
 
 from graph_recsys_benchmark.models import WalkBasedRecsysModel
@@ -42,7 +42,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='2', help='')
+parser.add_argument('--gpu_idx', type=str, default='4', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
@@ -169,25 +169,29 @@ class MetaPath2VecSolver(BaseSolver):
 
                     # Create random walk model
                     edge_index_dict = {
-                        ('genre', 'as the genre of', 'item'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                        ('item', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                        ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                        ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
                         ('user', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
                         ('gender', 'as the gender of', 'user'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
-                        ('user', 'has watched', 'item'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                        ('item', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                        ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                        ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                     }
                     metapath = [
-                        ('genre', 'as the genre of', 'item'),
-                        ('item', 'has been watched by', 'user'),
+                        ('genre', 'as the genre of', 'movie'),
+                        ('movie', 'has been watched by', 'user'),
                         ('user', 'has the gender', 'gender'),
                         ('gender', 'as the gender of', 'user'),
-                        ('user', 'has watched', 'item'),
-                        ('item', 'has the genre', 'genre')
+                        ('user', 'has watched', 'movie'),
+                        ('movie', 'has the genre', 'genre')
                     ]
                     self.model_args['metapath'] = metapath
                     self.model_args['edge_index_dict'] = edge_index_dict
 
                     random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(MetaPath2Vec.__init__).parameters}
+                    random_walk_model_args['types'] = dataset.types
+                    random_walk_model_args['num_nodes_dict'] = dataset.num_nodes_dict
+                    random_walk_model_args['type_accs'] = dataset.type_accs
+
                     random_walk_model = MetaPath2Vec(**random_walk_model_args).to(self.train_args['device'])
                     opt_class = get_opt_class(self.train_args['random_walk_opt'])
                     random_walk_optimizer = opt_class(
