@@ -161,50 +161,68 @@ def generate_graph_data(
     num_node_types = 11
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
+    types = ['business', 'user', 'stars', 'busreviewcount', 'attribute', 'category', 'checkincount',
+             'userreviewcount', 'friendcount', 'fans', 'averagestars']
+    num_nodes_dict = {'business': num_bus, 'user': num_users, 'stars': num_bus_stars, 'busreviewcount': num_bus_reviewcount,
+                      'attribute': num_bus_attributes, 'category': num_bus_categories, 'checkincount': num_bus_checkincount,
+                      'userreviewcount': num_user_reviewcount, 'friendcount': num_user_friendcount,
+                      'fans': num_user_fans, 'averagestars': num_user_averagestars}
 
     #########################  Define entities to node id map  #########################
+    type_accs = {}
     nid2e_dict = {}
     acc = 0
+    type_accs['business'] = acc
     bid2nid = {bid: i + acc for i, bid in enumerate(business['business_id'])}
     for i, bid in enumerate(business['business_id']):
         nid2e_dict[i + acc] = ('bid', bid)
     acc += num_bus
+    type_accs['user'] = acc
     uid2nid = {uid: i + acc for i, uid in enumerate(user['user_id'])}
     for i, uid in enumerate(user['user_id']):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_users
+    type_accs['stars'] = acc
     busstars2nid = {busstars: i + acc for i, busstars in enumerate(unique_bus_stars)}
     for i, busstars in enumerate(unique_bus_stars):
         nid2e_dict[i + acc] = ('busstars', busstars)
     acc += num_bus_stars
+    type_accs['busreviewcount'] = acc
     busreviewcount2nid = {busreviewcount: i + acc for i, busreviewcount in enumerate(unique_bus_reviewcount)}
     for i, busreviewcount in enumerate(unique_bus_reviewcount):
         nid2e_dict[i + acc] = ('busreviewcount', busreviewcount)
     acc += num_bus_reviewcount
+    type_accs['attribute'] = acc
     busattributes2nid = {busattributes: i + acc for i, busattributes in enumerate(unique_bus_attributes)}
     for i, busattributes in enumerate(unique_bus_attributes):
         nid2e_dict[i + acc] = ('busattributes', busattributes)
     acc += num_bus_attributes
+    type_accs['category'] = acc
     buscategories2nid = {buscategories: i + acc for i, buscategories in enumerate(unique_bus_categories)}
     for i, buscategories in enumerate(unique_bus_categories):
         nid2e_dict[i + acc] = ('buscategories', buscategories)
     acc += num_bus_categories
+    type_accs['checkincount'] = acc
     buscheckincount2nid = {buscheckincount: i + acc for i, buscheckincount in enumerate(unique_bus_checkincount)}
     for i, buscheckincount in enumerate(unique_bus_checkincount):
         nid2e_dict[i + acc] = ('buscheckincount', buscheckincount)
     acc += num_bus_checkincount
+    type_accs['userreviewcount'] = acc
     userreviewcount2nid = {userreviewcount: i + acc for i, userreviewcount in enumerate(unique_user_reviewcount)}
     for i, userreviewcount in enumerate(unique_user_reviewcount):
         nid2e_dict[i + acc] = ('userreviewcount', userreviewcount)
     acc += num_user_reviewcount
+    type_accs['friendcount'] = acc
     userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcount)}
     for i, userfriendcount in enumerate(unique_user_friendcount):
         nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
     acc += num_user_friendcount
+    type_accs['fans'] = acc
     userfans2nid = {userfans: i + acc for i, userfans in enumerate(unique_user_fans)}
     for i, userfans in enumerate(unique_user_fans):
         nid2e_dict[i + acc] = ('userfans', userfans)
     acc += num_user_fans
+    type_accs['averagestars'] = acc
     useraveragestars2nid = {useraveragestars: i + acc for i, useraveragestars in enumerate(unique_user_averagestars)}
     for i, useraveragestars in enumerate(unique_user_averagestars):
         nid2e_dict[i + acc] = ('useraveragestars', useraveragestars)
@@ -325,6 +343,11 @@ def generate_graph_data(
                                                     tip[tip.user_id == uid].iloc[0]['user_count']
     dataset_property_dict['user_nid_occs'] = user_nid_occs
 
+    # New functionality for pytorch geometric like dataset
+    dataset_property_dict['types'] = types
+    dataset_property_dict['num_nodes_dict'] = num_nodes_dict
+    dataset_property_dict['type_accs'] = type_accs
+
     return dataset_property_dict
 
 
@@ -340,7 +363,6 @@ class Yelp(Dataset):
         self.num_core = kwargs['num_core']
         self.seed = kwargs['seed']
         self.num_negative_samples = kwargs['num_negative_samples']
-        self.suffix = self.build_suffix()
         self.cf_loss_type = kwargs['cf_loss_type']
         self._cf_negative_sampling = kwargs['_cf_negative_sampling']
         self.kg_loss_type = kwargs.get('kg_loss_type', None)
@@ -361,7 +383,7 @@ class Yelp(Dataset):
 
     @property
     def processed_file_names(self):
-        return ['dataset{}.pkl'.format(self.suffix)]
+        return ['dataset{}.pkl'.format(self.build_suffix())]
 
     @property
     def untar_file_path(self):
@@ -569,7 +591,7 @@ class Yelp(Dataset):
             suffix = ''
         else:
             suffix = '_'.join(suffixes)
-        return '_' + suffix
+        return suffix
 
     def kg_negative_sampling(self):
         print('KG negative sampling...')

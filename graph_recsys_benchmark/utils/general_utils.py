@@ -66,12 +66,13 @@ def save_kgat_model(file_path, model, optim, epoch, rec_metrics, silent=False):
         print("Saved checkpoint_backup '{}'".format(file_path))
 
 
-def save_random_walk_model(file_path, model, optim, silent=False):
+def save_random_walk_model(file_path, model, optim, train_loss, silent=False):
     model_states = {'model': model.state_dict()}
     optim_states = {'optim': optim.state_dict()}
     states = {
         'model_states': model_states,
         'optim_states': optim_states,
+        'random_walk_train_loss_per_run': train_loss,
     }
 
     with open(file_path, mode='wb+') as f:
@@ -148,6 +149,18 @@ def save_kgat_global_logger(
         )
 
 
+def save_random_walk_logger(
+        global_logger_filepath,
+        HR_per_run, NDCG_per_run, AUC_per_run,
+        random_walk_train_loss_per_run, train_loss_per_run, eval_loss_per_run
+):
+    with open(global_logger_filepath, 'wb') as f:
+        pickle.dump(
+            [HR_per_run, NDCG_per_run, AUC_per_run, random_walk_train_loss_per_run, train_loss_per_run, eval_loss_per_run],
+            f
+        )
+
+
 def load_global_logger(global_logger_filepath):
     if os.path.isfile(global_logger_filepath):
         with open(global_logger_filepath, 'rb') as f:
@@ -164,11 +177,12 @@ def load_random_walk_model(file_path, model, optim, device):
     checkpoint = torch.load(file_path, map_location=device)
     model.load_state_dict(checkpoint['model_states']['model'])
     optim.load_state_dict(checkpoint['optim_states']['optim'])
+    train_loss = checkpoint['random_walk_train_loss_per_run']
     for state in optim.state.values():
         for k, v in state.items():
             if isinstance(v, torch.Tensor):
                 state[k] = v.to(device)
-    return model, optim
+    return model, optim, train_loss
 
 
 def load_kgat_global_logger(global_logger_filepath):

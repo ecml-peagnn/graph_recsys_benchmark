@@ -73,8 +73,6 @@ class MPAGCNRecsysModel(GraphRecsysModel):
     def reset_parameters(self):
         for module in self.mpagcn_channels:
             module.reset_parameters()
-        glorot(self.fc1.weight)
-        glorot(self.fc2.weight)
         if self.channel_aggr == 'att':
             glorot(self.att.weight)
 
@@ -99,3 +97,4 @@ class MPAGCNRecsysModel(GraphRecsysModel):
         x = F.relu(self.fc1(x))
         x = self.fc2(torch.cat([x, u_repr * i_repr]))
         return x
+

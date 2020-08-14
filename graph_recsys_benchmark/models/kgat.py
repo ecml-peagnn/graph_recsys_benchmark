@@ -70,7 +70,4 @@ class KGATRecsysModel(GraphRecsysModel):
     def predict(self, unids, inids):
         u_repr = self.cached_repr[unids]
         i_repr = self.cached_repr[inids]
-        x = torch.cat([u_repr, i_repr], dim=-1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        return torch.sum(u_repr * i_repr, dim=-1)

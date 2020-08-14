@@ -34,7 +34,6 @@ class MPAGATChannel(torch.nn.Module):
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.gat_layers[step_idx](x, edge_index_list[step_idx]))
         x = self.gat_layers[-1](x, edge_index_list[-1])
-        x = F.normalize(x)
         return x
 
 
@@ -73,8 +72,6 @@ class MPAGATRecsysModel(GraphRecsysModel):
     def reset_parameters(self):
         for module in self.mpagat_channels:
             module.reset_parameters()
-        glorot(self.fc1.weight)
-        glorot(self.fc2.weight)
         if self.channel_aggr == 'att':
             glorot(self.att.weight)
 
@@ -90,7 +87,6 @@ class MPAGATRecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=-2)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):
@@ -98,5 +94,5 @@ class MPAGATRecsysModel(GraphRecsysModel):
         i_repr = self.cached_repr[inids]
         x = torch.cat([u_repr, i_repr], dim=-1)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.fc2(torch.cat([x, u_repr * i_repr]))
         return x

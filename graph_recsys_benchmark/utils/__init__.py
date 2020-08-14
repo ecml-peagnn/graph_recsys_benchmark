@@ -21,5 +21,6 @@ __all__ = [
     'instantwrite',
     'clearcache',
     'load_random_walk_model',
-    'load_random_walk_global_logger'
+    'load_random_walk_global_logger',
+    'save_random_walk_logger'
 ]

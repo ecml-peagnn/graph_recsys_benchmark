@@ -192,7 +192,7 @@ class Node2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer = \
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
                             load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
@@ -209,9 +209,10 @@ class Node2VecSolver(BaseSolver):
                             random_walk_optimizer.step()
                             pbar.set_description('Random walk loss {:.4f}'.format(random_walk_loss / (random_walk_batch_idx + 1)))
                         print('walk loss: {:.4f}'.format(random_walk_loss / len(loader)))
+                        random_walk_train_loss_per_run = random_walk_loss / len(loader)
 
                         weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
-                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer)
+                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run)
 
                     # Init the RecSys model
                     with torch.no_grad():
@@ -347,27 +348,28 @@ class Node2VecSolver(BaseSolver):
                         HRs_per_run_np = np.vstack([HRs_per_run_np, np.max(HRs_per_epoch_np, axis=0)])
                         NDCGs_per_run_np = np.vstack([NDCGs_per_run_np, np.max(NDCGs_per_epoch_np, axis=0)])
                         AUC_per_run_np = np.vstack([AUC_per_run_np, np.max(AUC_per_epoch_np, axis=0)])
+                        random_walk_train_loss_per_run_np = np.vstack([random_walk_train_loss_per_run_np, random_walk_train_loss_per_run])
                         train_loss_per_run_np = np.vstack(
                             [train_loss_per_run_np, np.mean(train_loss_per_epoch_np, axis=0)])
                         eval_loss_per_run_np = np.vstack(
                             [eval_loss_per_run_np, np.mean(eval_loss_per_epoch_np, axis=0)])
 
-                        save_global_logger(
+                        save_random_walk_logger(
                             global_logger_file_path,
                             HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
-                            train_loss_per_run_np, eval_loss_per_run_np
+                            random_walk_train_loss_per_run_np, train_loss_per_run_np, eval_loss_per_run_np
                         )
                         print(
                             'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
-                            'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                            'walk loss: {:.4f}, train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
                                 run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
-                                AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         logger_file.write(
                             'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
-                            'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                            'walk loss: {:.4f}, train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
                                 run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
-                                AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         instantwrite(logger_file)
 
@@ -377,21 +379,21 @@ class Node2VecSolver(BaseSolver):
                         del model, optimizer, loss, loss_per_batch, rec_metrics
                         clearcache()
 
-                    print(
-                        'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
-                            AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
-                            eval_loss_per_run_np.mean(axis=0)[0]
-                        )
+                print(
+                    'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                        HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
+                        AUC_per_run_np.mean(axis=0)[0], random_walk_train_loss_per_run_np.mean(axis=0)[0],
+                        train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                     )
-                    logger_file.write(
-                        'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
-                            AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
-                            eval_loss_per_run_np.mean(axis=0)[0]
-                        )
+                )
+                logger_file.write(
+                    'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                        HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
+                        AUC_per_run_np.mean(axis=0)[0], random_walk_train_loss_per_run_np.mean(axis=0)[0],
+                        train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                     )
-                    instantwrite(logger_file)
+                )
+                instantwrite(logger_file)
 
 
 if __name__ == '__main__':

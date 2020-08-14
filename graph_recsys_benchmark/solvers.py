@@ -10,6 +10,7 @@ from GPUtil import showUtilization as gpu_usage
 
 from graph_recsys_benchmark.utils import *
 
+
 class BaseSolver(object):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         self.model_class = model_class

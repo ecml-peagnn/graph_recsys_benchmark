@@ -6,7 +6,7 @@ import json
 import tqdm
 
 
-def parse_ml1m(dir):
+def parse_ml1m(raw_path):
     """
     Read the movielens dataset from .dat file
     :param dir: the path to raw files (users.dat, movies.dat, ratings.dat)
@@ -15,7 +15,7 @@ def parse_ml1m(dir):
     """
 
     users = []
-    with open(join(dir, 'users.dat')) as f:
+    with open(join(raw_path, 'users.dat')) as f:
         for line in f:
             id_, gender, age, occupation, zip_ = line.strip().split('::')
             users.append({
@@ -70,7 +70,6 @@ def parse_ml1m(dir):
         if i in range(3000, 4000):
             apikey = key4
 
-
         try:
             movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&y=" + str(year) + "&apikey=" + apikey
             r = requests.get(movie_url)
@@ -115,45 +114,46 @@ def parse_ml25m(dir):
     """
     Read the movielens dataset from .dat file
     :param dir: the path to raw files (users.dat, movies.dat, ratings.dat)
-    :param debug: the portion of ratings userd, float
     :return: users, movies, ratings, pandas.DataFrame
     """
     # parse ratings
     ratings = pd.read_csv(join(dir, 'ratings.csv'))
-    ratings.rating -= 1
+    ratings = ratings.dropna()
     ratings = ratings.rename(columns={'userId': 'uid', 'movieId': 'iid'})
+    ratings = ratings.astype({'uid': int, 'iid': int, 'rating': int})
 
     # parse tags
-    tags = pd.read_csv(join(dir, 'tags.csv'))
-    tags = tags.rename(columns={'userId': 'uid', 'movieId': 'iid'})
+    tagging = pd.read_csv(join(dir, 'tags.csv'))
+    tagging = tagging.dropna()
+    tagging = tagging.rename(columns={'userId': 'uid', 'movieId': 'iid'})
+    tagging = tagging.astype({'uid': int, 'iid': int, 'tag': str})
 
     # parse movies
-    movies_orginal = pd.read_csv(join(dir, 'movies.csv'))
+    movies_original = pd.read_csv(join(dir, 'movies.csv'))
+    movies_original = movies_original.dropna()
 
     movies = []
-    for index, row in movies_orginal.iterrows():
-        movie_id = row['movieId']
+    for index, row in movies_original.iterrows():
+        iid = int(row['movieId'])
         title = row['title']
         genres_set = set(row['genres'].split('|'))
 
         # extract year
         year = title[-5:]
-        year = year[year.find("(") + 1:year.find(")")]
-        try:
-            year = int(year)
-        except:
+        year = year[year.find('(') + 1:year.find(')')]
+        if re.match(r'^-?\d+(?:\.\d+)?$', year) is None:
             year = 2020
+        else:
+            year = int(year)
+
+        # Rename title
         title = title.split(', The')[0].split(' (')[0].split(', A')[0].strip()
 
-        data = {'iid': int(movie_id), 'title': title, 'year': year}
+        data = {'iid': iid, 'title': title, 'year': year}
         for g in genres_set:
             data[g] = True
         movies.append(data)
-    movies = (
-        pd.DataFrame(movies)
-            .fillna(False)
-            .astype({'year': 'category'}))
-    movies = movies.rename(columns={'movieId': 'iid'})
+    movies = pd.DataFrame(movies).fillna(False)
 
     apikey = ''
     key1 = 'e760129c'
@@ -177,32 +177,31 @@ def parse_ml25m(dir):
         if i in range(3000, 4000):
             apikey = key4
 
-        if i < 10:
-            try:
-                movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&apikey=" + apikey
-                r = requests.get(movie_url)
-                movie_info_dic = json.loads(r.text)
+        try:
+            movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&apikey=' + apikey
+            r = requests.get(movie_url)
+            movie_info_dic = json.loads(r.text)
 
-            except:
+        except:
                 try:
-                    movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&y=" + str(year) + "&apikey=" + apikey
+                    movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(year) + '&apikey=' + apikey
                     r = requests.get(movie_url)
                     movie_info_dic = json.loads(r.text)
                 except:
                     try:
-                        movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&y=" + str(year - 1) + "&apikey=" + apikey
+                        movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(
+                            year - 1) + '&apikey=' + apikey
                         r = requests.get(movie_url)
                         movie_info_dic = json.loads(r.text)
                     except:
                         try:
-                            movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&y=" + str(
-                                year + 1) + "&apikey=" + apikey
+                            movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(
+                                year + 1) + '&apikey=' + apikey
                             r = requests.get(movie_url)
                             movie_info_dic = json.loads(r.text)
                         except:
                             movie_info_dic = dict()
-        else:
-            movie_info_dic = dict()
+
 
         director = ','.join(movie_info_dic.get('Director', '').split(', '))
         actor = ','.join(movie_info_dic.get('Actors', '').split(', '))
@@ -219,8 +218,10 @@ def parse_ml25m(dir):
 
     # parse genome tags
     genome_scores = pd.read_csv(join(dir, 'genome-scores.csv'))
-    genome_scores = genome_scores.rename(columns={'movieId': 'iid', 'tagId': 'tid'})
+    genome_scores = genome_scores.dropna()
+    genome_scores = genome_scores.rename(columns={'movieId': 'iid', 'tagId': 'genome_tid'})
     genome_tags = pd.read_csv(join(dir, 'genome-tags.csv'))
+    genome_tags = genome_tags.dropna()
     genome_tags = genome_tags.rename(columns={'tagId': 'genome_tid'})
 
-    return movies, ratings, genome_scores, genome_tags, tags
+    return movies, ratings, tagging, genome_scores, genome_tags
