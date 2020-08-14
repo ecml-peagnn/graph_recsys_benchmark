@@ -119,6 +119,7 @@ def load_kgat_model(file_path, model, optim, device):
 
     return model, optim, epoch, rec_metrics
 
+
 def save_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
