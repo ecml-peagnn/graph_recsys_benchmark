@@ -18,15 +18,17 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='1m', help='')
+parser.add_argument('--dataset_name', type=str, default='25m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
+
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
+
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
@@ -42,7 +44,7 @@ parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=25, help='')
+parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
 

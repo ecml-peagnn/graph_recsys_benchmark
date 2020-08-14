@@ -6,19 +6,19 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MPAGATRecsysModel
+from graph_recsys_benchmark.models import GATRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'MPAGAT'
+MODEL = 'GAT'
 
 parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='1m', help='')
+parser.add_argument('--dataset_name', type=str, default='25m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
@@ -29,16 +29,13 @@ parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2', help='')
-parser.add_argument('--channel_aggr', type=str, default='att', help='')
-
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='4', help='')
+parser.add_argument('--gpu_idx', type=str, default='5', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -48,7 +45,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=25, help='')
+parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
 
@@ -75,8 +72,7 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
-    'channel_aggr': args.channel_aggr
+    'num_heads': args.num_heads
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -113,7 +109,7 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class MPAGATRecsysModel(MPAGATRecsysModel):
+class GATRecsysModel(GATRecsysModel):
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
@@ -125,38 +121,15 @@ class MPAGATRecsysModel(MPAGATRecsysModel):
         return loss
 
     def update_graph_input(self, dataset):
-        user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
-        year2item_edge_index = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(train_args['device'])
-        actor2item_edge_index = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(train_args['device'])
-        director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
-        writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
-        genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
-        age2user_edge_index = torch.from_numpy(dataset.edge_index_nps['age2user']).long().to(train_args['device'])
-        gender2user_edge_index = torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(train_args['device'])
-        occ2user_edge_index = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
-        meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-        meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
-
-        meta_path_edge_index_list = [
-            meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
-            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-            meta_path_edge_indicis_10
-        ]
-        self.meta_path_edge_index_list = meta_path_edge_index_list
+        edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
+        edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
+        edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
+        return edge_index
 
 
-class MPAGATSolver(BaseSolver):
+class GATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(GATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -169,5 +142,5 @@ class MPAGATSolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = MPAGATSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
+    solver = GATSolver(GATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

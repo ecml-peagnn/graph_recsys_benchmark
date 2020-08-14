@@ -6,24 +6,27 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import SAGERecsysModel
+from graph_recsys_benchmark.models import GATRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'SAGE'
+MODEL = 'GAT'
 
 parser = argparse.ArgumentParser()
+
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='1m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
+
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
+parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 # Train params
@@ -42,7 +45,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=20, help='')
+parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
 
@@ -68,7 +71,8 @@ model_args = {
     'model_type': MODEL_TYPE,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'repr_dim': args.repr_dim, 'dropout': args.dropout
+    'repr_dim': args.repr_dim, 'dropout': args.dropout,
+    'num_heads': args.num_heads
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -105,7 +109,7 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class SAGERecsysModel(SAGERecsysModel):
+class GATRecsysModel(GATRecsysModel):
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
@@ -120,12 +124,12 @@ class SAGERecsysModel(SAGERecsysModel):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
         edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
-        return self.x, edge_index
+        return edge_index
 
 
-class SAGESolver(BaseSolver):
+class GATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(SAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(GATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -138,5 +142,5 @@ class SAGESolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = SAGESolver(SAGERecsysModel, dataset_args, model_args, train_args)
+    solver = GATSolver(GATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

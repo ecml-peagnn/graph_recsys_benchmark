@@ -42,7 +42,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='4', help='')
+parser.add_argument('--gpu_idx', type=str, default='2', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
@@ -147,9 +147,8 @@ class MetaPath2VecSolver(BaseSolver):
             os.makedirs(global_logger_path, exist_ok=True)
         global_logger_file_path = os.path.join(global_logger_path, 'global_logger.pkl')
         HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np, \
-        random_walk_train_loss_per_run_np, train_loss_per_run_np, \
-        eval_loss_per_run_np, last_run = \
-            load_random_walk_global_logger(global_logger_file_path)
+        train_loss_per_run_np, eval_loss_per_run_np, last_run = \
+            load_global_logger(global_logger_file_path)
 
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
         with open(logger_file_path, 'w') as logger_file:
@@ -177,12 +176,10 @@ class MetaPath2VecSolver(BaseSolver):
                         ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                     }
                     metapath = [
+                        ('user', 'has watched', 'movie'),
+                        ('movie', 'has the genre', 'genre'),
                         ('genre', 'as the genre of', 'movie'),
                         ('movie', 'has been watched by', 'user'),
-                        ('user', 'has the gender', 'gender'),
-                        ('gender', 'as the gender of', 'user'),
-                        ('user', 'has watched', 'movie'),
-                        ('movie', 'has the genre', 'genre')
                     ]
                     self.model_args['metapath'] = metapath
                     self.model_args['edge_index_dict'] = edge_index_dict
