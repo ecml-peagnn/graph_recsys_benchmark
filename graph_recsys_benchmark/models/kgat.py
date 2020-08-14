@@ -46,9 +46,14 @@ class KGATRecsysModel(GraphRecsysModel):
             self.r
         )
 
+        self.fc1 = torch.nn.Linear(kwargs['hidden_size'] * 3 + kwargs['hidden_size'] // 2, kwargs['hidden_size'])
+        self.fc2 = torch.nn.Linear(kwargs['hidden_size'], 1)
+
     def reset_parameters(self):
         if not self.if_use_features:
             glorot(self.x)
+        glorot(self.fc1.weight)
+        glorot(self.fc2.weight)
         glorot(self.r)
         glorot(self.proj_mat)
         self.conv1.reset_parameters()
@@ -61,3 +66,11 @@ class KGATRecsysModel(GraphRecsysModel):
         x_2 = F.normalize(F.dropout(self.conv2(x_1, edge_index, edge_attr), p=self.dropout, training=self.training), p=2, dim=-1)
         x_3 = F.normalize(F.dropout(self.conv3(x_2, edge_index, edge_attr), p=self.dropout, training=self.training), p=2, dim=-1)
         return torch.cat([x_1, x_2, x_3], dim=-1)
+
+    def predict(self, unids, inids):
+        u_repr = self.cached_repr[unids]
+        i_repr = self.cached_repr[inids]
+        x = torch.cat([u_repr, i_repr], dim=-1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x

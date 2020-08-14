@@ -1,5 +1,5 @@
 from .gcn import GCNRecsysModel
-from .sage import SAGERecsysModel
+from .pinsage import SAGERecsysModel
 from .gat import GATRecsysModel
 from .ncf import NCFRecsysModel
 from .mpagcn import MPAGCNRecsysModel

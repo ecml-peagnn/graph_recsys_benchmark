@@ -184,8 +184,6 @@ class MetaPath2Vec(torch.nn.Module):
     def __getitem__(self, idx):
         assert isinstance(idx, torch.Tensor)
 
-
-
     def __repr__(self):
         return '{}({}, {})'.format(self.__class__.__name__,
                                    self.embedding.weight.size(0),

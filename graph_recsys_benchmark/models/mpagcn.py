@@ -68,7 +68,7 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
+        self.fc2 = torch.nn.Linear(kwargs['repr_dim'] * 2, 1)
 
     def reset_parameters(self):
         for module in self.mpagcn_channels:
@@ -90,7 +90,6 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=-2)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):
@@ -98,5 +97,5 @@ class MPAGCNRecsysModel(GraphRecsysModel):
         i_repr = self.cached_repr[inids]
         x = torch.cat([u_repr, i_repr], dim=-1)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.fc2(torch.cat([x, u_repr * i_repr]))
         return x

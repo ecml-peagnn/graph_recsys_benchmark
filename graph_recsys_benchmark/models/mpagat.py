@@ -59,9 +59,9 @@ class MPAGATRecsysModel(GraphRecsysModel):
             kwargs_cpy['num_steps'] = num_steps
             self.mpagat_channels.append(MPAGATChannel(**kwargs_cpy))
 
-        if self.aggr == 'concat':
+        if self.channel_aggr == 'concat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
-        elif self.aggr == 'mean':
+        elif self.channel_aggr == 'mean':
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         elif self.channel_aggr == 'att':
             self.att = torch.nn.Linear(kwargs['repr_dim'], 1)

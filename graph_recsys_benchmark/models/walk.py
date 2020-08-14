@@ -1,5 +1,6 @@
 from .base import GraphRecsysModel
 import torch
+import torch.nn.functional as F
 from torch_geometric.nn.inits import glorot
 
 

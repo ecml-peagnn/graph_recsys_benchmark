@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 
 class GraphRecsysModel(torch.nn.Module):
@@ -21,16 +20,13 @@ class GraphRecsysModel(torch.nn.Module):
     def update_graph_input(self, dataset):
         raise NotImplementedError
 
+    def predict(self, unids, inids):
+        raise NotImplementedError
+
     def eval(self):
         super(GraphRecsysModel, self).eval()
         with torch.no_grad():
             self.cached_repr = self.forward()
-
-    def predict(self, unids, inids):
-        u_repr = self.cached_repr[unids]
-        i_repr = self.cached_repr[inids]
-        x = torch.sum(u_repr * i_repr, dim=-1)
-        return x
 
 
 class MFRecsysModel(torch.nn.Module):
