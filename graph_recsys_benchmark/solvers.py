@@ -93,10 +93,10 @@ class BaseSolver(object):
                 AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
                 eval_losses = np.vstack([eval_losses, loss])
                 test_bar.set_description(
-                    'Run {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                    'Run {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
                     'AUC: {:.4f}, eval loss: {:.4f}, '.format(
                         run, epoch,
-                        HRs.mean(axis=0)[5], NDCGs.mean(axis=0)[5], AUC.mean(axis=0)[0],
+                        HRs.mean(axis=0), NDCGs.mean(axis=0), AUC.mean(axis=0)[0],
                         eval_losses.mean(axis=0)[0])
                 )
 
@@ -148,10 +148,10 @@ class BaseSolver(object):
                 AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
                 eval_losses = np.vstack([eval_losses, loss])
                 test_bar.set_description(
-                    'Run {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                    'Run {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
                     'AUC: {:.4f}, eval loss: {:.4f}, '.format(
                         run, epoch,
-                        HRs.mean(axis=0)[5], NDCGs.mean(axis=0)[5], AUC.mean(axis=0)[0],
+                        HRs.mean(axis=0), NDCGs.mean(axis=0), AUC.mean(axis=0)[0],
                         eval_losses.mean(axis=0)[0])
                 )
         print("GPU Usage after each epoch")
@@ -230,15 +230,15 @@ class BaseSolver(object):
                         HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
                             self.metrics(run, 0, model, dataset)
                         print(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np, NDCGs_before_np, AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         logger_file.write(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np, NDCGs_before_np, AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         instantwrite(logger_file)
@@ -313,15 +313,15 @@ class BaseSolver(object):
                                     HRs_per_epoch_np, NDCGs_per_epoch_np, AUC_per_epoch_np, train_loss_per_epoch_np, eval_loss_per_epoch_np)
                                 )
                             print(
-                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                                'Run: {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs[5], NDCGs[5], AUC[0], train_loss, eval_loss[0]
+                                    run, epoch, HRs, NDCGs, AUC[0], train_loss, eval_loss[0]
                                 )
                             )
                             logger_file.write(
-                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                                'Run: {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs[5], NDCGs[5], AUC[0], train_loss, eval_loss[0]
+                                    run, epoch, HRs, NDCGs, AUC[0], train_loss, eval_loss[0]
                                 )
                             )
                             instantwrite(logger_file)
@@ -343,15 +343,15 @@ class BaseSolver(object):
                         train_loss_per_run_np, eval_loss_per_run_np
                     )
                     print(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                        'Run: {}, Duration: {:.4f}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
                         'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
+                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0), np.max(NDCGs_per_epoch_np, axis=0),
                             AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     logger_file.write(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                        'Run: {}, Duration: {:.4f}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
                         'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
+                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0), np.max(NDCGs_per_epoch_np, axis=0),
                             AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     instantwrite(logger_file)
@@ -363,14 +363,14 @@ class BaseSolver(object):
                     clearcache()
 
             print(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
+                'Overall HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                    HRs_per_run_np.mean(axis=0), NDCGs_per_run_np.mean(axis=0), AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
                     eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
             logger_file.write(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
+                'Overall HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                    HRs_per_run_np.mean(axis=0), NDCGs_per_run_np.mean(axis=0), AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
                     eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )

@@ -6,13 +6,13 @@ import random as rd
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MPASAGERecsysModel
+from graph_recsys_benchmark.models import MPAGCNRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'MPASAGE'
+MODEL = 'MPAGCN'
 
 parser = argparse.ArgumentParser()
 
@@ -21,7 +21,7 @@ parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='1m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
+parser.add_argument('--num_core', type=int, default=10, help='')
 
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
@@ -51,7 +51,6 @@ parser.add_argument('--save_every_epoch', type=int, default=25, help='')
 
 args = parser.parse_args()
 
-
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
     get_folder_path(model=MODEL, dataset=args.dataset + args.dataset_name, loss_type=LOSS_TYPE)
@@ -66,7 +65,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
+    'num_core': args.num_core, 'num_core': args.num_core,
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {
@@ -111,7 +110,7 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class MPASAGERecsysModel(MPASAGERecsysModel):
+class MPAGCNRecsysModel(MPAGCNRecsysModel):
     def cf_loss(self, batch):
         if self.training:
             self.cached_repr = self.forward()
@@ -149,13 +148,12 @@ class MPASAGERecsysModel(MPASAGERecsysModel):
             meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
             meta_path_edge_indicis_10
         ]
-
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
 
-class MPASAGESolver(BaseSolver):
+class MPAGCNSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(MPASAGESolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(MPAGCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
@@ -168,5 +166,5 @@ class MPASAGESolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = MPASAGESolver(MPASAGERecsysModel, dataset_args, model_args, train_args)
+    solver = MPAGCNSolver(MPAGCNRecsysModel, dataset_args, model_args, train_args)
     solver.run()
