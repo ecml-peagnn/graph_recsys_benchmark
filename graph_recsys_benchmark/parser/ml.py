@@ -29,7 +29,7 @@ def parse_ml1m(raw_path):
 
     movies = []
     # parser movies
-    with open(join(dir, 'movies.dat'), encoding='latin1') as f:
+    with open(join(raw_path, 'movies.dat'), encoding='latin1') as f:
         for line in f:
             id_, title, genres = line.strip().split('::')
             genres_set = set(genres.split('|'))
@@ -96,7 +96,7 @@ def parse_ml1m(raw_path):
     movies['writers'] = writer_list
 
     ratings = []
-    with open(join(dir, 'ratings.dat')) as f:
+    with open(join(raw_path, 'ratings.dat')) as f:
         for line in f:
             user_id, movie_id, rating, timestamp = [int(_) for _ in line.split('::')]
             ratings.append({

@@ -18,49 +18,43 @@ from torch_geometric.data import extract_tar
 from ..parser import parse_yelp
 
 
-def reindex_df(business, user, review, tip):
+def reindex_df(business, user, reviewtip):
     """
-    reindex business, user, review, tip in case there are some values missing or duplicates in between
+    reindex business, user, reviewtip in case there are some values missing or duplicates in between
     :param business: pd.DataFrame
     :param user: pd.DataFrame
-    :param review: pd.DataFrame
-    :param tip: pd.DataFrame
+    :param reviewtip: pd.DataFrame
     :return: same
     """
     print('Reindexing dataframes...')
-    unique_bids = business.business_id.unique()
     unique_uids = user.user_id.unique()
+    unique_iids = business.business_id.unique()
 
-    num_bus = unique_bids.shape[0]
     num_users = unique_uids.shape[0]
+    num_bus = unique_iids.shape[0]
 
-    raw_bids = np.array(unique_bids, dtype=object)
     raw_uids = np.array(unique_uids, dtype=object)
-    bids = np.arange(num_bus)
+    raw_iids = np.array(unique_iids, dtype=object)
+
     uids = np.arange(num_users)
+    iids = np.arange(num_bus)
 
-    business['business_id'] = bids
     user['user_id'] = uids
+    business['business_id'] = iids
 
-    raw_bid2bid = {raw_bid: bid for raw_bid, bid in zip(raw_bids, bids)}
     raw_uid2uid = {raw_uid: uid for raw_uid, uid in zip(raw_uids, uids)}
+    raw_iid2iid = {raw_iid: iid for raw_iid, iid in zip(raw_iids, iids)}
 
-    review_bids = np.array(review.business_id, dtype=object)
-    review_uids = np.array(review.user_id, dtype=object)
-    review_bids = [raw_bid2bid[review_bid] for review_bid in review_bids]
+    review_uids = np.array(reviewtip.user_id, dtype=object)
+    review_iids = np.array(reviewtip.business_id, dtype=object)
     review_uids = [raw_uid2uid[review_uid] for review_uid in review_uids]
-    review['business_id'] = review_bids
-    review['user_id'] = review_uids
+    review_iids = [raw_iid2iid[review_iid] for review_iid in review_iids]
+    reviewtip['user_id'] = review_uids
+    reviewtip['business_id'] = review_iids
 
-    tip_bids = np.array(tip.business_id, dtype=object)
-    tip_uids = np.array(tip.user_id, dtype=object)
-    tip_bids = [raw_bid2bid[tip_bid] for tip_bid in tip_bids]
-    tip_uids = [raw_uid2uid[tip_uid] for tip_uid in tip_uids]
-    tip['business_id'] = tip_bids
-    tip['user_id'] = tip_uids
     print('Reindex done!')
 
-    return business, user, review, tip
+    return business, user, reviewtip
 
 
 def drop_infrequent_concept_from_str(df, concept_name):
@@ -81,11 +75,10 @@ def drop_infrequent_concept_from_str(df, concept_name):
 
 
 def generate_graph_data(
-        business, user, review, tip
+        users, items, reviewtip
 ):
     """
-    Entitiy node include (business, user, review, tip)
-    num_nodes = num_users + num_items + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
+    Entitiy node include (business, user, reviewtip)
     """
 
     def get_concept_num_from_str(df, concept_name):
@@ -101,247 +94,249 @@ def generate_graph_data(
         num_concepts = len(concepts)
         return list(concepts), num_concepts
 
+
     #########################  Create dataset property dict  #########################
-    dataset_property_dict = {'business': business, 'user': user, 'review': review, 'tip': tip}
+    dataset_property_dict = {'users': users, 'items': items, 'reviewtip': reviewtip}
 
     #########################  Define entities  #########################
-    num_bus = business.shape[0]
-    num_users = user.shape[0]
-    dataset_property_dict['num_bus'] = num_bus
+    num_users = users.shape[0]
+    num_items = items.shape[0]
+
     dataset_property_dict['num_users'] = num_users
+    dataset_property_dict['num_items'] = num_items
 
-    unique_bus_stars = list(business.stars.unique())
-    num_bus_stars = len(unique_bus_stars)
-
-    unique_bus_reviewcount = list(business.review_count.unique())
-    num_bus_reviewcount = len(unique_bus_reviewcount)
-
-    unique_bus_attributes, num_bus_attributes = get_concept_num_from_str(business, 'attributes')
-    unique_bus_categories, num_bus_categories = get_concept_num_from_str(business, 'categories')
-
-    unique_bus_checkincount = list(business.checkin_count.unique())
-    num_bus_checkincount = len(unique_bus_checkincount)
-
-    unique_user_reviewcount = list(user.review_count.unique())
+    unique_user_reviewcount = list(users.review_count.unique())
     num_user_reviewcount = len(unique_user_reviewcount)
 
-    unique_user_friendcount = list(user.friends_count.unique())
+    unique_user_friendcount = list(users.friends_count.unique())
     num_user_friendcount = len(unique_user_friendcount)
 
-    unique_user_fans = list(user.fans.unique())
+    unique_user_fans = list(users.fans.unique())
     num_user_fans = len(unique_user_fans)
 
-    unique_user_averagestars = list(user.average_stars.unique())
-    num_user_averagestars = len(unique_user_averagestars)
+    unique_user_stars = list(users.average_stars.unique())
+    num_user_stars = len(unique_user_stars)
 
-    dataset_property_dict['unique_bus_stars'] = unique_bus_stars
-    dataset_property_dict['num_bus_stars'] = num_bus_stars
-    dataset_property_dict['unique_bus_reviewcount'] = unique_bus_reviewcount
-    dataset_property_dict['num_bus_reviewcount'] = num_bus_reviewcount
-    dataset_property_dict['unique_bus_attributes'] = unique_bus_attributes
-    dataset_property_dict['num_bus_attributes'] = num_bus_attributes
-    dataset_property_dict['unique_bus_categories'] = unique_bus_categories
-    dataset_property_dict['num_bus_categories'] = num_bus_categories
-    dataset_property_dict['unique_bus_checkincount'] = unique_bus_checkincount
-    dataset_property_dict['num_bus_checkincount'] = num_bus_checkincount
+    unique_item_stars = list(items.stars.unique())
+    num_item_stars = len(unique_item_stars)
+
+    unique_item_reviewcount = list(items.review_count.unique())
+    num_item_reviewcount = len(unique_item_reviewcount)
+
+    unique_item_attributes, num_item_attributes = get_concept_num_from_str(items, 'attributes')
+    unique_item_categories, num_item_categories = get_concept_num_from_str(items, 'categories')
+
+    unique_item_checkincount = list(items.checkin_count.unique())
+    num_item_checkincount = len(unique_item_checkincount)
+
     dataset_property_dict['unique_user_reviewcount'] = unique_user_reviewcount
     dataset_property_dict['num_user_reviewcount'] = num_user_reviewcount
     dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
     dataset_property_dict['num_user_friendcount'] = num_user_friendcount
     dataset_property_dict['unique_user_fans'] = unique_user_fans
     dataset_property_dict['num_user_fans'] = num_user_fans
-    dataset_property_dict['unique_user_averagestars'] = unique_user_averagestars
-    dataset_property_dict['num_user_averagestars'] = num_user_averagestars
+    dataset_property_dict['unique_user_stars'] = unique_user_stars
+    dataset_property_dict['num_user_stars'] = num_user_stars
+    dataset_property_dict['unique_item_stars'] = unique_item_stars
+    dataset_property_dict['num_item_stars'] = num_item_stars
+    dataset_property_dict['unique_item_reviewcount'] = unique_item_reviewcount
+    dataset_property_dict['num_item_reviewcount'] = num_item_reviewcount
+    dataset_property_dict['unique_item_attributes'] = unique_item_attributes
+    dataset_property_dict['num_item_attributes'] = num_item_attributes
+    dataset_property_dict['unique_item_categories'] = unique_item_categories
+    dataset_property_dict['num_item_categories'] = num_item_categories
+    dataset_property_dict['unique_item_checkincount'] = unique_item_checkincount
+    dataset_property_dict['num_item_checkincount'] = num_item_checkincount
 
     #########################  Define number of entities  #########################
-    num_nodes = num_bus + num_users + num_bus_stars + num_bus_reviewcount + \
-                num_bus_attributes + num_bus_categories + num_bus_checkincount + \
-                num_user_reviewcount + num_user_friendcount + \
-                num_user_fans + num_user_averagestars
+    num_nodes = num_users + num_items + num_user_reviewcount + num_user_friendcount + \
+                num_user_fans + num_user_stars + num_item_stars + num_item_reviewcount + \
+                num_item_attributes + num_item_categories + num_item_checkincount
+
     num_node_types = 11
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['business', 'user', 'stars', 'busreviewcount', 'attribute', 'category', 'checkincount',
-             'userreviewcount', 'friendcount', 'fans', 'averagestars']
-    num_nodes_dict = {'business': num_bus, 'user': num_users, 'stars': num_bus_stars, 'busreviewcount': num_bus_reviewcount,
-                      'attribute': num_bus_attributes, 'category': num_bus_categories, 'checkincount': num_bus_checkincount,
-                      'userreviewcount': num_user_reviewcount, 'friendcount': num_user_friendcount,
-                      'fans': num_user_fans, 'averagestars': num_user_averagestars}
+    types = ['users', 'items', 'userreviewcount', 'userfriendcount', 'userfans', 'userstars',
+             'itemstars', 'itemreviewcount', 'itemattributes', 'itemcategories', 'itemcheckincount']
+    num_nodes_dict = {'users': num_users, 'items': num_items, 'userreviewcount': num_user_reviewcount,
+                      'userfriendcount': num_user_friendcount, 'userfans': num_user_fans, 'userstars': num_user_stars,
+                      'itemstars': num_item_stars, 'itemreviewcount': num_item_reviewcount,
+                      'itemattributes': num_item_attributes,
+                      'itemcategories': num_item_categories, 'itemcheckincount': num_item_checkincount,
+                      }
 
     #########################  Define entities to node id map  #########################
     type_accs = {}
     nid2e_dict = {}
     acc = 0
-    type_accs['business'] = acc
-    bid2nid = {bid: i + acc for i, bid in enumerate(business['business_id'])}
-    for i, bid in enumerate(business['business_id']):
-        nid2e_dict[i + acc] = ('bid', bid)
-    acc += num_bus
-    type_accs['user'] = acc
-    uid2nid = {uid: i + acc for i, uid in enumerate(user['user_id'])}
-    for i, uid in enumerate(user['user_id']):
+    type_accs['users'] = acc
+    uid2nid = {uid: i + acc for i, uid in enumerate(users['user_id'])}
+    for i, uid in enumerate(users['user_id']):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_users
-    type_accs['stars'] = acc
-    busstars2nid = {busstars: i + acc for i, busstars in enumerate(unique_bus_stars)}
-    for i, busstars in enumerate(unique_bus_stars):
-        nid2e_dict[i + acc] = ('busstars', busstars)
-    acc += num_bus_stars
-    type_accs['busreviewcount'] = acc
-    busreviewcount2nid = {busreviewcount: i + acc for i, busreviewcount in enumerate(unique_bus_reviewcount)}
-    for i, busreviewcount in enumerate(unique_bus_reviewcount):
-        nid2e_dict[i + acc] = ('busreviewcount', busreviewcount)
-    acc += num_bus_reviewcount
-    type_accs['attribute'] = acc
-    busattributes2nid = {busattributes: i + acc for i, busattributes in enumerate(unique_bus_attributes)}
-    for i, busattributes in enumerate(unique_bus_attributes):
-        nid2e_dict[i + acc] = ('busattributes', busattributes)
-    acc += num_bus_attributes
-    type_accs['category'] = acc
-    buscategories2nid = {buscategories: i + acc for i, buscategories in enumerate(unique_bus_categories)}
-    for i, buscategories in enumerate(unique_bus_categories):
-        nid2e_dict[i + acc] = ('buscategories', buscategories)
-    acc += num_bus_categories
-    type_accs['checkincount'] = acc
-    buscheckincount2nid = {buscheckincount: i + acc for i, buscheckincount in enumerate(unique_bus_checkincount)}
-    for i, buscheckincount in enumerate(unique_bus_checkincount):
-        nid2e_dict[i + acc] = ('buscheckincount', buscheckincount)
-    acc += num_bus_checkincount
+    type_accs['items'] = acc
+    iid2nid = {iid: i + acc for i, iid in enumerate(items['business_id'])}
+    for i, iid in enumerate(items['business_id']):
+        nid2e_dict[i + acc] = ('iid', iid)
+    acc += num_items
     type_accs['userreviewcount'] = acc
     userreviewcount2nid = {userreviewcount: i + acc for i, userreviewcount in enumerate(unique_user_reviewcount)}
     for i, userreviewcount in enumerate(unique_user_reviewcount):
         nid2e_dict[i + acc] = ('userreviewcount', userreviewcount)
     acc += num_user_reviewcount
-    type_accs['friendcount'] = acc
+    type_accs['userfriendcount'] = acc
     userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcount)}
     for i, userfriendcount in enumerate(unique_user_friendcount):
         nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
     acc += num_user_friendcount
-    type_accs['fans'] = acc
+    type_accs['userfans'] = acc
     userfans2nid = {userfans: i + acc for i, userfans in enumerate(unique_user_fans)}
     for i, userfans in enumerate(unique_user_fans):
         nid2e_dict[i + acc] = ('userfans', userfans)
     acc += num_user_fans
-    type_accs['averagestars'] = acc
-    useraveragestars2nid = {useraveragestars: i + acc for i, useraveragestars in enumerate(unique_user_averagestars)}
-    for i, useraveragestars in enumerate(unique_user_averagestars):
-        nid2e_dict[i + acc] = ('useraveragestars', useraveragestars)
+    type_accs['userstars'] = acc
+    userstars2nid = {userstars: i + acc for i, userstars in enumerate(unique_user_stars)}
+    for i, userstars in enumerate(unique_user_stars):
+        nid2e_dict[i + acc] = ('userstars', userstars)
+    acc += num_user_fans
+    type_accs['itemstars'] = acc
+    itemstars2nid = {itemstars: i + acc for i, itemstars in enumerate(unique_item_stars)}
+    for i, itemstars in enumerate(unique_item_stars):
+        nid2e_dict[i + acc] = ('itemstars', itemstars)
+    acc += num_item_stars
+    type_accs['itemreviewcount'] = acc
+    itemreviewcount2nid = {itemreviewcount: i + acc for i, itemreviewcount in enumerate(unique_item_reviewcount)}
+    for i, itemreviewcount in enumerate(unique_item_reviewcount):
+        nid2e_dict[i + acc] = ('itemreviewcount', itemreviewcount)
+    acc += num_item_reviewcount
+    type_accs['itemattributes'] = acc
+    itemattributes2nid = {itemattributes: i + acc for i, itemattributes in enumerate(unique_item_attributes)}
+    for i, itemattributes in enumerate(unique_item_attributes):
+        nid2e_dict[i + acc] = ('itemattributes', itemattributes)
+    acc += num_item_attributes
+    type_accs['itemcategories'] = acc
+    itemcategories2nid = {itemcategories: i + acc for i, itemcategories in enumerate(unique_item_categories)}
+    for i, itemcategories in enumerate(unique_item_categories):
+        nid2e_dict[i + acc] = ('itemcategories', itemcategories)
+    acc += num_item_categories
+    type_accs['itemcheckincount'] = acc
+    itemcheckincount2nid = {itemcheckincount: i + acc for i, itemcheckincount in enumerate(unique_item_checkincount)}
+    for i, itemcheckincount in enumerate(unique_item_checkincount):
+        nid2e_dict[i + acc] = ('itemcheckincount', itemcheckincount)
 
-    e2nid_dict = {'bid': bid2nid, 'uid': uid2nid, 'busstars': busstars2nid,
-                  'busreviewcount': busreviewcount2nid, 'busattributes': busattributes2nid,
-                  'buscategories': buscategories2nid, 'buscheckincount': buscheckincount2nid,
+    e2nid_dict = {'uid': uid2nid, 'iid': iid2nid,
                   'userreviewcount': userreviewcount2nid, 'userfriendcount': userfriendcount2nid,
-                  'userfans': userfans2nid, 'useraveragestars': useraveragestars2nid}
+                  'userfans': userfans2nid, 'userstars': userstars2nid,
+                  'itemstars': itemstars2nid, 'itemreviewcount': itemreviewcount2nid,
+                  'itemattributes': itemattributes2nid,
+                  'itemcategories': itemcategories2nid, 'itemcheckincount': itemcheckincount2nid
+                  }
     dataset_property_dict['e2nid_dict'] = e2nid_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
-    print('Creating business property edges...')
-    b_nids = [e2nid_dict['bid'][bid] for bid in business.business_id]
-    busstars_nids = [e2nid_dict['busstars'][busstars] for busstars in business.stars]
-    stars2bus_edge_index_np = np.vstack((np.array(busstars_nids), np.array(b_nids)))
-    busreviewcount_nids = [e2nid_dict['busreviewcount'][busreviewcount] for busreviewcount in business.review_count]
-    reviewcount2bus_edge_index_np = np.vstack((np.array(busreviewcount_nids), np.array(b_nids)))
-
-    attributes_list = [
-        [attribute for attribute in attributes.split(',') if attribute != '']
-        for attributes in business.attributes
-    ]
-    busattributes_nids = [[e2nid_dict['busattributes'][attribute] for attribute in attributes] for attributes in
-                          attributes_list]
-    busattributes_nids = list(itertools.chain.from_iterable(busattributes_nids))
-    a_b_nids = [[b_nid for _ in range(len(attributes_list[idx]))] for idx, b_nid in enumerate(b_nids)]
-    a_b_nids = list(itertools.chain.from_iterable(a_b_nids))
-    attributes2bus_edge_index_np = np.vstack((np.array(busattributes_nids), np.array(a_b_nids)))
-
-    categories_list = [
-        [category for category in categories.split(',') if category != '']
-        for categories in business.categories
-    ]
-    buscategories_nids = [[e2nid_dict['buscategories'][category] for category in categories] for categories in
-                          categories_list]
-    buscategories_nids = list(itertools.chain.from_iterable(buscategories_nids))
-    c_b_nids = [[b_nid for _ in range(len(categories_list[idx]))] for idx, b_nid in enumerate(b_nids)]
-    c_b_nids = list(itertools.chain.from_iterable(c_b_nids))
-    categories2bus_edge_index_np = np.vstack((np.array(buscategories_nids), np.array(c_b_nids)))
-
-    buscheckincount_nids = [e2nid_dict['buscheckincount'][buscheckincount] for buscheckincount in
-                            business.checkin_count]
-    checkincount2bus_edge_index_np = np.vstack((np.array(buscheckincount_nids), np.array(b_nids)))
-
-    edge_index_nps['stars2bus'] = stars2bus_edge_index_np
-    edge_index_nps['reviewcount2bus'] = reviewcount2bus_edge_index_np
-    edge_index_nps['attributes2bus'] = attributes2bus_edge_index_np
-    edge_index_nps['categories2bus'] = categories2bus_edge_index_np
-    edge_index_nps['checkincount2bus'] = checkincount2bus_edge_index_np
-
     print('Creating user property edges...')
-    u_nids = [e2nid_dict['uid'][uid] for uid in user.user_id]
-    userreviewcount_nids = [e2nid_dict['userreviewcount'][userreviewcount] for userreviewcount in user.review_count]
+    u_nids = [e2nid_dict['uid'][uid] for uid in users.user_id]
+    userreviewcount_nids = [e2nid_dict['userreviewcount'][userreviewcount] for userreviewcount in users.review_count]
     reviewcount2user_edge_index_np = np.vstack((np.array(userreviewcount_nids), np.array(u_nids)))
-    userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in user.friends_count]
+    userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in users.friends_count]
     friendcount2user_edge_index_np = np.vstack((np.array(userfriendcount_nids), np.array(u_nids)))
-
-    userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in user.fans]
+    userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in users.fans]
     fans2user_edge_index_np = np.vstack((np.array(userfans_nids), np.array(u_nids)))
-
-    useraveragestars_nids = [e2nid_dict['useraveragestars'][useraveragestars] for useraveragestars in
-                             user.average_stars]
-    averagestars2user_edge_index_np = np.vstack((np.array(useraveragestars_nids), np.array(u_nids)))
+    userstars_nids = [e2nid_dict['userstars'][userstars] for userstars in users.average_stars]
+    stars2user_edge_index_np = np.vstack((np.array(userstars_nids), np.array(u_nids)))
 
     edge_index_nps['reviewcount2user'] = reviewcount2user_edge_index_np
     edge_index_nps['friendcount2user'] = friendcount2user_edge_index_np
     edge_index_nps['fans2user'] = fans2user_edge_index_np
-    edge_index_nps['averagestars2user'] = averagestars2user_edge_index_np
+    edge_index_nps['stars2user'] = stars2user_edge_index_np
 
-    print('Creating review and tip property edges...')
-    train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map = {}, {}, {}
+    print('Creating item property edges...')
+    i_nids = [e2nid_dict['iid'][iid] for iid in items.business_id]
+    itemstars_nids = [e2nid_dict['itemstars'][itemstars] for itemstars in items.stars]
+    stars2item_edge_index_np = np.vstack((np.array(itemstars_nids), np.array(i_nids)))
+    itemreviewcount_nids = [e2nid_dict['itemreviewcount'][itemreviewcount] for itemreviewcount in items.review_count]
+    reviewcount2item_edge_index_np = np.vstack((np.array(itemreviewcount_nids), np.array(i_nids)))
 
-    bus2user_edge_index_np = np.zeros((2, 0))
-    pbar = tqdm.tqdm(business.business_id, total=business.business_id.shape[0])
-    for bid in pbar:
-        pbar.set_description('Creating the edges for the business {}'.format(bid))
-        bid_review = review[review.business_id == bid].sort_values('stars')
-        bid_review_uids = bid_review[['user_id']].to_numpy().reshape(-1)
-        bid_tip = tip[tip.business_id == bid].sort_values('compliment_count')
-        bid_tip_uids = bid_tip[['user_id']].to_numpy().reshape(-1)
-        bid_uids = np.unique(np.concatenate((bid_review_uids, bid_tip_uids)))
+    attributes_list = [
+        [attribute for attribute in attributes.split(',') if attribute != '']
+        for attributes in items.attributes
+    ]
+    itemattributes_nids = [[e2nid_dict['itemattributes'][attribute] for attribute in attributes] for attributes in
+                           attributes_list]
+    itemattributes_nids = list(itertools.chain.from_iterable(itemattributes_nids))
+    a_i_nids = [[i_nid for _ in range(len(attributes_list[idx]))] for idx, i_nid in enumerate(i_nids)]
+    a_i_nids = list(itertools.chain.from_iterable(a_i_nids))
+    attributes2item_edge_index_np = np.vstack((np.array(itemattributes_nids), np.array(a_i_nids)))
 
-        bnid = e2nid_dict['bid'][bid]
-        train_pos_bid_uids = list(bid_uids[:-1])  # Use leave one out setup
-        train_pos_bid_unids = [e2nid_dict['uid'][uid] for uid in train_pos_bid_uids]
-        test_pos_bid_uids = list(bid_uids[-1:])
-        test_pos_bid_unids = [e2nid_dict['uid'][uid] for uid in test_pos_bid_uids]
-        neg_bid_uids = list(set(user.user_id) - set(bid_uids))
-        neg_bid_unids = [e2nid_dict['uid'][uid] for uid in neg_bid_uids]
+    categories_list = [
+        [category for category in categories.split(',') if category != '']
+        for categories in items.categories
+    ]
+    itemcategories_nids = [[e2nid_dict['itemcategories'][category] for category in categories] for categories in
+                           categories_list]
+    itemcategories_nids = list(itertools.chain.from_iterable(itemcategories_nids))
+    c_i_nids = [[i_nid for _ in range(len(categories_list[idx]))] for idx, i_nid in enumerate(i_nids)]
+    c_i_nids = list(itertools.chain.from_iterable(c_i_nids))
+    categories2item_edge_index_np = np.vstack((np.array(itemcategories_nids), np.array(c_i_nids)))
 
-        train_pos_bnid_unid_map[bnid] = train_pos_bid_unids
-        test_pos_bnid_unid_map[bnid] = test_pos_bid_unids
-        neg_bnid_unid_map[bnid] = neg_bid_unids
+    itemcheckincount_nids = [e2nid_dict['itemcheckincount'][itemcheckincount] for itemcheckincount in
+                             items.checkin_count]
+    checkincount2item_edge_index_np = np.vstack((np.array(itemcheckincount_nids), np.array(i_nids)))
 
-        bnid_bus2user_edge_index_np = np.array(
-            [[bnid for _ in range(len(train_pos_bid_unids))], train_pos_bid_unids]
+    edge_index_nps['stars2item'] = stars2item_edge_index_np
+    edge_index_nps['reviewcount2item'] = reviewcount2item_edge_index_np
+    edge_index_nps['attributes2item'] = attributes2item_edge_index_np
+    edge_index_nps['categories2item'] = categories2item_edge_index_np
+    edge_index_nps['checkincount2item'] = checkincount2item_edge_index_np
+
+    print('Creating reviewtip property edges...')
+    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+
+    user2item_edge_index_np = np.zeros((2, 0))
+    pbar = tqdm.tqdm(users.user_id, total=users.user_id.shape[0])
+    for uid in pbar:
+        pbar.set_description('Creating the edges for the user {}'.format(uid))
+        uid_reviewtip = reviewtip[reviewtip.user_id == uid].sort_values(['bus_count', 'user_count'])
+        uid_iids = uid_reviewtip[['business_id']].to_numpy().reshape(-1)
+
+        unid = e2nid_dict['uid'][uid]
+        train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
+        train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
+        test_pos_uid_iids = list(uid_iids[-1:])
+        test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
+        neg_uid_iids = list(set(items.business_id) - set(uid_iids))
+        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
+
+        train_pos_unid_inid_map[unid] = train_pos_uid_inids
+        test_pos_unid_inid_map[unid] = test_pos_uid_inids
+        neg_unid_inid_map[unid] = neg_uid_inids
+
+        unid_user2item_edge_index_np = np.array(
+            [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
         )
-        bus2user_edge_index_np = np.hstack([bus2user_edge_index_np, bnid_bus2user_edge_index_np])
+        user2item_edge_index_np = np.hstack([user2item_edge_index_np, unid_user2item_edge_index_np])
 
-    edge_index_nps['bus2user'] = bus2user_edge_index_np
+    edge_index_nps['user2item'] = user2item_edge_index_np
+
+    print('missing uids:', np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int)-num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_bnid_unid_map'], dataset_property_dict['test_pos_bnid_unid_map'], \
-    dataset_property_dict['neg_bnid_unid_map'] = \
-        train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map
+    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    dataset_property_dict['neg_unid_inid_map'] = \
+        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
     dataset_property_dict['edge_type_dict'] = edge_type_dict
     dataset_property_dict['num_edge_types'] = len(list(edge_index_nps.keys()))
 
-    print('Building the user occurrence map...')
-    user_nid_occs = {}
-    for uid in user.user_id:
-        user_nid_occs[e2nid_dict['uid'][uid]] = review[review.user_id == uid].iloc[0]['user_count'] + \
-                                                    tip[tip.user_id == uid].iloc[0]['user_count']
-    dataset_property_dict['user_nid_occs'] = user_nid_occs
+    print('Building the item occurrence map...')
+    item_nid_occs = {}
+    for iid in items.business_id:
+        item_nid_occs[e2nid_dict['iid'][iid]] = 0 if reviewtip[reviewtip.business_id == iid].empty else reviewtip[reviewtip.business_id == iid].iloc[0]['bus_count']
+
+    dataset_property_dict['item_nid_occs'] = item_nid_occs
 
     # New functionality for pytorch geometric like dataset
     dataset_property_dict['types'] = types
@@ -400,16 +395,15 @@ class Yelp(Dataset):
     def process(self):
         # parser files
         if isfile(join(self.processed_dir, 'business.pkl')) and isfile(join(self.processed_dir, 'user.pkl')) and isfile(
-                join(self.processed_dir, 'review.pkl')) and isfile(join(self.processed_dir, 'tip.pkl')):
+                join(self.processed_dir, 'reviewtip.pkl')):
             print('Read data frame!')
             business = pd.read_pickle(join(self.processed_dir, 'business.pkl'))
             user = pd.read_pickle(join(self.processed_dir, 'user.pkl'))
-            review = pd.read_pickle(join(self.processed_dir, 'review.pkl'))
-            tip = pd.read_pickle(join(self.processed_dir, 'tip.pkl'))
+            reviewtip = pd.read_pickle(join(self.processed_dir, 'reviewtip.pkl'))
             business = business.fillna('')
             user = user.fillna('')
-            review = review.fillna('')
-            tip = tip.fillna('')
+            reviewtip = reviewtip.fillna('')
+
         else:
             print('Data frame not found in {}! Read from raw data!'.format(self.processed_dir))
             business, user, review, tip, checkin = parse_yelp(self.untar_file_path)
@@ -519,65 +513,58 @@ class Yelp(Dataset):
             # Merging business and checkin
             business = pd.merge(business, checkin, on='business_id', how='left').fillna(0)
 
+            #Select only relevant columns of review and tip
+            review = review.iloc[:,[1,2]]
+            tip = tip.iloc[:,[0,1]]
+
+            #Concat review and tips
+            reviewtip = pd.concat([review, tip], axis=0)
+
             # remove duplications
             business = business.drop_duplicates()
             user = user.drop_duplicates()
-            review = review.drop_duplicates()
-            tip = tip.drop_duplicates()
-            checkin = checkin.drop_duplicates()
+            reviewtip = reviewtip.drop_duplicates()
 
             if business.shape[0] != business.business_id.unique().shape[0] or user.shape[0] != \
-                    user.user_id.unique().shape[0] or review.shape[0] != review.review_id.unique().shape[0] \
-                    or checkin.shape[0] != checkin.business_id.unique().shape[0]:
+                    user.user_id.unique().shape[0]:
                 raise ValueError('Duplicates in dfs.')
 
-            # Compute the business and user counts for review
-            bus_count = review['business_id'].value_counts()
-            user_count = review['user_id'].value_counts()
+            # Compute the business and user counts for reviewtip
+            bus_count = reviewtip['business_id'].value_counts()
+            user_count = reviewtip['user_id'].value_counts()
             bus_count.name = 'bus_count'
             user_count.name = 'user_count'
-            review = review.join(bus_count, on='business_id')
-            review = review.join(user_count, on='user_id')
+            reviewtip = reviewtip.join(bus_count, on='business_id')
+            reviewtip = reviewtip.join(user_count, on='user_id')
 
-            # Compute the business and user counts for tip
-            bus_count = tip['business_id'].value_counts()
-            user_count = tip['user_id'].value_counts()
-            bus_count.name = 'bus_count'
-            user_count.name = 'user_count'
-            tip = tip.join(bus_count, on='business_id')
-            tip = tip.join(user_count, on='user_id')
-
-            # Remove infrequent business and user in review
-            review = review[review.bus_count > self.num_core]
-            review = review[review.user_count > self.num_core]
-
-            # Remove infrequent business and user in tip
-            tip = tip[tip.bus_count > self.num_core]
-            tip = tip[tip.user_count > self.num_core]
+            # Remove infrequent business and user in reviewtip
+            reviewtip = reviewtip[reviewtip.user_count > self.num_core]
+            reviewtip = reviewtip[reviewtip.bus_count > self.num_core]
 
             # Sync the business and user dataframe
-            for i in range(0, 4):
-                business = business[business.business_id.isin(review['business_id'].unique())]
-                user = user[user.user_id.isin(review['user_id'].unique())]
-                review = review[review.user_id.isin(user['user_id'].unique())]
-                review = review[review.business_id.isin(business['business_id'].unique())]
+            user = user[user.user_id.isin(reviewtip['user_id'].unique())]
+            business = business[business.business_id.isin(reviewtip['business_id'].unique())]
+            reviewtip = reviewtip[reviewtip.user_id.isin(user['user_id'].unique())]
+            reviewtip = reviewtip[reviewtip.business_id.isin(business['business_id'].unique())]
 
-                business = business[business.business_id.isin(tip['business_id'].unique())]
-                user = user[user.user_id.isin(tip['user_id'].unique())]
-                tip = tip[tip.user_id.isin(user['user_id'].unique())]
-                tip = tip[tip.business_id.isin(business['business_id'].unique())]
+            # Compute the updated business and user counts for reviewtip
+            bus_count = reviewtip['business_id'].value_counts()
+            user_count = reviewtip['user_id'].value_counts()
+            bus_count.name = 'bus_count'
+            user_count.name = 'user_count'
+            reviewtip = reviewtip.iloc[:,[0,1]].join(bus_count, on='business_id')
+            reviewtip = reviewtip.join(user_count, on='user_id')
 
             # Reindex the bid and uid in case of missing values
-            business, user, review, tip = reindex_df(business, user, review, tip)
+            business, user, reviewtip = reindex_df(business, user, reviewtip)
 
             print('Preprocessing done.')
 
             business.to_pickle(join(self.processed_dir, 'business.pkl'))
             user.to_pickle(join(self.processed_dir, 'user.pkl'))
-            review.to_pickle(join(self.processed_dir, 'review.pkl'))
-            tip.to_pickle(join(self.processed_dir, 'tip.pkl'))
+            reviewtip.to_pickle(join(self.processed_dir, 'reviewtip.pkl'))
 
-        dataset_property_dict = generate_graph_data(business, user, review, tip)
+        dataset_property_dict = generate_graph_data(user, business, reviewtip)
 
         with open(self.processed_paths[0], 'wb') as f:
             pickle.dump(dataset_property_dict, f)
@@ -617,58 +604,58 @@ class Yelp(Dataset):
 
     def cf_negative_sampling(self):
         print('CF negative sampling...')
-        pos_edge_index_trans_np = self.edge_index_nps['bus2user'].T
+        pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
         if self.cf_loss_type == 'BCE':
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
 
-            neg_unids = []
-            b_nids = pos_samples_np[:, 0]
-            p_bar = tqdm.tqdm(b_nids)
-            for b_nid in p_bar:
-                neg_unids.append(
+            neg_inids = []
+            u_nids = pos_samples_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
                     self._cf_negative_sampling(
-                        b_nid,
+                        u_nid,
                         self.num_negative_samples,
                         (
-                            self.train_pos_bnid_unid_map,
-                            self.test_pos_bnid_unid_map,
-                            self.neg_bnid_unid_map
+                            self.train_pos_unid_inid_map,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
                         ),
-                        self.user_nid_occs
+                        self.item_nid_occs
                     )
                 )
-            neg_unids_np = np.vstack(neg_unids)
+            neg_inids_np = np.vstack(neg_inids)
             neg_samples_np = np.hstack(
                 [
                     np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
-                    neg_unids_np,
-                    torch.zeros((neg_unids_np.shape[0], 1)).long()
+                    neg_inids_np,
+                    torch.zeros((neg_inids_np.shape[0], 1)).long()
                 ]
             )
 
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            neg_unids = []
-            b_nids = pos_edge_index_trans_np[:, 0]
-            p_bar = tqdm.tqdm(b_nids)
-            for b_nid in p_bar:
-                neg_unids.append(
+            neg_inids = []
+            u_nids = pos_edge_index_trans_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
                     self._cf_negative_sampling(
-                        b_nid,
+                        u_nid,
                         self.num_negative_samples,
                         (
-                            self.train_pos_bnid_unid_map,
-                            self.test_pos_bnid_unid_map,
-                            self.neg_bnid_unid_map
+                            self.train_pos_unid_inid_map,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
                         ),
-                        self.user_nid_occs
+                        self.item_nid_occs
                     )
                 )
 
             train_data_np = np.hstack(
                 [
                     np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
-                    np.vstack(neg_unids)
+                    np.vstack(neg_inids)
                 ]
             )
         else:

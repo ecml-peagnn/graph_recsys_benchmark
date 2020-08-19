@@ -24,11 +24,9 @@ MODEL = 'MetaPath2Vec'
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='1m', help='')
+parser.add_argument('--dataset', type=str, default='Yelp', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
+parser.add_argument('--num_core', type=int, default=30, help='')
 
 # Model params
 parser.add_argument('--emb_dim', type=int, default=64, help='')
@@ -45,26 +43,26 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--epochs', type=int, default=30, help='')
+parser.add_argument('--runs', type=int, default=3, help='')
+parser.add_argument('--epochs', type=int, default=20, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
-parser.add_argument('--batch_size', type=int, default=1028, help='')
-parser.add_argument('--num_workers', type=int, default=4, help='')
+parser.add_argument('--batch_size', type=int, default=1024, help='')
+parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--random_walk_opt', type=str, default='SparseAdam', help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--random_walk_lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=26, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
+parser.add_argument('--save_every_epoch', type=int, default=16, help='')
 
 args = parser.parse_args()
 
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
-    get_folder_path(model=MODEL, dataset=args.dataset + args.dataset_name, loss_type=LOSS_TYPE)
+    get_folder_path(model=MODEL, dataset=args.dataset, loss_type=LOSS_TYPE)
 
 # Setup device
 if not torch.cuda.is_available() or args.device == 'cpu':
@@ -74,10 +72,9 @@ else:
 
 # Setup args
 dataset_args = {
-    'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
+    'root': data_folder, 'dataset': args.dataset,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'cf_loss_type': LOSS_TYPE
+    'num_core': args.num_core, 'cf_loss_type': LOSS_TYPE
 }
 model_args = {
     'embedding_dim': args.emb_dim, 'model_type': MODEL_TYPE,
@@ -165,25 +162,35 @@ class MetaPath2VecSolver(BaseSolver):
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
 
+                    print("GPU Usage before data load")
+                    gpu_usage()
+
                     # Create the dataset
                     self.dataset_args['seed'] = seed
                     dataset = load_dataset(self.dataset_args)
 
+                    print("GPU Usage after data load")
+                    gpu_usage()
+
                     # Create random walk model
                     edge_index_dict = {
-                        ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                        ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                        ('user', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
-                        ('gender', 'as the gender of', 'user'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
-                        ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                        ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                        ('itemattributes', 'as the attribute of', 'items'): torch.from_numpy(dataset.edge_index_nps['attributes2item']).long().to(self.train_args['device']),
+                        ('items', 'has been visited by', 'users'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                        ('users', 'has the number of friends', 'userfriendcount'): torch.from_numpy(np.flip(dataset.edge_index_nps['friendcount2user'], 0).copy()).long().to(self.train_args['device']),
+                        ('userfriendcount', 'as the number of friends of', 'users'): torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(self.train_args['device']),
+                        ('users', 'has visited', 'items'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                        ('items', 'has the attribute', 'itemattributes'): torch.from_numpy(np.flip(dataset.edge_index_nps['attributes2item'], 0).copy()).long().to(self.train_args['device']),
+
                     }
                     metapath = [
-                        ('user', 'has watched', 'movie'),
-                        ('movie', 'has the genre', 'genre'),
-                        ('genre', 'as the genre of', 'movie'),
-                        ('movie', 'has been watched by', 'user'),
+                        ('itemattributes', 'as the attribute of', 'items'),
+                        ('items', 'has been visited by', 'users'),
+                        ('users', 'has the number of friends', 'userfriendcount'),
+                        ('userfriendcount', 'as the number of friends of', 'users'),
+                        ('users', 'has visited', 'items'),
+                        ('items', 'has the attribute', 'itemattributes')
                     ]
+
                     self.model_args['metapath'] = metapath
                     self.model_args['edge_index_dict'] = edge_index_dict
 
@@ -283,6 +290,8 @@ class MetaPath2VecSolver(BaseSolver):
                                 AUC_before_np[0], eval_loss_before_np[0]
                             )
                         )
+                        instantwrite(logger_file)
+                        clearcache()
 
                     t_start = time.perf_counter()
                     if start_epoch <= self.train_args['epochs']:
@@ -383,6 +392,7 @@ class MetaPath2VecSolver(BaseSolver):
                             HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
                             random_walk_train_loss_per_run_np, train_loss_per_run_np, eval_loss_per_run_np
                         )
+
                         print(
                             'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
                             'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '

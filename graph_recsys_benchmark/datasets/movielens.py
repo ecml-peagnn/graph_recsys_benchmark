@@ -26,7 +26,7 @@ def reindex_df_ml1m(users, movies, ratings):
     :param ratings: pd.DataFrame
     :return: same
     """
-    unique_uids = users.uid.unique().sort()
+    unique_uids = np.sort(users.uid.unique()).astype(np.int)
     num_users = unique_uids.shape[0]
     raw_uids = np.array(unique_uids, dtype=np.int)
     uids = np.arange(num_users)
@@ -36,7 +36,7 @@ def reindex_df_ml1m(users, movies, ratings):
     rating_uids = [raw_uid2uid[rating_uid] for rating_uid in rating_uids]
     ratings['uid'] = rating_uids
 
-    unique_iids = movies.iid.unique().sort()
+    unique_iids = np.sort(movies.iid.unique()).astype(np.int)
     num_movies = unique_iids.shape[0]
     raw_iids = np.array(unique_iids, dtype=np.int)
     iids = np.arange(num_movies)
@@ -703,7 +703,8 @@ class MovieLens(Dataset):
             except:
                 unzip_raw_dir = join(self.raw_dir, 'ml-{}'.format(self.name))
                 print('Data frame not found in {}! Read from raw data and preprocessing from {}!'.format(self.processed_dir, unzip_raw_dir))
-                movies, ratings, tagging, genome_scores, genome_tags = parse_ml25m(unzip_raw_dir)
+                users, movies, ratings = parse_ml1m(unzip_raw_dir)
+
                 # Remove duplicates
                 movies = movies.drop_duplicates()
                 ratings = ratings.drop_duplicates()
