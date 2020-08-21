@@ -198,7 +198,7 @@ def generate_graph_data(
     userstars2nid = {userstars: i + acc for i, userstars in enumerate(unique_user_stars)}
     for i, userstars in enumerate(unique_user_stars):
         nid2e_dict[i + acc] = ('userstars', userstars)
-    acc += num_user_fans
+    acc += num_user_stars
     type_accs['itemstars'] = acc
     itemstars2nid = {itemstars: i + acc for i, itemstars in enumerate(unique_item_stars)}
     for i, itemstars in enumerate(unique_item_stars):
@@ -319,7 +319,7 @@ def generate_graph_data(
 
     edge_index_nps['user2item'] = user2item_edge_index_np
 
-    print('missing uids:', np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int)-num_users)))
+    print('missing iids:', np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int)-num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
     dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
