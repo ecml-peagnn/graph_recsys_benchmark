@@ -45,115 +45,60 @@ class BaseSolver(object):
         """
         HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
 
-        if self.dataset_args['dataset'] == "Movielens":
-            train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = \
-                dataset.train_pos_unid_inid_map, dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
 
-            u_nids = list(test_pos_unid_inid_map.keys())
-            test_bar = tqdm.tqdm(u_nids, total=len(u_nids))
-            for u_idx, u_nid in enumerate(test_bar):
-                pos_i_nids, neg_i_nids = self.generate_candidates(
-                    dataset, u_nid
-                )
-                if len(pos_i_nids) == 0 or len(neg_i_nids) == 0:
-                    raise ValueError("No pos or neg samples found in evaluation!")
+        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = \
+            dataset.train_pos_unid_inid_map, dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
 
-                pos_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(pos_i_nids))], 'pos_i_nid': pos_i_nids})
-                neg_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(neg_i_nids))], 'neg_i_nid': neg_i_nids})
-                pos_neg_pair_t = torch.from_numpy(
-                    pd.merge(pos_i_nid_df, neg_i_nid_df, how='inner', on='u_nid').to_numpy()
-                ).to(self.train_args['device'])
+        u_nids = list(test_pos_unid_inid_map.keys())
+        test_bar = tqdm.tqdm(u_nids, total=len(u_nids))
+        for u_idx, u_nid in enumerate(test_bar):
+            pos_i_nids, neg_i_nids = self.generate_candidates(
+                dataset, u_nid
+            )
+            if len(pos_i_nids) == 0 or len(neg_i_nids) == 0:
+                raise ValueError("No pos or neg samples found in evaluation!")
 
-                if self.model_args['model_type'] == 'MF':
-                    pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
-                    pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
-                loss = model.cf_loss(pos_neg_pair_t).detach().cpu().item()
+            pos_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(pos_i_nids))], 'pos_i_nid': pos_i_nids})
+            neg_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(neg_i_nids))], 'neg_i_nid': neg_i_nids})
+            pos_neg_pair_t = torch.from_numpy(
+                pd.merge(pos_i_nid_df, neg_i_nid_df, how='inner', on='u_nid').to_numpy()
+            ).to(self.train_args['device'])
 
-                pos_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(pos_i_nids))])).to(
-                    self.train_args['device'])
-                pos_i_nids_t = torch.from_numpy(np.array(pos_i_nids)).to(self.train_args['device'])
-                neg_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(neg_i_nids))])).to(
-                    self.train_args['device'])
-                neg_i_nids_t = torch.from_numpy(np.array(neg_i_nids)).to(self.train_args['device'])
-                if self.model_args['model_type'] == 'MF':
-                    pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                    neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                    pos_i_nids_t -= dataset.e2nid_dict['iid'][0]
-                    neg_i_nids_t -= dataset.e2nid_dict['iid'][0]
-                pos_pred = model.predict(pos_u_nids_t, pos_i_nids_t).reshape(-1)
-                neg_pred = model.predict(neg_u_nids_t, neg_i_nids_t).reshape(-1)
+            if self.model_args['model_type'] == 'MF':
+                pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
+                pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
+            loss = model.cf_loss(pos_neg_pair_t).detach().cpu().item()
 
-                _, indices = torch.sort(torch.cat([pos_pred, neg_pred]), descending=True)
-                hit_vec = (indices < len(pos_i_nids)).cpu().detach().numpy()
-                pos_pred = pos_pred.cpu().detach().numpy()
-                neg_pred = neg_pred.cpu().detach().numpy()
+            pos_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(pos_i_nids))])).to(
+                self.train_args['device'])
+            pos_i_nids_t = torch.from_numpy(np.array(pos_i_nids)).to(self.train_args['device'])
+            neg_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(neg_i_nids))])).to(
+                self.train_args['device'])
+            neg_i_nids_t = torch.from_numpy(np.array(neg_i_nids)).to(self.train_args['device'])
+            if self.model_args['model_type'] == 'MF':
+                pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
+                neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
+                pos_i_nids_t -= dataset.e2nid_dict['iid'][0]
+                neg_i_nids_t -= dataset.e2nid_dict['iid'][0]
+            pos_pred = model.predict(pos_u_nids_t, pos_i_nids_t).reshape(-1)
+            neg_pred = model.predict(neg_u_nids_t, neg_i_nids_t).reshape(-1)
 
-                HRs = np.vstack([HRs, hit(hit_vec)])
-                NDCGs = np.vstack([NDCGs, ndcg(hit_vec)])
-                AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
-                eval_losses = np.vstack([eval_losses, loss])
-                test_bar.set_description(
-                    'Run {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
-                    'AUC: {:.4f}, eval loss: {:.4f}, '.format(
-                        run, epoch,
-                        HRs.mean(axis=0), NDCGs.mean(axis=0), AUC.mean(axis=0)[0],
-                        eval_losses.mean(axis=0)[0])
-                )
+            _, indices = torch.sort(torch.cat([pos_pred, neg_pred]), descending=True)
+            hit_vec = (indices < len(pos_i_nids)).cpu().detach().numpy()
+            pos_pred = pos_pred.cpu().detach().numpy()
+            neg_pred = neg_pred.cpu().detach().numpy()
 
-        elif self.dataset_args['dataset'] == "Yelp":
-            train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map = \
-                dataset.train_pos_bnid_unid_map, dataset.test_pos_bnid_unid_map, dataset.neg_bnid_unid_map
-
-            b_nids = list(test_pos_bnid_unid_map.keys())
-            test_bar = tqdm.tqdm(b_nids, total=len(b_nids))
-            for b_idx, b_nid in enumerate(test_bar):
-                pos_u_nids, neg_u_nids = self.generate_candidates(
-                    dataset, b_nid
-                )
-                if len(pos_u_nids) == 0 or len(neg_u_nids) == 0:
-                    raise ValueError("No pos or neg samples found in evaluation!")
-
-                pos_u_nid_df = pd.DataFrame({'b_nid': [b_nid for _ in range(len(pos_u_nids))], 'pos_u_nid': pos_u_nids})
-                neg_u_nid_df = pd.DataFrame({'b_nid': [b_nid for _ in range(len(neg_u_nids))], 'neg_u_nid': neg_u_nids})
-                pos_neg_pair_t = torch.from_numpy(
-                    pd.merge(pos_u_nid_df, neg_u_nid_df, how='inner', on='b_nid').to_numpy()
-                ).to(self.train_args['device'])
-
-                if self.model_args['model_type'] == 'MF':
-                    pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['bid'][0]
-                    pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['uid'][0]
-                loss = model.cf_loss(pos_neg_pair_t).detach().cpu().item()
-
-                pos_b_nids_t = torch.from_numpy(np.array([b_nid for _ in range(len(pos_u_nids))])).to(
-                    self.train_args['device'])
-                pos_u_nids_t = torch.from_numpy(np.array(pos_u_nids)).to(self.train_args['device'])
-                neg_b_nids_t = torch.from_numpy(np.array([b_nid for _ in range(len(neg_u_nids))])).to(
-                    self.train_args['device'])
-                neg_u_nids_t = torch.from_numpy(np.array(neg_u_nids)).to(self.train_args['device'])
-                if self.model_args['model_type'] == 'MF':
-                    pos_b_nids_t -= dataset.e2nid_dict['bid'][0]
-                    neg_b_nids_t -= dataset.e2nid_dict['bid'][0]
-                    pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                    neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                pos_pred = model.predict(pos_b_nids_t, pos_u_nids_t).reshape(-1)
-                neg_pred = model.predict(neg_b_nids_t, neg_u_nids_t).reshape(-1)
-
-                _, indices = torch.sort(torch.cat([pos_pred, neg_pred]), descending=True)
-                hit_vec = (indices < len(pos_u_nids)).cpu().detach().numpy()
-                pos_pred = pos_pred.cpu().detach().numpy()
-                neg_pred = neg_pred.cpu().detach().numpy()
-
-                HRs = np.vstack([HRs, hit(hit_vec)])
-                NDCGs = np.vstack([NDCGs, ndcg(hit_vec)])
-                AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
-                eval_losses = np.vstack([eval_losses, loss])
-                test_bar.set_description(
-                    'Run {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
-                    'AUC: {:.4f}, eval loss: {:.4f}, '.format(
-                        run, epoch,
-                        HRs.mean(axis=0), NDCGs.mean(axis=0), AUC.mean(axis=0)[0],
-                        eval_losses.mean(axis=0)[0])
-                )
+            HRs = np.vstack([HRs, hit(hit_vec)])
+            NDCGs = np.vstack([NDCGs, ndcg(hit_vec)])
+            AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
+            eval_losses = np.vstack([eval_losses, loss])
+            test_bar.set_description(
+                'Run {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, eval loss: {:.4f}, '.format(
+                    run, epoch, HRs.mean(axis=0)[0], HRs.mean(axis=0)[5], HRs.mean(axis=0)[10], HRs.mean(axis=0)[15],
+                    NDCGs.mean(axis=0)[0], NDCGs.mean(axis=0)[5], NDCGs.mean(axis=0)[10], NDCGs.mean(axis=0)[15],
+                    AUC.mean(axis=0)[0], eval_losses.mean(axis=0)[0])
+            )
         print("GPU Usage after each epoch")
         gpu_usage()
         return np.mean(HRs, axis=0), np.mean(NDCGs, axis=0), np.mean(AUC, axis=0), np.mean(eval_losses, axis=0)
@@ -195,12 +140,8 @@ class BaseSolver(object):
                         self.model_args['num_nodes'] = dataset.num_nodes
                         self.model_args['dataset'] = dataset
                     elif self.model_args['model_type'] == 'MF':
-                        if self.dataset_args['dataset'] == "Movielens":
-                            self.model_args['num_users'] = dataset.num_users
-                            self.model_args['num_items'] = dataset.num_items
-                        elif self.dataset_args['dataset'] == "Yelp":
-                            self.model_args['num_users'] = dataset.num_bus
-                            self.model_args['num_items'] = dataset.num_users
+                        self.model_args['num_users'] = dataset.num_users
+                        self.model_args['num_items'] = dataset.num_items
 
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
 
@@ -230,15 +171,21 @@ class BaseSolver(object):
                         HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
                             self.metrics(run, 0, model, dataset)
                         print(
-                            'Initial performance HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np, NDCGs_before_np, AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         logger_file.write(
-                            'Initial performance HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np, NDCGs_before_np, AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         instantwrite(logger_file)
@@ -262,19 +209,11 @@ class BaseSolver(object):
                             for _, batch in enumerate(train_bar):
                                 if self.model_args['model_type'] == 'MF':
                                     if self.model_args['loss_type'] == 'BCE':
-                                        if self.dataset_args['dataset'] == "Movielens":
-                                            batch[:, 0] -= dataset.e2nid_dict['uid'][0]
-                                            batch[:, 1] -= dataset.e2nid_dict['iid'][0]
-                                        elif self.dataset_args['dataset'] == "Yelp":
-                                            batch[:, 0] -= dataset.e2nid_dict['bid'][0]
-                                            batch[:, 1] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1] -= dataset.e2nid_dict['iid'][0]
                                     elif self.model_args['loss_type'] == 'BPR':
-                                        if self.dataset_args['dataset'] == "Movielens":
-                                            batch[:, 0] -= dataset.e2nid_dict['uid'][0]
-                                            batch[:, 1:] -= dataset.e2nid_dict['iid'][0]
-                                        elif self.dataset_args['dataset'] == "Yelp":
-                                            batch[:, 0] -= dataset.e2nid_dict['bid'][0]
-                                            batch[:, 1:] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1:] -= dataset.e2nid_dict['iid'][0]
                                 batch = batch.to(self.train_args['device'])
 
                                 optimizer.zero_grad()
@@ -313,15 +252,19 @@ class BaseSolver(object):
                                     HRs_per_epoch_np, NDCGs_per_epoch_np, AUC_per_epoch_np, train_loss_per_epoch_np, eval_loss_per_epoch_np)
                                 )
                             print(
-                                'Run: {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs, NDCGs, AUC[0], train_loss, eval_loss[0]
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                    AUC[0], train_loss, eval_loss[0]
                                 )
                             )
                             logger_file.write(
-                                'Run: {}, epoch: {}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs, NDCGs, AUC[0], train_loss, eval_loss[0]
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                    AUC[0], train_loss, eval_loss[0]
                                 )
                             )
                             instantwrite(logger_file)
@@ -343,16 +286,25 @@ class BaseSolver(object):
                         train_loss_per_run_np, eval_loss_per_run_np
                     )
                     print(
-                        'Run: {}, Duration: {:.4f}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
+                        'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                         'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0), np.max(NDCGs_per_epoch_np, axis=0),
-                            AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                            np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                            np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5], np.max(NDCGs_per_epoch_np, axis=0)[10],
+                            np.max(NDCGs_per_epoch_np, axis=0)[15], AUC_per_epoch_np[-1][0],
+                            train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     logger_file.write(
-                        'Run: {}, Duration: {:.4f}, HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, '
+                        'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                         'train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0), np.max(NDCGs_per_epoch_np, axis=0),
-                            AUC_per_epoch_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                                run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                                np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                                np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
+                                np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
+                                AUC_per_epoch_np[-1][0],
+                                train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     instantwrite(logger_file)
 
@@ -363,15 +315,23 @@ class BaseSolver(object):
                     clearcache()
 
             print(
-                'Overall HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0), NDCGs_per_run_np.mean(axis=0), AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
-                    eval_loss_per_run_np.mean(axis=0)[0]
+                'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                        HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                        HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0],
+                        NDCGs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[10],
+                        NDCGs_per_run_np.mean(axis=0)[15], AUC_per_run_np.mean(axis=0)[0],
+                        train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
             logger_file.write(
-                'Overall HR@(5-20): {:.4f}, NDCG@(5-20): {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0), NDCGs_per_run_np.mean(axis=0), AUC_per_run_np.mean(axis=0)[0], train_loss_per_run_np.mean(axis=0)[0],
-                    eval_loss_per_run_np.mean(axis=0)[0]
+                'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                    HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                    HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0],
+                    NDCGs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[10],
+                    NDCGs_per_run_np.mean(axis=0)[15], AUC_per_run_np.mean(axis=0)[0],
+                    train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
             instantwrite(logger_file)
