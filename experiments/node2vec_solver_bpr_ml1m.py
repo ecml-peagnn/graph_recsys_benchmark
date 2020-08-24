@@ -45,7 +45,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='7', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
@@ -192,8 +192,7 @@ class Node2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
-                            load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
                         print("Train new random walk model, since no random walk model checkpoint_backup found at '{}'".format(weights_file))

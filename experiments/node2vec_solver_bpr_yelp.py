@@ -76,7 +76,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'cf_loss_type': LOSS_TYPE
+    'num_core': args.num_core, 'num_feat_core': args.num_feat_core, cf_loss_type': LOSS_TYPE
 }
 model_args = {
     'embedding_dim': args.emb_dim, 'model_type': MODEL_TYPE,
