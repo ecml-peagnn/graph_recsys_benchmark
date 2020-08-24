@@ -34,7 +34,6 @@ class MPAGCNChannel(torch.nn.Module):
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.gcn_layers[step_idx](x, edge_index_list[step_idx]))
         x = self.gcn_layers[-1](x, edge_index_list[-1])
-        x = F.normalize(x)
         return x
 
 
@@ -59,20 +58,20 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             kwargs_cpy['num_steps'] = num_steps
             self.mpagcn_channels.append(MPAGCNChannel(**kwargs_cpy))
 
-        if self.channel_aggr == 'concat':
-            self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
-        elif self.channel_aggr == 'mean':
+        if self.channel_aggr == 'mean':
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         elif self.channel_aggr == 'att':
             self.att = torch.nn.Linear(kwargs['repr_dim'], 1)
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        self.fc2 = torch.nn.Linear(kwargs['repr_dim'] * 2, 1)
+        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
 
     def reset_parameters(self):
         for module in self.mpagcn_channels:
             module.reset_parameters()
+        glorot(self.fc1.weight)
+        glorot(self.fc2.weight)
         if self.channel_aggr == 'att':
             glorot(self.att.weight)
 
@@ -95,6 +94,6 @@ class MPAGCNRecsysModel(GraphRecsysModel):
         i_repr = self.cached_repr[inids]
         x = torch.cat([u_repr, i_repr], dim=-1)
         x = F.relu(self.fc1(x))
-        x = self.fc2(torch.cat([x, u_repr * i_repr]))
+        x = self.fc2(x)
         return x
 

@@ -34,7 +34,6 @@ class MPASAGEChannel(torch.nn.Module):
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.sage_layers[step_idx](x, edge_index_list[step_idx]))
         x = self.sage_layers[-1](x, edge_index_list[-1])
-        x = F.normalize(x)
         return x
 
 
@@ -68,7 +67,7 @@ class MPASAGERecsysModel(GraphRecsysModel):
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
+        self.fc2 = torch.nn.Linear(kwargs['repr_dim'] * 2, 1)
 
     def reset_parameters(self):
         for module in self.mpasage_channels:
@@ -95,6 +94,6 @@ class MPASAGERecsysModel(GraphRecsysModel):
         i_repr = self.cached_repr[inids]
         x = torch.cat([u_repr, i_repr], dim=-1)
         x = F.relu(self.fc1(x))
-        x = self.fc2(torch.cat([x, u_repr * i_repr]))
+        x = self.fc2(x)
         return x
 
