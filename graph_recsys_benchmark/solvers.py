@@ -127,7 +127,6 @@ class BaseSolver(object):
                     gpu_usage()
 
                     # Create the dataset
-                    self.dataset_args['seed'] = seed
                     dataset = load_dataset(self.dataset_args)
 
                     print("GPU Usage after data load")
