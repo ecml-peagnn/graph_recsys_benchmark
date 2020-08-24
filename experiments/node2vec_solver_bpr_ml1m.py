@@ -155,7 +155,7 @@ class Node2VecSolver(BaseSolver):
             load_random_walk_global_logger(global_logger_file_path)
 
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
-        with open(logger_file_path, 'w') as logger_file:
+        with open(logger_file_path, 'a') as logger_file:
             start_run = last_run + 1
             if start_run <= self.train_args['runs']:
                 for run in range(start_run, self.train_args['runs'] + 1):
@@ -177,6 +177,7 @@ class Node2VecSolver(BaseSolver):
                     self.model_args['edge_index'] = edge_index
 
                     random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(Node2Vec.__init__).parameters}
+                    # random_walk_model_args['num_nodes'] = dataset.num_nodes
                     random_walk_model = Node2Vec(**random_walk_model_args).to(self.train_args['device'])
                     opt_class = get_opt_class(self.train_args['random_walk_opt'])
                     random_walk_optimizer = opt_class(
@@ -249,15 +250,21 @@ class Node2VecSolver(BaseSolver):
                         HRs_before_np, NDCGs_before_np, AUC_before_np, eval_loss_before_np = \
                             self.metrics(run, 0, model, dataset)
                         print(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], eval_loss_before_np[0]
                             )
                         )
                         logger_file.write(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], eval_loss_before_np[0]
                             )
                         )
 
@@ -279,19 +286,11 @@ class Node2VecSolver(BaseSolver):
                             for _, batch in enumerate(train_bar):
                                 if self.model_args['model_type'] == 'MF':
                                     if self.model_args['loss_type'] == 'BCE':
-                                        if self.dataset_args['dataset'] == "Movielens":
-                                            batch[:, 0] -= dataset.e2nid_dict['uid'][0]
-                                            batch[:, 1] -= dataset.e2nid_dict['iid'][0]
-                                        elif self.dataset_args['dataset'] == "Yelp":
-                                            batch[:, 0] -= dataset.e2nid_dict['bid'][0]
-                                            batch[:, 1] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1] -= dataset.e2nid_dict['iid'][0]
                                     elif self.model_args['loss_type'] == 'BPR':
-                                        if self.dataset_args['dataset'] == "Movielens":
-                                            batch[:, 0] -= dataset.e2nid_dict['uid'][0]
-                                            batch[:, 1:] -= dataset.e2nid_dict['iid'][0]
-                                        elif self.dataset_args['dataset'] == "Yelp":
-                                            batch[:, 0] -= dataset.e2nid_dict['bid'][0]
-                                            batch[:, 1:] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 0] -= dataset.e2nid_dict['uid'][0]
+                                        batch[:, 1:] -= dataset.e2nid_dict['iid'][0]
                                 batch = batch.to(self.train_args['device'])
 
                                 optimizer.zero_grad()
@@ -331,10 +330,20 @@ class Node2VecSolver(BaseSolver):
                                         HRs_per_epoch_np, NDCGs_per_epoch_np, AUC_per_epoch_np, train_loss_per_epoch_np,
                                         eval_loss_per_epoch_np)
                                 )
-                            logger_file.write(
-                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                            print(
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                                 'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs[5], NDCGs[5], AUC[0], train_loss, eval_loss[0]
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                    AUC[0], train_loss, eval_loss[0]
+                                )
+                            )
+                            logger_file.write(
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                    AUC[0], train_loss, eval_loss[0]
                                 )
                             )
                             instantwrite(logger_file)
@@ -359,16 +368,25 @@ class Node2VecSolver(BaseSolver):
                             random_walk_train_loss_per_run_np, train_loss_per_run_np, eval_loss_per_run_np
                         )
                         print(
-                            'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                            'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                             'walk loss: {:.4f}, train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                                run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
-                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                            run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                            np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                            np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5], np.max(NDCGs_per_epoch_np, axis=0)[10],
+                            np.max(NDCGs_per_epoch_np, axis=0)[15], AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0],
+                            train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         logger_file.write(
-                            'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, '
+                            'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
                             'walk loss: {:.4f}, train_loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                                run, t_end - t_start, HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5],
-                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0], train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
+                                run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                                np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                                np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
+                                np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
+                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0],
+                                train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         instantwrite(logger_file)
 
@@ -379,15 +397,21 @@ class Node2VecSolver(BaseSolver):
                         clearcache()
 
                 print(
-                    'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                        HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
+                    'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                    'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                        HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                        HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0], NDCGs_per_run_np.mean(axis=0)[5],
+                        NDCGs_per_run_np.mean(axis=0)[10], NDCGs_per_run_np.mean(axis=0)[15],
                         AUC_per_run_np.mean(axis=0)[0], random_walk_train_loss_per_run_np.mean(axis=0)[0],
                         train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                     )
                 )
                 logger_file.write(
-                    'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
-                        HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5],
+                    'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                    'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, walk loss: {:.4f}, train loss: {:.4f}, eval loss: {:.4f}\n'.format(
+                        HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                        HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0], NDCGs_per_run_np.mean(axis=0)[5],
+                        NDCGs_per_run_np.mean(axis=0)[10], NDCGs_per_run_np.mean(axis=0)[15],
                         AUC_per_run_np.mean(axis=0)[0], random_walk_train_loss_per_run_np.mean(axis=0)[0],
                         train_loss_per_run_np.mean(axis=0)[0], eval_loss_per_run_np.mean(axis=0)[0]
                     )

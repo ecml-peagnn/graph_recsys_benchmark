@@ -35,8 +35,14 @@ def parse_ml1m(raw_path):
             genres_set = set(genres.split('|'))
 
             # extract year
-            assert re.match(r'.*\([0-9]{4}\)$', title)
-            year = title[-5:-1]
+            year = title[-5:]
+            year = year[year.find('(') + 1:year.find(')')]
+            if re.match(r'^-?\d+(?:\.\d+)?$', year) is None:
+                year = 2020
+            else:
+                year = year
+
+            # Get title
             title = title.split(', The')[0].split(' (')[0].split(', A')[0].strip()
 
             data = {'iid': int(id_), 'title': title, 'year': int(year)}
@@ -48,39 +54,38 @@ def parse_ml1m(raw_path):
             .fillna(False)
             .astype({'year': 'category'}))
 
-    apikey = ''
-    key1 = 'e760129c'
-    key2 = 'e44e5305'
-    key3 = '8403a97b'
-    key4 = '192c6b0e'
-
     directors_strs = []
     actors_strs = []
     writer_list = []
 
     pbar = tqdm.tqdm(zip(movies.title, movies.year), total=movies.shape[0])
+    apikey = 'ca2a706a'
     for i, (title, year) in enumerate(pbar):
         pbar.set_description('Get item resources')
-        if i in range(0, 1000):
-            apikey = key1
-        if i in range(1000, 2000):
-            apikey = key2
-        if i in range(2000, 3000):
-            apikey = key3
-        if i in range(3000, 4000):
-            apikey = key4
-
         try:
-            movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&y=" + str(year) + "&apikey=" + apikey
+            movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&apikey=' + apikey
             r = requests.get(movie_url)
             movie_info_dic = json.loads(r.text)
+
         except:
-            try:
-                movie_url = "http://www.omdbapi.com/?" + "t=" + title + "&apikey=" + apikey
-                r = requests.get(movie_url)
-                movie_info_dic = json.loads(r.text)
-            except:
-                movie_info_dic = dict()
+                try:
+                    movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(year) + '&apikey=' + apikey
+                    r = requests.get(movie_url)
+                    movie_info_dic = json.loads(r.text)
+                except:
+                    try:
+                        movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(
+                            year - 1) + '&apikey=' + apikey
+                        r = requests.get(movie_url)
+                        movie_info_dic = json.loads(r.text)
+                    except:
+                        try:
+                            movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&y=' + str(
+                                year + 1) + '&apikey=' + apikey
+                            r = requests.get(movie_url)
+                            movie_info_dic = json.loads(r.text)
+                        except:
+                            movie_info_dic = dict()
 
         director = ','.join(movie_info_dic.get('Director', '').split(', '))
         actor = ','.join(movie_info_dic.get('Actors', '').split(', '))
@@ -102,7 +107,7 @@ def parse_ml1m(raw_path):
             ratings.append({
                 'uid': user_id,
                 'iid': movie_id,
-                'rating': rating - 1,
+                'rating': rating,
                 'timestamp': timestamp,
             })
     ratings = pd.DataFrame(ratings)
@@ -120,7 +125,7 @@ def parse_ml25m(dir):
     ratings = pd.read_csv(join(dir, 'ratings.csv'))
     ratings = ratings.dropna()
     ratings = ratings.rename(columns={'userId': 'uid', 'movieId': 'iid'})
-    ratings = ratings.astype({'uid': int, 'iid': int, 'rating': int})
+    ratings = ratings.astype({'uid': int, 'iid': int, 'rating': float})
 
     # parse tags
     tagging = pd.read_csv(join(dir, 'tags.csv'))
@@ -155,28 +160,13 @@ def parse_ml25m(dir):
         movies.append(data)
     movies = pd.DataFrame(movies).fillna(False)
 
-    apikey = ''
-    key1 = 'e760129c'
-    key2 = 'e44e5305'
-    key3 = '8403a97b'
-    key4 = '192c6b0e'
-
     directors_strs = []
     actors_strs = []
     writer_list = []
-
+    apikey = 'ca2a706a'
     pbar = tqdm.tqdm(zip(movies.title, movies.year), total=movies.shape[0])
     for i, (title, year) in enumerate(pbar):
         pbar.set_description('Get item resources')
-        if i in range(0, 1000):
-            apikey = key1
-        if i in range(1000, 2000):
-            apikey = key2
-        if i in range(2000, 3000):
-            apikey = key3
-        if i in range(3000, 4000):
-            apikey = key4
-
         try:
             movie_url = 'http://www.omdbapi.com/?' + 't=' + title + '&apikey=' + apikey
             r = requests.get(movie_url)
@@ -201,7 +191,6 @@ def parse_ml25m(dir):
                             movie_info_dic = json.loads(r.text)
                         except:
                             movie_info_dic = dict()
-
 
         director = ','.join(movie_info_dic.get('Director', '').split(', '))
         actor = ','.join(movie_info_dic.get('Actors', '').split(', '))

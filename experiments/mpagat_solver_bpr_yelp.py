@@ -19,9 +19,9 @@ parser = argparse.ArgumentParser()
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Yelp', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
+parser.add_argument('--num_core', type=int, default=30, help='')
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
@@ -36,7 +36,7 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=5, help='')
+parser.add_argument('--runs', type=int, default=3, help='')
 parser.add_argument('--epochs', type=int, default=20, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -45,7 +45,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
-parser.add_argument('--save_every_epoch', type=int, default=15, help='')
+parser.add_argument('--save_every_epoch', type=int, default=16, help='')
 
 args = parser.parse_args()
 
@@ -90,23 +90,23 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
+def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
-    :param b_nid:
+    :param u_nid:
     :return:
     '''
-    train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map = train_splition
+    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
     # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
     # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
     # nid_occs = nid_occs / np.sum(nid_occs)
     # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
     # negative_inids = negative_inids
 
-    negative_unids = test_pos_bnid_unid_map[b_nid] + neg_bnid_unid_map[b_nid]
-    negative_unids = rd.choices(population=negative_unids, k=num_negative_samples)
+    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
+    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
 
-    return np.array(negative_unids).reshape(-1, 1)
+    return np.array(negative_inids).reshape(-1, 1)
 
 
 class MPAGATRecsysModel(MPAGATRecsysModel):
@@ -121,28 +121,29 @@ class MPAGATRecsysModel(MPAGATRecsysModel):
         return loss
 
     def update_graph_input(self, dataset):
-        bus2user_edge_index = torch.from_numpy(dataset.edge_index_nps['bus2user']).long().to(train_args['device'])
+        user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
+        stars2item_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2item']).long().to(train_args['device'])
+        reviewcount2item_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2item']).long().to(train_args['device'])
+        attributes2item_edge_index = torch.from_numpy(dataset.edge_index_nps['attributes2item']).long().to(train_args['device'])
+        categories2item_edge_index = torch.from_numpy(dataset.edge_index_nps['categories2item']).long().to(train_args['device'])
+        checkincount2item_edge_index = torch.from_numpy(dataset.edge_index_nps['checkincount2item']).long().to(train_args['device'])
         reviewcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2user']).long().to(train_args['device'])
         friendcount2user_edge_index = torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(train_args['device'])
         fans2user_edge_index = torch.from_numpy(dataset.edge_index_nps['fans2user']).long().to(train_args['device'])
-        averagestars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['averagestars2user']).long().to(train_args['device'])
-        stars2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2bus']).long().to(train_args['device'])
-        reviewcount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['reviewcount2bus']).long().to(train_args['device'])
-        attributes2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['attributes2bus']).long().to(train_args['device'])
-        categories2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['categories2bus']).long().to(train_args['device'])
-        checkincount2bus_edge_index = torch.from_numpy(dataset.edge_index_nps['checkincount2bus']).long().to(train_args['device'])
+        stars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2user']).long().to(train_args['device'])
 
-        meta_path_edge_indicis_1 = [bus2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_2 = [torch.flip(bus2user_edge_index, dims=[0]), bus2user_edge_index]
-        meta_path_edge_indicis_3 = [reviewcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [friendcount2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [fans2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [averagestars2user_edge_index, torch.flip(bus2user_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [stars2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_8 = [reviewcount2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_9 = [attributes2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_10 = [categories2bus_edge_index, bus2user_edge_index]
-        meta_path_edge_indicis_11 = [checkincount2bus_edge_index, bus2user_edge_index]
+
+        meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+        meta_path_edge_indicis_3 = [stars2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [reviewcount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [attributes2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [categories2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [checkincount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_8 = [reviewcount2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_9 = [friendcount2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_10 = [fans2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_11 = [stars2user_edge_index, user2item_edge_index]
 
         meta_path_edge_index_list = [
             meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3, meta_path_edge_indicis_4,
@@ -156,13 +157,13 @@ class MPAGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
-    def generate_candidates(self, dataset, b_nid):
-        pos_u_nids = dataset.test_pos_bnid_unid_map[b_nid]
-        neg_u_nids = np.array(dataset.neg_bnid_unid_map[b_nid])
+    def generate_candidates(self, dataset, u_nid):
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
 
-        neg_u_nids_indices = np.array(rd.sample(range(neg_u_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
 
-        return pos_u_nids, list(neg_u_nids[neg_u_nids_indices])
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
 
 
 if __name__ == '__main__':

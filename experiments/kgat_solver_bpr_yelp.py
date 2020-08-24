@@ -25,9 +25,10 @@ parser = argparse.ArgumentParser()
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Yelp', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
+parser.add_argument('--num_core', type=int, default=30, help='')
+
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 # Train params
@@ -37,7 +38,7 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=5, help='')
+parser.add_argument('--runs', type=int, default=3, help='')
 parser.add_argument('--epochs', type=int, default=20, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -45,7 +46,7 @@ parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='')
 parser.add_argument('--save_epochs', type=str, default='5,10,15', help='')
-parser.add_argument('--save_every_epoch', type=int, default=15, help='')
+parser.add_argument('--save_every_epoch', type=int, default=16, help='')
 
 args = parser.parse_args()
 
@@ -88,23 +89,23 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(b_nid, num_negative_samples, train_splition, user_nid_occs):
+def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
     '''
     The negative sampling methods used for generating the training batches
-    :param b_nid:
+    :param u_nid:
     :return:
     '''
-    train_pos_bnid_unid_map, test_pos_bnid_unid_map, neg_bnid_unid_map = train_splition
+    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
     # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
     # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
     # nid_occs = nid_occs / np.sum(nid_occs)
     # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
     # negative_inids = negative_inids
 
-    negative_unids = test_pos_bnid_unid_map[b_nid] + neg_bnid_unid_map[b_nid]
-    negative_unids = rd.choices(population=negative_unids, k=num_negative_samples)
+    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
+    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
 
-    return np.array(negative_unids).reshape(-1, 1)
+    return np.array(negative_inids).reshape(-1, 1)
 
 
 class KGATRecsysModel(KGATRecsysModel):
@@ -155,13 +156,13 @@ class KGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(KGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
-    def generate_candidates(self, dataset, b_nid):
-        pos_u_nids = dataset.test_pos_bnid_unid_map[b_nid]
-        neg_u_nids = np.array(dataset.neg_bnid_unid_map[b_nid])
+    def generate_candidates(self, dataset, u_nid):
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
 
-        neg_u_nids_indices = np.array(rd.sample(range(neg_u_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
 
-        return pos_u_nids, list(neg_u_nids[neg_u_nids_indices])
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
 
     def run(self):
         global_logger_path = self.train_args['logger_folder']
@@ -231,15 +232,21 @@ class KGATSolver(BaseSolver):
                         HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
                             self.metrics(run, 0, model, dataset)
                         print(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         logger_file.write(
-                            'Initial performance HR@10: {:.4f}, NDCG@10: {:.4f}, '
+                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
                             'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[5], NDCGs_before_np[5], AUC_before_np[0], cf_eval_loss_before_np[0]
+                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
+                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
+                                AUC_before_np[0], cf_eval_loss_before_np[0]
                             )
                         )
                         instantwrite(logger_file)
@@ -249,6 +256,8 @@ class KGATSolver(BaseSolver):
                     if start_epoch <= self.train_args['epochs']:
                         # Start training model
                         for epoch in range(start_epoch, self.train_args['epochs'] + 1):
+
+                            # Train KG part
                             model.train()
                             kg_loss_per_batch = []
                             dataset.kg_negative_sampling()
@@ -273,6 +282,7 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, kg train loss: {:.4f}'.format(run, epoch, kg_train_loss)
                                 )
 
+                            # Evaluate KG train
                             model.eval()
                             kg_loss_per_batch = []
                             dataset.kg_negative_sampling()
@@ -295,6 +305,7 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, kg eval loss: {:.4f}'.format(run, epoch, kg_eval_loss)
                                 )
 
+                            # Train CF part
                             model.train()
                             cf_loss_per_batch = []
                             dataset.cf_negative_sampling()
@@ -354,13 +365,22 @@ class KGATSolver(BaseSolver):
                                     kg_eval_loss_per_epoch_np, cf_eval_loss_per_epoch_np
                                     )
                                 )
+                            print(
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                'kg train loss: {:.4f}, cf train loss: {:.4f}, '
+                                'kg eval loss: {:.4f}, cf eval loss: {:.4f} \n'.format(
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10],
+                                    NDCGs[15], AUC[0], kg_train_loss, cf_train_loss, kg_eval_loss, cf_eval_loss[0]
+                                )
+                            )
                             logger_file.write(
-                                'Run: {}, epoch: {}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                                kg train loss: {:.4f}, cf train loss: {:.4f}, \
-                                kg eval loss: {:.4f}, cf eval loss: {:.4f} \n'.format(
-                                    run, epoch, HRs[5], NDCGs[5], AUC[0],
-                                    kg_train_loss, cf_train_loss,
-                                    kg_eval_loss, cf_eval_loss[0]
+                                'Run: {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                'kg train loss: {:.4f}, cf train loss: {:.4f}, '
+                                'kg eval loss: {:.4f}, cf eval loss: {:.4f} \n'.format(
+                                    run, epoch, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10],
+                                    NDCGs[15], AUC[0], kg_train_loss, cf_train_loss, kg_eval_loss, cf_eval_loss[0]
                                 )
                             )
                             instantwrite(logger_file)
@@ -370,13 +390,13 @@ class KGATSolver(BaseSolver):
                             torch.cuda.synchronize()
                     t_end = time.perf_counter()
 
-                    HRs_per_run_np = np.vstack([HRs_per_run_np, HRs_per_epoch_np[-1]])
-                    NDCGs_per_run_np = np.vstack([NDCGs_per_run_np, NDCGs_per_epoch_np[-1]])
-                    AUC_per_run_np = np.vstack([AUC_per_run_np, AUC_per_epoch_np[-1]])
-                    kg_train_loss_per_run_np = np.vstack([kg_train_loss_per_run_np, kg_train_loss_per_epoch_np[-1]])
-                    cf_train_loss_per_run_np = np.vstack([cf_train_loss_per_run_np, cf_train_loss_per_epoch_np[-1]])
-                    kg_eval_loss_per_run_np = np.vstack([kg_eval_loss_per_run_np, kg_eval_loss_per_epoch_np[-1]])
-                    cf_eval_loss_per_run_np = np.vstack([cf_eval_loss_per_run_np, cf_eval_loss_per_epoch_np[-1]])
+                    HRs_per_run_np = np.vstack([HRs_per_run_np, np.max(HRs_per_epoch_np, axis=0)])
+                    NDCGs_per_run_np = np.vstack([NDCGs_per_run_np, np.max(NDCGs_per_epoch_np, axis=0)])
+                    AUC_per_run_np = np.vstack([AUC_per_run_np, np.max(AUC_per_epoch_np, axis=0)])
+                    kg_train_loss_per_run_np = np.vstack([kg_train_loss_per_run_np, np.mean(kg_train_loss_per_epoch_np, axis=0)])
+                    cf_train_loss_per_run_np = np.vstack([cf_train_loss_per_run_np, np.mean(cf_train_loss_per_epoch_np, axis=0)])
+                    kg_eval_loss_per_run_np = np.vstack([kg_eval_loss_per_run_np, np.mean(kg_eval_loss_per_epoch_np, axis=0)])
+                    cf_eval_loss_per_run_np = np.vstack([cf_eval_loss_per_run_np, np.mean(cf_eval_loss_per_epoch_np, axis=0)])
 
                     save_kgat_global_logger(
                         global_logger_file_path,
@@ -385,21 +405,29 @@ class KGATSolver(BaseSolver):
                         kg_eval_loss_per_run_np, cf_eval_loss_per_run_np
                     )
                     print(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                        kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f}\
-                        \n'.format(
+                        'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                        'kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f} \n'.format(
                             run, t_end - t_start,
-                            HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5], AUC_per_epoch_np[-1][0],
+                            np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                            np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                            np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
+                            np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
+                            AUC_per_epoch_np[-1][0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
                             kg_eval_loss_per_epoch_np[-1][0], cf_eval_loss_per_epoch_np[-1][0]
                         )
                     )
                     logger_file.write(
-                        'Run: {}, Duration: {:.4f}, HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
-                        kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f}\
-                        \n'.format(
+                        'Run: {}, Duration: {:.4f}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                        'kg_train_loss: {:.4f}, cf_train_loss: {:.4f}, kg_eval_loss: {:.4f}, cf_eval_loss: {:.4f} \n'.format(
                             run, t_end - t_start,
-                            HRs_per_epoch_np[-1][5], NDCGs_per_epoch_np[-1][5], AUC_per_epoch_np[-1][0],
+                            np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
+                            np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
+                            np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
+                            np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
+                            AUC_per_epoch_np[-1][0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
                             kg_eval_loss_per_epoch_np[-1][0], cf_eval_loss_per_epoch_np[-1][0]
                         )
@@ -412,19 +440,27 @@ class KGATSolver(BaseSolver):
                     del model, optimizer, loss, kg_loss_per_batch, rec_metrics
                     clearcache()
             print(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
+                'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, \
+                NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, \
                 kg train loss: {:.4f}, cf train loss: {:.4f}, \
                 kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0],
+                    HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                    HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0], NDCGs_per_run_np.mean(axis=0)[5],
+                    NDCGs_per_run_np.mean(axis=0)[10], NDCGs_per_run_np.mean(axis=0)[15],
+                    AUC_per_run_np.mean(axis=0)[0],
                     kg_train_loss_per_run_np.mean(axis=0)[0], cf_train_loss_per_run_np.mean(axis=0)[0],
                     kg_eval_loss_per_run_np.mean(axis=0)[0], cf_eval_loss_per_run_np.mean(axis=0)[0]
                 )
             )
             logger_file.write(
-                'Overall HR@10: {:.4f}, NDCG@10: {:.4f}, AUC: {:.4f}, \
+                'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, \
+                NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, \
                 kg train loss: {:.4f}, cf train loss: {:.4f}, \
                 kg eval loss: {:.4f}, cf eval loss: {:.4f}\n'.format(
-                    HRs_per_run_np.mean(axis=0)[5], NDCGs_per_run_np.mean(axis=0)[5], AUC_per_run_np.mean(axis=0)[0],
+                    HRs_per_run_np.mean(axis=0)[0], HRs_per_run_np.mean(axis=0)[5], HRs_per_run_np.mean(axis=0)[10],
+                    HRs_per_run_np.mean(axis=0)[15], NDCGs_per_run_np.mean(axis=0)[0], NDCGs_per_run_np.mean(axis=0)[5],
+                    NDCGs_per_run_np.mean(axis=0)[10], NDCGs_per_run_np.mean(axis=0)[15],
+                    AUC_per_run_np.mean(axis=0)[0],
                     kg_train_loss_per_run_np.mean(axis=0)[0], cf_train_loss_per_run_np.mean(axis=0)[0],
                     kg_eval_loss_per_run_np.mean(axis=0)[0], cf_eval_loss_per_run_np.mean(axis=0)[0]
                 )

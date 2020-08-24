@@ -87,6 +87,7 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=-2)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
+        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):

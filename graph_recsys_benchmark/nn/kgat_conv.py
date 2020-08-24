@@ -10,10 +10,10 @@ from torch_geometric.nn.inits import glorot, zeros
 class KGATConv(MessagePassing):
     def __init__(
             self, in_channels, out_channels,
-            node_embedding, proj_mat, relation_embedding,
+            proj_mat, relation_embedding,
             negative_slope=0.2, bias=True, **kwargs):
         super(KGATConv, self).__init__(aggr='add', **kwargs)
-        self.node_embedding, self.proj_mat, self.relation_embedding = node_embedding, proj_mat, relation_embedding
+        self.proj_mat, self.relation_embedding = proj_mat, relation_embedding
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -36,28 +36,15 @@ class KGATConv(MessagePassing):
         glorot(self.weight_bi)
         zeros(self.bias)
 
-    def forward(self, x, edge_index, edge_attr, size=None):
+    def forward(self, x, edge_index, att_map, size=None):
         """"""
         if size is None and torch.is_tensor(x):
             edge_index, _ = remove_self_loops(edge_index)
 
-        return self.propagate(edge_index, edge_attr=edge_attr, size=size, x=x)
+        return self.propagate(edge_index, size=size, x=x, att_map=att_map)
 
-    def message(self, edge_index_i, edge_index_j, x_j, size_i, edge_attr):
-        # Compute attention coefficients.
-        if edge_index_i is not None:
-            signs = torch.sign(edge_attr[:, 0])
-            signs[signs == 0] = 1
-            abs_val = torch.abs(edge_attr[:, 0])
-            trans_vec = self.relation_embedding[abs_val] * signs.view(-1, 1)
-            alpha = torch.mm(self.node_embedding[edge_index_i], self.proj_mat) * torch.tanh(torch.mm(self.node_embedding[edge_index_j], self.proj_mat) + trans_vec)
-            alpha = alpha.sum(-1).detach()
-        else:
-            raise NotImplementedError('x_i is None!')
-
-        alpha = softmax(alpha, edge_index_i, size_i)
-
-        return x_j * alpha.view(-1, 1)
+    def message(self, x_j, att_map):
+        return x_j * att_map.view(-1, 1)
 
     def update(self, aggr_out, x):
         add_aggr = x + aggr_out

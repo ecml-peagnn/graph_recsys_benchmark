@@ -1068,6 +1068,14 @@ class MovieLens(Dataset):
                 users = users[users.uid.isin(ratings['uid'].unique())]
                 movies = movies[movies.iid.isin(ratings['iid'].unique())]
 
+                # Compute the updated movie and user counts
+                item_count = ratings['iid'].value_counts()
+                item_count.name = 'movie_count'
+                user_count = ratings['uid'].value_counts()
+                user_count.name = 'user_count'
+                ratings = ratings.iloc[:, [0, 1, 2, 3]].join(item_count, on='iid')
+                ratings = ratings.join(user_count, on='uid')
+
                 # Reindex
                 users, movies, ratings = reindex_df_ml1m(users, movies, ratings)
 

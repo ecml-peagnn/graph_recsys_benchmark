@@ -72,6 +72,8 @@ class MPASAGERecsysModel(GraphRecsysModel):
     def reset_parameters(self):
         for module in self.mpasage_channels:
             module.reset_parameters()
+        glorot(self.fc1.weight)
+        glorot(self.fc2.weight)
         if self.channel_aggr == 'att':
             glorot(self.att.weight)
 
@@ -87,6 +89,7 @@ class MPASAGERecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=-2)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
+        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):

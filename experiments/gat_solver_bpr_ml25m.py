@@ -24,7 +24,7 @@ parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
 
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
@@ -35,7 +35,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='5', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')

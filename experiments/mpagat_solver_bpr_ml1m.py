@@ -38,7 +38,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='1', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -48,7 +48,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
-parser.add_argument('--save_every_epoch', type=int, default=25, help='')
+parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
 
