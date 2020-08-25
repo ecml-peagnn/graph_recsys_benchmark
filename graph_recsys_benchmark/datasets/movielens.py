@@ -1623,29 +1623,37 @@ class MovieLens(Dataset):
 
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            neg_inids = []
-            u_nids = pos_edge_index_trans_np[:, 0]
-            p_bar = tqdm.tqdm(u_nids)
-            for u_nid in p_bar:
-                neg_inids.append(
-                    self._cf_negative_sampling(
-                        u_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_unid_inid_map,
-                            self.test_pos_unid_inid_map,
-                            self.neg_unid_inid_map
-                        ),
-                        self.item_nid_occs
-                    )
-                )
+            # neg_inids = []
+            # u_nids = pos_edge_index_trans_np[:, 0]
+            # p_bar = tqdm.tqdm(u_nids)
+            # for u_nid in p_bar:
+            #     neg_inids.append(
+            #         self._cf_negative_sampling(
+            #             u_nid,
+            #             self.num_negative_samples,
+            #             (
+            #                 self.train_pos_unid_inid_map,
+            #                 self.test_pos_unid_inid_map,
+            #                 self.neg_unid_inid_map
+            #             ),
+            #             self.item_nid_occs
+            #         )
+            #     )
+            # train_data_np = np.hstack(
+            #     [
+            #         np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
+            #         np.vstack(neg_inids)
+            #     ]
+            # )
 
-            train_data_np = np.hstack(
-                [
-                    np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
-                    np.vstack(neg_inids)
-                ]
+            # Random sampling from all items
+            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            neg_inids = np.random.randint(
+                low=self.type_accs['movie'],
+                high=self.type_accs['movie'] + self.num_items,
+                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
             )
+            train_data_np = np.hstack([pos_inids, neg_inids])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()
