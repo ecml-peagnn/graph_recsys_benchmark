@@ -12,6 +12,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
+GRAPH_TYPE = 'hete'
 MODEL = 'GCN'
 
 parser = argparse.ArgumentParser()
@@ -20,8 +21,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='25m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
+parser.add_argument('--num_core', type=int, default=20, help='')
+parser.add_argument('--num_feat_core', type=int, default=20, help='')
 
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
@@ -35,7 +36,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='0', help='')
+parser.add_argument('--gpu_idx', type=str, default='6', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -63,7 +64,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_core': args.num_core,
+    'num_core': args.num_core, 'num_feat_core': args.num_core, 'type': GRAPH_TYPE,
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {

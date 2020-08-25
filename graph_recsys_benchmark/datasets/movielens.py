@@ -140,10 +140,10 @@ def generate_ml1m_hete_graph(
     dataset_property_dict = {'users': users, 'items': movies, 'ratings': ratings}
 
     #########################  Define entities  #########################
-    unique_uids = list(ratings.uid.unique())
+    unique_uids = list(np.sort(ratings.uid.unique()))
     num_users = len(unique_uids)
 
-    unique_iids = list(ratings.iid.unique())
+    unique_iids = list(np.sort(ratings.iid.unique()))
     num_items = len(unique_iids)
 
     unique_genders = list(users.gender.unique())
@@ -270,28 +270,28 @@ def generate_ml1m_hete_graph(
     edge_index_nps['age2user'] = age2user_edge_index_np
 
     print('Creating item property edges...')
-    i_nids = [e2nid_dict['iid'][iid] for iid in movies.iid]
+    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
     year_nids = [e2nid_dict['year'][year] for year in movies.year]
-    year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(i_nids)))
+    year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(inids)))
 
     genre_nids = []
-    i_nids = []
+    inids = []
     for genre in unique_genres:
         iids = movies.iid[movies[genre]]
-        i_nids += [e2nid_dict['iid'][iid] for iid in iids]
+        inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
-    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(i_nids)))
+    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
 
-    i_nids = [e2nid_dict['iid'][iid] for iid in movies.iid]
+    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
     directors_list = [
         [director for director in directors.split(',') if director != '']
         for directors in movies.directors
     ]
     directors_nids = [[e2nid_dict['director'][director] for director in directors] for directors in directors_list]
     directors_nids = list(itertools.chain.from_iterable(directors_nids))
-    d_i_nids = [[i_nid for _ in range(len(directors_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    d_i_nids = list(itertools.chain.from_iterable(d_i_nids))
-    director2item_edge_index_np = np.vstack((np.array(directors_nids), np.array(d_i_nids)))
+    d_inids = [[i_nid for _ in range(len(directors_list[idx]))] for idx, i_nid in enumerate(inids)]
+    d_inids = list(itertools.chain.from_iterable(d_inids))
+    director2item_edge_index_np = np.vstack((np.array(directors_nids), np.array(d_inids)))
 
     actors_list = [
         [actor for actor in actors.split(',') if actor != '']
@@ -299,9 +299,9 @@ def generate_ml1m_hete_graph(
     ]
     actor_nids = [[e2nid_dict['actor'][actor] for actor in actors] for actors in actors_list]
     actor_nids = list(itertools.chain.from_iterable(actor_nids))
-    a_i_nids = [[i_nid for _ in range(len(actors_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    a_i_nids = list(itertools.chain.from_iterable(a_i_nids))
-    actor2item_edge_index_np = np.vstack((np.array(actor_nids), np.array(a_i_nids)))
+    a_inids = [[i_nid for _ in range(len(actors_list[idx]))] for idx, i_nid in enumerate(inids)]
+    a_inids = list(itertools.chain.from_iterable(a_inids))
+    actor2item_edge_index_np = np.vstack((np.array(actor_nids), np.array(a_inids)))
 
     writers_list = [
         [writer for writer in writers.split(',') if writer != '']
@@ -309,9 +309,9 @@ def generate_ml1m_hete_graph(
     ]
     writer_nids = [[e2nid_dict['writer'][writer] for writer in writers] for writers in writers_list]
     writer_nids = list(itertools.chain.from_iterable(writer_nids))
-    w_i_nids = [[i_nid for _ in range(len(writers_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    w_i_nids = list(itertools.chain.from_iterable(w_i_nids))
-    writer2item_edge_index_np = np.vstack((np.array(writer_nids), np.array(w_i_nids)))
+    w_inids = [[i_nid for _ in range(len(writers_list[idx]))] for idx, i_nid in enumerate(inids)]
+    w_inids = list(itertools.chain.from_iterable(w_inids))
+    writer2item_edge_index_np = np.vstack((np.array(writer_nids), np.array(w_inids)))
     edge_index_nps['year2item'] = year2item_edge_index_np
     edge_index_nps['genre2item'] = genre2item_edge_index_np
     edge_index_nps['director2item'] = director2item_edge_index_np
@@ -505,29 +505,29 @@ def generate_ml25m_hete_graph(
 
     #########################  create graphs  #########################
     edge_index_nps = {}
-    print('Creating item property edges...')
-    i_nids = [e2nid_dict['iid'][iid] for iid in movies.iid]
+    print('Creating item attribute edges...')
+    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
     year_nids = [e2nid_dict['year'][year] for year in movies.year]
-    year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(i_nids)))
+    year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(inids)))
 
     genre_nids = []
-    i_nids = []
+    inids = []
     for genre in unique_genres:
         iids = movies.iid[movies[genre]]
-        i_nids += [e2nid_dict['iid'][iid] for iid in iids]
+        inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
-    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(i_nids)))
+    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
 
-    i_nids = [e2nid_dict['iid'][iid] for iid in movies.iid]
+    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
     directors_list = [
         [director for director in directors.split(',') if director != '']
         for directors in movies.directors
     ]
     directors_nids = [[e2nid_dict['director'][director] for director in directors] for directors in directors_list]
     directors_nids = list(itertools.chain.from_iterable(directors_nids))
-    d_i_nids = [[i_nid for _ in range(len(directors_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    d_i_nids = list(itertools.chain.from_iterable(d_i_nids))
-    director2item_edge_index_np = np.vstack((np.array(directors_nids), np.array(d_i_nids)))
+    d_inids = [[i_nid for _ in range(len(directors_list[idx]))] for idx, i_nid in enumerate(inids)]
+    d_inids = list(itertools.chain.from_iterable(d_inids))
+    director2item_edge_index_np = np.vstack((np.array(directors_nids), np.array(d_inids)))
 
     actors_list = [
         [actor for actor in actors.split(',') if actor != '']
@@ -535,9 +535,9 @@ def generate_ml25m_hete_graph(
     ]
     actor_nids = [[e2nid_dict['actor'][actor] for actor in actors] for actors in actors_list]
     actor_nids = list(itertools.chain.from_iterable(actor_nids))
-    a_i_nids = [[i_nid for _ in range(len(actors_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    a_i_nids = list(itertools.chain.from_iterable(a_i_nids))
-    actor2item_edge_index_np = np.vstack((np.array(actor_nids), np.array(a_i_nids)))
+    a_inids = [[i_nid for _ in range(len(actors_list[idx]))] for idx, i_nid in enumerate(inids)]
+    a_inids = list(itertools.chain.from_iterable(a_inids))
+    actor2item_edge_index_np = np.vstack((np.array(actor_nids), np.array(a_inids)))
 
     writers_list = [
         [writer for writer in writers.split(',') if writer != '']
@@ -545,9 +545,9 @@ def generate_ml25m_hete_graph(
     ]
     writer_nids = [[e2nid_dict['writer'][writer] for writer in writers] for writers in writers_list]
     writer_nids = list(itertools.chain.from_iterable(writer_nids))
-    w_i_nids = [[i_nid for _ in range(len(writers_list[idx]))] for idx, i_nid in enumerate(i_nids)]
-    w_i_nids = list(itertools.chain.from_iterable(w_i_nids))
-    writer2item_edge_index_np = np.vstack((np.array(writer_nids), np.array(w_i_nids)))
+    w_inids = [[i_nid for _ in range(len(writers_list[idx]))] for idx, i_nid in enumerate(inids)]
+    w_inids = list(itertools.chain.from_iterable(w_inids))
+    writer2item_edge_index_np = np.vstack((np.array(writer_nids), np.array(w_inids)))
     edge_index_nps['year2item'] = year2item_edge_index_np
     edge_index_nps['genre2item'] = genre2item_edge_index_np
     edge_index_nps['director2item'] = director2item_edge_index_np
@@ -559,7 +559,6 @@ def generate_ml25m_hete_graph(
     genome_tag2item_edge_index_np = np.vstack((np.array(genome_tnids), np.array(inids)))
     edge_index_nps['genome_tag2item'] = genome_tag2item_edge_index_np
 
-    print('Creating tag edges...')
     unids = [e2nid_dict['uid'][uid] for uid in tagging.uid]
     tnids = [e2nid_dict['tid'][tid] for tid in tagging.tid]
     inids = [e2nid_dict['iid'][iid] for iid in tagging.iid]
@@ -572,11 +571,11 @@ def generate_ml25m_hete_graph(
     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
-    sorted_ratings = ratings.sort_values('timestamp')
-    pbar = tqdm.tqdm(unique_uids[:100], total=len(unique_uids))
+    sorted_ratings = ratings.sort_values('uid')
+    pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
     for uid in pbar:
         pbar.set_description('Creating the edges for the user {}'.format(uid))
-        uid_ratings = sorted_ratings[sorted_ratings.uid == uid]
+        uid_ratings = sorted_ratings[sorted_ratings.uid == uid].sort_values('timestamp')
         uid_iids = uid_ratings.iid.to_numpy()
 
         unid = e2nid_dict['uid'][uid]
@@ -1054,27 +1053,24 @@ class MovieLens(Dataset):
                 users = users.drop_duplicates()
 
                 # Sync
-                users = users[users.uid.isin(ratings['uid'].unique())]
-                movies = movies[movies.iid.isin(ratings['iid'].unique())]
-                ratings = ratings[ratings.uid.isin(users['uid'].unique())]
-                ratings = ratings[ratings.iid.isin(movies['iid'].unique())]
+                users = users[users.uid.isin(ratings.uid.unique())]
+                movies = movies[movies.iid.isin(ratings.iid.unique())]
+                ratings = ratings[ratings.iid.isin(movies.iid.unique())]
+                ratings = ratings[ratings.uid.isin(users.uid.unique())]
 
-                # Remove infrequent users, which have less cores
+                # Remove infrequent movies
+                movie_count = ratings['iid'].value_counts()
+                movie_count.name = 'movie_count'
+                ratings = ratings[ratings.join(movie_count, on='iid').movie_count > self.num_core]
+
+                # Remove infrequent users
                 user_count = ratings['uid'].value_counts()
                 user_count.name = 'user_count'
                 ratings = ratings[ratings.join(user_count, on='uid').user_count > self.num_core]
 
-                # Sync the user and item after filter out infrequent users
-                users = users[users.uid.isin(ratings['uid'].unique())]
-                movies = movies[movies.iid.isin(ratings['iid'].unique())]
-
-                # Compute the updated movie and user counts
-                item_count = ratings['iid'].value_counts()
-                item_count.name = 'movie_count'
-                user_count = ratings['uid'].value_counts()
-                user_count.name = 'user_count'
-                ratings = ratings.iloc[:, [0, 1, 2, 3]].join(item_count, on='iid')
-                ratings = ratings.join(user_count, on='uid')
+                # Sync
+                movies = movies[movies.iid.isin(ratings.iid.unique())]
+                users = users[users.uid.isin(ratings.uid.unique())]
 
                 # Reindex
                 users, movies, ratings = reindex_df_ml1m(users, movies, ratings)
@@ -1160,10 +1156,7 @@ class MovieLens(Dataset):
                 # Remove infrequent users
                 user_count = ratings['uid'].value_counts()
                 user_count.name = 'user_count'
-                ratings = ratings.join(user_count, on='uid')
-                ratings = ratings[ratings.user_count > self.num_core]
-                ratings = ratings[ratings.user_count < 100 * self.num_core]
-                ratings = ratings.drop(columns=['user_count'])
+                ratings = ratings[ratings.join(user_count, on='uid').user_count > self.num_core]
 
                 # Sync
                 movies = movies[movies.iid.isin(ratings.iid.unique())]
