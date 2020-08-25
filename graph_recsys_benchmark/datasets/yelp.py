@@ -356,7 +356,7 @@ class Yelp(Dataset):
                  **kwargs):
 
         self.num_core = kwargs['num_core']
-        self.seed = kwargs['seed']
+        # self.seed = kwargs['seed']
         self.num_negative_samples = kwargs['num_negative_samples']
         self.cf_loss_type = kwargs['cf_loss_type']
         self._cf_negative_sampling = kwargs['_cf_negative_sampling']
@@ -570,15 +570,7 @@ class Yelp(Dataset):
             pickle.dump(dataset_property_dict, f)
 
     def build_suffix(self):
-        suffixes = [
-            'core_{}'.format(self.num_core),
-            'seed_{}'.format(self.seed)
-        ]
-        if not suffixes:
-            suffix = ''
-        else:
-            suffix = '_'.join(suffixes)
-        return suffix
+        return 'core_{}'.format(self.num_core)
 
     def kg_negative_sampling(self):
         print('KG negative sampling...')
@@ -697,7 +689,7 @@ if __name__ == '__main__':
     root = osp.join('.', 'tmp', 'yelp')
     name = 'Yelp'
     seed = 2020
-    dataset = Yelp(root=root, seed=seed)
+    dataset = Yelp(root=root)
     dataloader = DataLoader(dataset)
     for u_nids, pos_inids, neg_inids in dataloader:
         pass
