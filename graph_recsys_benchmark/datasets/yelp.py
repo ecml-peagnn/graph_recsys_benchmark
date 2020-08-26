@@ -183,9 +183,6 @@ def generate_graph_data(
             itemcheckincount[discretized_itemcheckincount <= itemcheckincount] = str(discretized_itemcheckincount)
     items['checkin_count'] = itemcheckincount
 
-    #########################  Create dataset property dict  #########################
-    dataset_property_dict = {'users': users, 'items': items, 'reviewtip': reviewtip}
-
     #########################  Define entities  #########################
     unique_uids = list(np.sort(reviewtip.user_id.unique()))
     num_users = len(unique_uids)
@@ -217,6 +214,8 @@ def generate_graph_data(
     unique_item_checkincount = list(items.checkin_count.unique())
     num_item_checkincount = len(unique_item_checkincount)
 
+    #########################  Create dataset property dict  #########################
+    dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
     dataset_property_dict['num_users'] = num_users
     dataset_property_dict['unique_iids'] = unique_iids
@@ -397,12 +396,8 @@ def generate_graph_data(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -415,9 +410,7 @@ def generate_graph_data(
           np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
