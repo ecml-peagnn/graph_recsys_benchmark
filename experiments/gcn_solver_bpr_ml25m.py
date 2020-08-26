@@ -26,9 +26,9 @@ parser.add_argument('--num_feat_core', type=int, default=20, help='')
 
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
-parser.add_argument('--emb_dim', type=int, default=64, help='')
+parser.add_argument('--emb_dim', type=int, default=32, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
-parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--hidden_size', type=int, default=32, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
