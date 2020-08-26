@@ -170,8 +170,8 @@ def generate_mlsmall_hete_graph(
             years[discretized_year <= years] = str(discretized_year)
     movies['year'] = years
 
-    #########################  Create dataset property dict  #########################
-    dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging}
+    # #########################  Create dataset property dict  #########################
+    # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging}
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
@@ -193,6 +193,7 @@ def generate_mlsmall_hete_graph(
     unique_tags = list(np.sort(tagging.tid.unique()))
     num_tags = len(unique_tags)
 
+    dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
     dataset_property_dict['num_users'] = num_users
     dataset_property_dict['unique_iids'] = unique_iids
@@ -356,9 +357,10 @@ def generate_mlsmall_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    # dataset_property_dict['neg_unid_inid_map'] = \
+    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -408,8 +410,8 @@ def generate_ml1m_hete_graph(
             years[discretized_year <= years] = str(discretized_year)
     movies['year'] = years
 
-    #########################  Create dataset property dict  #########################
-    dataset_property_dict = {'users': users, 'items': movies, 'ratings': ratings}
+    # #########################  Create dataset property dict  #########################
+    # dataset_property_dict = {'users': users, 'items': movies, 'ratings': ratings}
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
@@ -437,6 +439,7 @@ def generate_ml1m_hete_graph(
     unique_actors, num_actors = get_concept_num_from_str(movies, 'actors')
     unique_writers, num_writers = get_concept_num_from_str(movies, 'writers')
 
+    dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
     dataset_property_dict['num_users'] = len(unique_uids)
     dataset_property_dict['unique_iids'] = unique_iids
@@ -591,7 +594,8 @@ def generate_ml1m_hete_graph(
     edge_index_nps['writer2item'] = writer2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    # train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map = {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -606,12 +610,12 @@ def generate_ml1m_hete_graph(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
+        # neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        # neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
+        # train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        neg_unid_inid_map[unid] = neg_uid_inids
+        # neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -620,9 +624,10 @@ def generate_ml1m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    # dataset_property_dict['neg_unid_inid_map'] = \
+    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -668,8 +673,8 @@ def generate_ml25m_hete_graph(
     movies['year'] = years
 
     #########################  Create dataset property dict  #########################
-    dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging,
-                             'genome_tags': genome_tags, 'genome_tagging': genome_tagging}
+    # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging,
+    #                          'genome_tags': genome_tags, 'genome_tagging': genome_tagging}
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
@@ -694,6 +699,7 @@ def generate_ml25m_hete_graph(
     unique_genome_tags = list(genome_tagging.genome_tid.unique())
     num_genome_tags = len(unique_genome_tags)
 
+    dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
     dataset_property_dict['num_users'] = num_users
     dataset_property_dict['unique_iids'] = unique_iids
@@ -840,7 +846,8 @@ def generate_ml25m_hete_graph(
     edge_index_nps['tag2item'] = tag2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    # train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map = {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
@@ -855,12 +862,12 @@ def generate_ml25m_hete_graph(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
+        # neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        # neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
+        # train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        neg_unid_inid_map[unid] = neg_uid_inids
+        # neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -869,9 +876,10 @@ def generate_ml25m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    # dataset_property_dict['neg_unid_inid_map'] = \
+    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
