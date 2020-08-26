@@ -13,13 +13,14 @@ from graph_recsys_benchmark.solvers import BaseSolver
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
 MODEL = 'MPAGCN'
+GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Yelp', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=30, help='')
+parser.add_argument('--num_core', type=int, default=10, help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
@@ -62,7 +63,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'cf_loss_type': LOSS_TYPE
+    'num_core': args.num_core, 'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE
 }
 model_args = {
     'model_type': MODEL_TYPE,

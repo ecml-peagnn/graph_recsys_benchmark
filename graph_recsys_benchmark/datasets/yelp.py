@@ -94,16 +94,104 @@ def generate_graph_data(
         num_concepts = len(concepts)
         return list(concepts), num_concepts
 
+    #########################  Discretized user reviewcount  #########################
+    userreviewcount = users.review_count.to_numpy().astype(np.int)
+    min_userreviewcount = min(userreviewcount)
+    max_userreviewcount = max(userreviewcount)
+    num_userreviewcount = (max_userreviewcount - min_userreviewcount) // 100
+    discretized_userreviewcounts = [min_userreviewcount + i * 100 for i in range(num_userreviewcount + 1)]
+    for i, discretized_userreviewcount in enumerate(discretized_userreviewcounts):
+        if i != len(discretized_userreviewcounts) - 1:
+            userreviewcount[(discretized_userreviewcount <= userreviewcount) & (
+                        userreviewcount < discretized_userreviewcounts[i + 1])] = str(discretized_userreviewcount)
+        else:
+            userreviewcount[discretized_userreviewcount <= userreviewcount] = str(discretized_userreviewcount)
+    users['review_count'] = userreviewcount
+
+    #########################  Discretized user friendcount  #########################
+    userfriends_count = users.friends_count.to_numpy().astype(np.int)
+    min_userfriends_count = min(userfriends_count)
+    max_userfriends_count = max(userfriends_count)
+    num_userfriends_count = (max_userfriends_count - min_userfriends_count) // 500
+    discretized_userfriends_counts = [min_userfriends_count + i * 500 for i in range(num_userfriends_count + 1)]
+    for i, discretized_friend_count in enumerate(discretized_userfriends_counts):
+        if i != len(discretized_userfriends_counts) - 1:
+            userfriends_count[
+                (discretized_friend_count <= userfriends_count) & (
+                            userfriends_count < discretized_userfriends_counts[i + 1])] = str(
+                discretized_friend_count)
+        else:
+            userfriends_count[discretized_friend_count <= userfriends_count] = str(discretized_friend_count)
+    users['friends_count'] = userfriends_count
+
+    #########################  Discretized user fans  #########################
+    userfans = users.fans.to_numpy().astype(np.int)
+    min_userfans = min(userfans)
+    max_userfans = max(userfans)
+    num_userfans = (max_userfans - min_userfans) // 100
+    discretized_userfans = [min_userfans + i * 100 for i in range(num_userfans + 1)]
+    for i, discretized_userfan in enumerate(discretized_userfans):
+        if i != len(discretized_userfans) - 1:
+            userfans[
+                (discretized_userfan <= userfans) & (
+                        userfans < discretized_userfans[i + 1])] = str(
+                discretized_userfan)
+        else:
+            userfans[discretized_userfan <= userfans] = str(discretized_userfan)
+    users['fans'] = userfans
+
+    #########################  Discretized user stars  #########################
+    userstars = users.average_stars.to_numpy().astype(np.float)
+    min_userstars = min(userstars)
+    max_userstars = max(userstars)
+    num_userstars = ((max_userstars - min_userstars) // 0.5).astype(np.int)
+    discretized_userstars = [min_userstars + i * 0.5 for i in range(num_userstars + 1)]
+    for i, discretized_userstar in enumerate(discretized_userstars):
+        if i != len(discretized_userstars) - 1:
+            userstars[
+                (discretized_userstar <= userstars) & (
+                        userstars < discretized_userstars[i + 1])] = str(
+                discretized_userstar)
+        else:
+            userstars[discretized_userstar <= userstars] = str(discretized_userstar)
+    users['average_stars'] = userstars
+    #########################  Discretized item reviewcount  #########################
+    itemreviewcount = items.review_count.to_numpy().astype(np.int)
+    min_itemreviewcount = min(itemreviewcount)
+    max_itemreviewcount = max(itemreviewcount)
+    num_itemreviewcount = (max_itemreviewcount - min_itemreviewcount) // 500
+    discretized_itemreviewcounts = [min_itemreviewcount + i * 500 for i in range(num_itemreviewcount + 1)]
+    for i, discretized_itemreviewcount in enumerate(discretized_itemreviewcounts):
+        if i != len(discretized_itemreviewcounts) - 1:
+            itemreviewcount[(discretized_itemreviewcount <= itemreviewcount) & (
+                    itemreviewcount < discretized_itemreviewcounts[i + 1])] = str(discretized_itemreviewcount)
+        else:
+            itemreviewcount[discretized_itemreviewcount <= itemreviewcount] = str(discretized_itemreviewcount)
+    items['review_count'] = itemreviewcount
+
+    #########################  Discretized item checkincount  #########################
+    itemcheckincount = items.checkin_count.to_numpy().astype(np.int)
+    min_itemcheckincount = min(itemcheckincount)
+    max_itemcheckincount = max(itemcheckincount)
+    num_itemcheckincount = (max_itemcheckincount - min_itemcheckincount) // 1000
+    discretized_itemcheckincounts = [min_itemcheckincount + i * 1000 for i in range(num_itemcheckincount + 1)]
+    for i, discretized_itemcheckincount in enumerate(discretized_itemcheckincounts):
+        if i != len(discretized_itemcheckincounts) - 1:
+            itemcheckincount[(discretized_itemcheckincount <= itemcheckincount) & (
+                    itemcheckincount < discretized_itemcheckincounts[i + 1])] = str(discretized_itemcheckincount)
+        else:
+            itemcheckincount[discretized_itemcheckincount <= itemcheckincount] = str(discretized_itemcheckincount)
+    items['checkin_count'] = itemcheckincount
 
     #########################  Create dataset property dict  #########################
     dataset_property_dict = {'users': users, 'items': items, 'reviewtip': reviewtip}
 
     #########################  Define entities  #########################
-    num_users = users.shape[0]
-    num_items = items.shape[0]
+    unique_uids = list(np.sort(reviewtip.user_id.unique()))
+    num_users = len(unique_uids)
 
-    dataset_property_dict['num_users'] = num_users
-    dataset_property_dict['num_items'] = num_items
+    unique_iids = list(np.sort(reviewtip.business_id.unique()))
+    num_items = len(unique_iids)
 
     unique_user_reviewcount = list(users.review_count.unique())
     num_user_reviewcount = len(unique_user_reviewcount)
@@ -129,6 +217,10 @@ def generate_graph_data(
     unique_item_checkincount = list(items.checkin_count.unique())
     num_item_checkincount = len(unique_item_checkincount)
 
+    dataset_property_dict['unique_uids'] = unique_uids
+    dataset_property_dict['num_users'] = num_users
+    dataset_property_dict['unique_iids'] = unique_iids
+    dataset_property_dict['num_items'] = num_items
     dataset_property_dict['unique_user_reviewcount'] = unique_user_reviewcount
     dataset_property_dict['num_user_reviewcount'] = num_user_reviewcount
     dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
@@ -164,7 +256,6 @@ def generate_graph_data(
                       'itemattributes': num_item_attributes,
                       'itemcategories': num_item_categories, 'itemcheckincount': num_item_checkincount,
                       }
-
     #########################  Define entities to node id map  #########################
     type_accs = {}
     nid2e_dict = {}
@@ -294,18 +385,19 @@ def generate_graph_data(
     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
-    pbar = tqdm.tqdm(users.user_id, total=users.user_id.shape[0])
+    pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
+    sorted_reviewtip = reviewtip.sort_values(['bus_count', 'user_count'])
     for uid in pbar:
         pbar.set_description('Creating the edges for the user {}'.format(uid))
-        uid_reviewtip = reviewtip[reviewtip.user_id == uid].sort_values(['bus_count', 'user_count'])
-        uid_iids = uid_reviewtip[['business_id']].to_numpy().reshape(-1)
+        uid_reviewtip = sorted_reviewtip[sorted_reviewtip.user_id == uid]
+        uid_iids = uid_reviewtip.business_id.to_numpy()
 
         unid = e2nid_dict['uid'][uid]
         train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        neg_uid_iids = list(set(items.business_id) - set(uid_iids))
+        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
         train_pos_unid_inid_map[unid] = train_pos_uid_inids
@@ -319,7 +411,8 @@ def generate_graph_data(
 
     edge_index_nps['user2item'] = user2item_edge_index_np
 
-    print('missing iids:', np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int)-num_users)))
+    print('missing iids:',
+          np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
     dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
@@ -334,7 +427,7 @@ def generate_graph_data(
     print('Building the item occurrence map...')
     item_nid_occs = {}
     for iid in items.business_id:
-        item_nid_occs[e2nid_dict['iid'][iid]] = 0 if reviewtip[reviewtip.business_id == iid].empty else reviewtip[reviewtip.business_id == iid].iloc[0]['bus_count']
+        item_nid_occs[e2nid_dict['iid'][iid]] = reviewtip[reviewtip.business_id == iid].iloc[0]['bus_count']
 
     dataset_property_dict['item_nid_occs'] = item_nid_occs
 
@@ -355,8 +448,9 @@ class Yelp(Dataset):
                  pre_filter=None,
                  **kwargs):
 
+        self.type = kwargs['type']
+        assert self.type in ['hete', 'bipartite']
         self.num_core = kwargs['num_core']
-        # self.seed = kwargs['seed']
         self.num_negative_samples = kwargs['num_negative_samples']
         self.cf_loss_type = kwargs['cf_loss_type']
         self._cf_negative_sampling = kwargs['_cf_negative_sampling']
@@ -513,11 +607,11 @@ class Yelp(Dataset):
             # Merging business and checkin
             business = pd.merge(business, checkin, on='business_id', how='left').fillna(0)
 
-            #Select only relevant columns of review and tip
-            review = review.iloc[:,[1,2]]
-            tip = tip.iloc[:,[0,1]]
+            # Select only relevant columns of review and tip
+            review = review.iloc[:, [1, 2]]
+            tip = tip.iloc[:, [0, 1]]
 
-            #Concat review and tips
+            # Concat review and tips
             reviewtip = pd.concat([review, tip], axis=0)
 
             # remove duplications
@@ -529,17 +623,21 @@ class Yelp(Dataset):
                     user.user_id.unique().shape[0]:
                 raise ValueError('Duplicates in dfs.')
 
-            # Compute the business and user counts for reviewtip
+            # Compute the business counts for reviewtip
             bus_count = reviewtip['business_id'].value_counts()
-            user_count = reviewtip['user_id'].value_counts()
             bus_count.name = 'bus_count'
+
+            # Remove infrequent business in reviewtip
+            reviewtip = reviewtip[reviewtip.join(bus_count, on='business_id').bus_count > (self.num_core + 40)]
+
+            # Compute the user counts for reviewtip
+            user_count = reviewtip['user_id'].value_counts()
             user_count.name = 'user_count'
-            reviewtip = reviewtip.join(bus_count, on='business_id')
             reviewtip = reviewtip.join(user_count, on='user_id')
 
-            # Remove infrequent business and user in reviewtip
-            reviewtip = reviewtip[reviewtip.user_count > self.num_core]
-            reviewtip = reviewtip[reviewtip.bus_count > self.num_core]
+            # Remove infrequent users in reviewtip
+            reviewtip = reviewtip[
+                (reviewtip.user_count > self.num_core) & (reviewtip.user_count <= (self.num_core + 10))]
 
             # Sync the business and user dataframe
             user = user[user.user_id.isin(reviewtip['user_id'].unique())]
@@ -552,7 +650,7 @@ class Yelp(Dataset):
             user_count = reviewtip['user_id'].value_counts()
             bus_count.name = 'bus_count'
             user_count.name = 'user_count'
-            reviewtip = reviewtip.iloc[:,[0,1]].join(bus_count, on='business_id')
+            reviewtip = reviewtip.iloc[:, [0, 1]].join(bus_count, on='business_id')
             reviewtip = reviewtip.join(user_count, on='user_id')
 
             # Reindex the bid and uid in case of missing values
@@ -570,7 +668,7 @@ class Yelp(Dataset):
             pickle.dump(dataset_property_dict, f)
 
     def build_suffix(self):
-        return 'core_{}'.format(self.num_core)
+        return 'core_{}_type_{}'.format(self.num_core, self.type)
 
     def kg_negative_sampling(self):
         print('KG negative sampling...')
@@ -627,29 +725,14 @@ class Yelp(Dataset):
 
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            neg_inids = []
-            u_nids = pos_edge_index_trans_np[:, 0]
-            p_bar = tqdm.tqdm(u_nids)
-            for u_nid in p_bar:
-                neg_inids.append(
-                    self._cf_negative_sampling(
-                        u_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_unid_inid_map,
-                            self.test_pos_unid_inid_map,
-                            self.neg_unid_inid_map
-                        ),
-                        self.item_nid_occs
-                    )
-                )
-
-            train_data_np = np.hstack(
-                [
-                    np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
-                    np.vstack(neg_inids)
-                ]
+            # Random sampling from all items
+            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            neg_inids = np.random.randint(
+                low=self.type_accs['items'],
+                high=self.type_accs['items'] + self.num_items,
+                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
             )
+            train_data_np = np.hstack([pos_inids, neg_inids])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()
