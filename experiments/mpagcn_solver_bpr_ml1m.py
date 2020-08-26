@@ -12,6 +12,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
+GRAPH_TYPE = 'hete'
 MODEL = 'MPAGCN'
 
 parser = argparse.ArgumentParser()
@@ -65,7 +66,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
+    'num_core': args.num_core, 'num_feat_core': args.num_feat_core, 'type': GRAPH_TYPE,
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {
@@ -156,12 +157,11 @@ class MPAGCNSolver(BaseSolver):
         super(MPAGCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_inids, list(neg_inids)
 
 
 if __name__ == '__main__':
