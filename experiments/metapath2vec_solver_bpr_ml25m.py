@@ -10,8 +10,7 @@ import sys
 from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
-
-from torch_geometric.nn.models import Node2Vec
+from graph_recsys_benchmark.models import MetaPath2Vec
 from torch.utils.data import DataLoader
 
 from graph_recsys_benchmark.models import WalkBasedRecsysModel
@@ -21,7 +20,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 MODEL_TYPE = 'Walk'
 LOSS_TYPE = 'BPR'
 GRAPH_TYPE = 'hete'
-MODEL = 'Node2Vec'
+MODEL = 'MetaPath2Vec'
 
 parser = argparse.ArgumentParser()
 
@@ -123,7 +122,7 @@ def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occ
     return np.array(negative_inids).reshape(-1, 1)
 
 
-class Node2VecRecsysModel(WalkBasedRecsysModel):
+class MetaPath2VecRecsysModel(WalkBasedRecsysModel):
     def cf_loss(self, batch):
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
@@ -133,16 +132,17 @@ class Node2VecRecsysModel(WalkBasedRecsysModel):
         return loss
 
 
-class Node2VecSolver(BaseSolver):
+class MetaPath2VecSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(Node2VecSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(MetaPath2VecSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
-        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
 
-        return pos_inids, list(neg_inids)
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
+
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
 
     def run(self):
         global_logger_path = self.train_args['logger_folder']
@@ -171,14 +171,29 @@ class Node2VecSolver(BaseSolver):
                     dataset = load_dataset(self.dataset_args)
 
                     # Create random walk model
-                    edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
-                    edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
-                    edge_index = torch.from_numpy(edge_index_np).long().to(self.train_args['device'])
-                    self.model_args['edge_index'] = edge_index
+                    edge_index_dict = {
+                        ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                        ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                        ('user', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
+                        ('gender', 'as the gender of', 'user'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
+                        ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                        ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                    }
+                    metapath = [
+                        ('user', 'has watched', 'movie'),
+                        ('movie', 'has the genre', 'genre'),
+                        ('genre', 'as the genre of', 'movie'),
+                        ('movie', 'has been watched by', 'user'),
+                    ]
+                    self.model_args['metapath'] = metapath
+                    self.model_args['edge_index_dict'] = edge_index_dict
 
-                    random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(Node2Vec.__init__).parameters}
-                    # random_walk_model_args['num_nodes'] = dataset.num_nodes
-                    random_walk_model = Node2Vec(**random_walk_model_args).to(self.train_args['device'])
+                    random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(MetaPath2Vec.__init__).parameters}
+                    random_walk_model_args['types'] = dataset.types
+                    random_walk_model_args['num_nodes_dict'] = dataset.num_nodes_dict
+                    random_walk_model_args['type_accs'] = dataset.type_accs
+
+                    random_walk_model = MetaPath2Vec(**random_walk_model_args).to(self.train_args['device'])
                     opt_class = get_opt_class(self.train_args['random_walk_opt'])
                     random_walk_optimizer = opt_class(
                         params=random_walk_model.parameters(),
@@ -193,7 +208,8 @@ class Node2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
+                            load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
                         print("Train new random walk model, since no random walk model checkpoint_backup found at '{}'".format(weights_file))
@@ -219,7 +235,8 @@ class Node2VecSolver(BaseSolver):
                         random_walk_model.eval()
                         self.model_args['embedding'] = torch.tensor(random_walk_model.embedding.weight, requires_grad=False)
                     # Do cleaning
-                    del self.model_args['edge_index']
+                    del self.model_args['metapath']
+                    del self.model_args['edge_index_dict']
                     del random_walk_model
                     torch.cuda.empty_cache()
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
@@ -421,5 +438,5 @@ class Node2VecSolver(BaseSolver):
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = Node2VecSolver(Node2VecRecsysModel, dataset_args, model_args, train_args)
+    solver = MetaPath2VecSolver(MetaPath2VecRecsysModel, dataset_args, model_args, train_args)
     solver.run()

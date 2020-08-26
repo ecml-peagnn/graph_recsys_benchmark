@@ -161,12 +161,11 @@ class KGATSolver(BaseSolver):
         super(KGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_inids, list(neg_inids)
 
     def metrics(
             self,
@@ -451,7 +450,7 @@ class KGATSolver(BaseSolver):
                     kg_eval_loss_per_run_np = np.vstack([kg_eval_loss_per_run_np, kg_eval_loss_per_epoch_np[-1]])
                     cf_eval_loss_per_run_np = np.vstack([cf_eval_loss_per_run_np, cf_eval_loss_per_epoch_np[-1]])
 
-                    save_kgat_global_logger(
+                    save_kg_global_logger(
                         global_logger_file_path,
                         HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
                         kg_train_loss_per_run_np, cf_train_loss_per_run_np,
