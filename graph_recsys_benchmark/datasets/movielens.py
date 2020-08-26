@@ -650,7 +650,7 @@ def generate_ml1m_hete_graph(
 
 
 def generate_ml25m_hete_graph(
-        movies, ratings, tags, tagging, genome_tags, genome_tagging
+        movies, ratings, tagging, genome_tagging
 ):
     def get_concept_num_from_str(df, concept_name):
         concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
@@ -693,11 +693,11 @@ def generate_ml25m_hete_graph(
     unique_actors, num_actors = get_concept_num_from_str(movies, 'actors')
     unique_writers, num_writers = get_concept_num_from_str(movies, 'writers')
 
-    unique_tags = list(np.sort(tagging.tid.unique()))
-    num_tags = len(unique_tags)
+    unique_tids = list(np.sort(tagging.tid.unique()))
+    num_tags = len(unique_tids)
 
-    unique_genome_tags = list(genome_tagging.genome_tid.unique())
-    num_genome_tags = len(unique_genome_tags)
+    unique_genome_tids = list(np.sort(genome_tagging.genome_tid.unique()))
+    num_genome_tags = len(unique_genome_tids)
 
     dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
@@ -714,9 +714,9 @@ def generate_ml25m_hete_graph(
     dataset_property_dict['num_actors'] = num_actors
     dataset_property_dict['unique_writers'] = unique_writers
     dataset_property_dict['num_writers'] = num_writers
-    dataset_property_dict['unique_tags'] = unique_tags
+    dataset_property_dict['unique_tags'] = unique_tids
     dataset_property_dict['num_tags'] = num_tags
-    dataset_property_dict['unique_genome_tags'] = unique_genome_tags
+    dataset_property_dict['unique_genome_tags'] = unique_genome_tids
     dataset_property_dict['num_genome_tags'] = num_genome_tags
 
     #########################  Define number of entities  #########################
@@ -727,7 +727,7 @@ def generate_ml25m_hete_graph(
     dataset_property_dict['num_node_types'] = num_node_types
     types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tags', 'genome_tags']
     num_nodes_dict = {'user': num_users, 'movie': num_items, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers, 'tag': num_tags, 'genome_tag': genome_tags}
+                      'actor': num_actors, 'writer': num_writers, 'tag': num_tags, 'genome_tag': num_genome_tags}
 
     #########################  Define entities to node id map  #########################
     type_accs = {}
@@ -769,13 +769,13 @@ def generate_ml25m_hete_graph(
         nid2e_dict[i + acc] = ('writer', writer)
     acc += num_actors
     type_accs['tag'] = acc
-    tag2nid = {tag: i + acc for i, tag in enumerate(unique_tags)}
-    for i, tag in enumerate(unique_tags):
+    tag2nid = {tag: i + acc for i, tag in enumerate(unique_tids)}
+    for i, tag in enumerate(unique_tids):
         nid2e_dict[i + acc] = ('tag', tag)
     acc += num_tags
     type_accs['genome_tag'] = acc
-    genome_tag2nid = {genome_tag: i + acc for i, genome_tag in enumerate(unique_genome_tags)}
-    for i, genome_tag in enumerate(unique_genome_tags):
+    genome_tag2nid = {genome_tag: i + acc for i, genome_tag in enumerate(unique_genome_tids)}
+    for i, genome_tag in enumerate(unique_genome_tids):
         nid2e_dict[i + acc] = ('genome_tag', genome_tag)
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid, 'genome_tid': genome_tag2nid}
@@ -1026,7 +1026,7 @@ def generate_ml1m_bi_graph(
 
 
 def generate_ml25m_bi_graph(
-        movies, ratings, tags, tagging, genome_tags, genome_tagging
+        movies, ratings, tagging, genome_tagging
 ):
     def get_concept_num_from_str(df, concept_name):
         concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
@@ -1436,7 +1436,10 @@ class MovieLens(Dataset):
                 # Remove infrequent users
                 user_count = ratings['uid'].value_counts()
                 user_count.name = 'user_count'
-                ratings = ratings[ratings.join(user_count, on='uid').user_count > self.num_core]
+                ratings = ratings.join(user_count, on='uid')
+                ratings = ratings[ratings.user_count > self.num_core]
+                ratings = ratings[ratings.user_count < 30 * self.num_core]
+                ratings = ratings.drop(columns=['user_count'])
 
                 # Sync
                 movies = movies[movies.iid.isin(ratings.iid.unique())]
@@ -1477,8 +1480,7 @@ class MovieLens(Dataset):
 
             # Generate and save graph
             if self.type == 'hete':
-                dataset_property_dict = generate_ml25m_hete_graph(movies, ratings, tags, tagging, genome_tags,
-                                                              genome_tagging)
+                dataset_property_dict = generate_ml25m_hete_graph(movies, ratings, tagging, genome_tagging)
             elif self.type == 'bipartite':
                 raise NotImplementedError
                 # dataset_property_dict = generate_ml25m_bi_graph(movies, ratings, tags, tagging, genome_tags,
@@ -1602,31 +1604,42 @@ class MovieLens(Dataset):
         print('CF negative sampling...')
         pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
         if self.cf_loss_type == 'BCE':
+            # pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+            #
+            # neg_inids = []
+            # u_nids = pos_samples_np[:, 0]
+            # p_bar = tqdm.tqdm(u_nids)
+            # for u_nid in p_bar:
+            #     neg_inids.append(
+            #         self._cf_negative_sampling(
+            #             u_nid,
+            #             self.num_negative_samples,
+            #             (
+            #                 self.train_pos_unid_inid_map,
+            #                 self.test_pos_unid_inid_map,
+            #                 self.neg_unid_inid_map
+            #             ),
+            #             self.item_nid_occs
+            #         )
+            #     )
+            # neg_inids_np = np.vstack(neg_inids)
+            # neg_samples_np = np.hstack(
+            #     [
+            #         np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+            #         neg_inids_np,
+            #         torch.zeros((neg_inids_np.shape[0], 1)).long()
+            #     ]
+            # )
+            #
+            # train_data_np = np.vstack([pos_samples_np, neg_samples_np])
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
 
-            neg_inids = []
-            u_nids = pos_samples_np[:, 0]
-            p_bar = tqdm.tqdm(u_nids)
-            for u_nid in p_bar:
-                neg_inids.append(
-                    self._cf_negative_sampling(
-                        u_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_unid_inid_map,
-                            self.test_pos_unid_inid_map,
-                            self.neg_unid_inid_map
-                        ),
-                        self.item_nid_occs
-                    )
-                )
-            neg_inids_np = np.vstack(neg_inids)
-            neg_samples_np = np.hstack(
-                [
-                    np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
-                    neg_inids_np,
-                    torch.zeros((neg_inids_np.shape[0], 1)).long()
-                ]
+            neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            neg_samples_np[:, 2] = 0
+            neg_samples_np[:, 1] = np.random.randint(
+                low=self.type_accs['movie'],
+                high=self.type_accs['movie'] + self.num_items,
+                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
             )
 
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
