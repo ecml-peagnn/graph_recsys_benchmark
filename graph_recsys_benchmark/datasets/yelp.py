@@ -691,31 +691,13 @@ class Yelp(Dataset):
         if self.cf_loss_type == 'BCE':
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
 
-            neg_inids = []
-            u_nids = pos_samples_np[:, 0]
-            p_bar = tqdm.tqdm(u_nids)
-            for u_nid in p_bar:
-                neg_inids.append(
-                    self._cf_negative_sampling(
-                        u_nid,
-                        self.num_negative_samples,
-                        (
-                            self.train_pos_unid_inid_map,
-                            self.test_pos_unid_inid_map,
-                            self.neg_unid_inid_map
-                        ),
-                        self.item_nid_occs
-                    )
-                )
-            neg_inids_np = np.vstack(neg_inids)
-            neg_samples_np = np.hstack(
-                [
-                    np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
-                    neg_inids_np,
-                    torch.zeros((neg_inids_np.shape[0], 1)).long()
-                ]
+            neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            neg_samples_np[:, 2] = 0
+            neg_samples_np[:, 1] = np.random.randint(
+                low=self.type_accs['items'],
+                high=self.type_accs['items'] + self.num_items,
+                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
             )
-
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
             # Random sampling from all items
