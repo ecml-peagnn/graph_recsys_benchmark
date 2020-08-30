@@ -133,7 +133,7 @@ def save_global_logger(
         )
 
 
-def save_kgat_global_logger(
+def save_kg_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
         kg_train_loss_per_run, cf_train_loss_per_run,

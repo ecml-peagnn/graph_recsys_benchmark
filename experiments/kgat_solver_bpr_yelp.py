@@ -398,7 +398,7 @@ class KGATSolver(BaseSolver):
                     kg_eval_loss_per_run_np = np.vstack([kg_eval_loss_per_run_np, np.mean(kg_eval_loss_per_epoch_np, axis=0)])
                     cf_eval_loss_per_run_np = np.vstack([cf_eval_loss_per_run_np, np.mean(cf_eval_loss_per_epoch_np, axis=0)])
 
-                    save_kgat_global_logger(
+                    save_kg_global_logger(
                         global_logger_file_path,
                         HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
                         kg_train_loss_per_run_np, cf_train_loss_per_run_np,

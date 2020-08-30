@@ -131,7 +131,6 @@ class NCFSolver(BaseSolver):
 
         return pos_inids, list(neg_inids)
 
-
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
     solver = NCFSolver(BCENCFRecsysModel, dataset_args, model_args, train_args)

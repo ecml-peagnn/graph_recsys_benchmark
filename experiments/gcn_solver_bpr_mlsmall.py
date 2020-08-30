@@ -34,7 +34,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='5', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -112,8 +112,15 @@ class GCNRecsysModel(GCNRecsysModel):
             self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        pos_genre, neg_genre = batch[:, 3], batch[:, 4]
+        pos_genre = (self.x[batch[:, 1]] - self.x[pos_genre]) * (self.x[batch[:, 1]] - self.x[pos_genre])
+        pos_genre = pos_genre.sum(dim=-1)
+        neg_genre = (self.x[batch[:, 1] ]- self.x[neg_genre]) * (self.x[batch[:, 1]] - self.x[neg_genre])
+        neg_genre = neg_genre.sum(dim=-1)
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        reg_los = -(pos_genre - neg_genre).sigmoid().log().sum()
+        loss = cf_loss  + 0.1 * reg_los
 
         return loss
 
@@ -129,12 +136,11 @@ class GCNSolver(BaseSolver):
         super(GCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_inids, list(neg_inids)
 
 
 if __name__ == '__main__':

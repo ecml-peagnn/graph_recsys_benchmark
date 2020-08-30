@@ -148,7 +148,7 @@ def drop_infrequent_concept_from_str(df, concept_name, num_occs):
 
 
 def generate_mlsmall_hete_graph(
-        movies, ratings, tags, tagging
+        movies, ratings, tagging
 ):
     def get_concept_num_from_str(df, concept_name):
         concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
@@ -267,6 +267,7 @@ def generate_mlsmall_hete_graph(
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
+    dataset_property_dict['nid2e_dict'] = nid2e_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
@@ -1415,6 +1416,7 @@ class MovieLens(Dataset):
                 # Remove duplicates
                 movies = movies.drop_duplicates()
                 ratings = ratings.drop_duplicates()
+                ratings = ratings[ratings.timestamp > 1514764799]  # All interactions after 2017.12.31
                 tagging = tagging.drop_duplicates()
                 genome_scores = genome_scores.drop_duplicates()
                 genome_tags = genome_tags.drop_duplicates()
@@ -1565,7 +1567,7 @@ class MovieLens(Dataset):
 
             # Generate and save graph
             if self.type == 'hete':
-                dataset_property_dict = generate_mlsmall_hete_graph(movies, ratings, tags, tagging)
+                dataset_property_dict = generate_mlsmall_hete_graph(movies, ratings, tagging)
             elif self.type == 'bipartite':
                 raise NotImplementedError
                 # dataset_property_dict = generate_mlsmall_bi_graph(movies, ratings, tags, tagging, genome_tags,
@@ -1644,37 +1646,33 @@ class MovieLens(Dataset):
 
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            # neg_inids = []
-            # u_nids = pos_edge_index_trans_np[:, 0]
-            # p_bar = tqdm.tqdm(u_nids)
-            # for u_nid in p_bar:
-            #     neg_inids.append(
-            #         self._cf_negative_sampling(
-            #             u_nid,
-            #             self.num_negative_samples,
-            #             (
-            #                 self.train_pos_unid_inid_map,
-            #                 self.test_pos_unid_inid_map,
-            #                 self.neg_unid_inid_map
-            #             ),
-            #             self.item_nid_occs
-            #         )
-            #     )
-            # train_data_np = np.hstack(
-            #     [
-            #         np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
-            #         np.vstack(neg_inids)
-            #     ]
-            # )
-
             # Random sampling from all items
-            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            pos_pairs = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             neg_inids = np.random.randint(
                 low=self.type_accs['movie'],
                 high=self.type_accs['movie'] + self.num_items,
                 size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
             )
-            train_data_np = np.hstack([pos_inids, neg_inids])
+            train_data_np = np.hstack([pos_pairs, neg_inids])
+
+            # add entity aware data to batches
+            iid_genre_nids = []
+            movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
+            pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+            for iid in pbar:
+                i_genres = [genre for genre in self.unique_genres if movies.loc[movies['iid'] == iid][genre].item()]
+                genre_nids = [self.e2nid_dict['genre'][genre] for genre in i_genres]
+                iid_genre_nids.append(genre_nids)
+            pos_genre_nids = []
+            for inid in train_data_np[:, 1]:
+                pos_genre_nids.append(np.random.choice(iid_genre_nids[int(inid - self.type_accs['movie'])]))
+            pos_genre_nid = np.array(pos_genre_nids).reshape(-1, 1)
+            neg_genre_nid = np.random.randint(
+                low=self.type_accs['genre'],
+                high=self.type_accs['genre'] + self.num_genres,
+                size=(train_data_np.shape[0], 1)
+            )
+            train_data_np = np.hstack([train_data_np, pos_genre_nid, neg_genre_nid])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()

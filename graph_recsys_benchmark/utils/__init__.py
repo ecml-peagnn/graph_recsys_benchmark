@@ -14,7 +14,7 @@ __all__ = [
     'load_model',
     'load_random_walk_model',
     'save_global_logger',
-    'save_kgat_global_logger',
+    'save_kg_global_logger',
     'load_global_logger',
     'load_kgat_global_logger',
     'load_dataset',
