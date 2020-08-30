@@ -767,7 +767,7 @@ def generate_ml25m_hete_graph(
     writer2nid = {writer: i + acc for i, writer in enumerate(unique_writers)}
     for i, writer in enumerate(unique_writers):
         nid2e_dict[i + acc] = ('writer', writer)
-    acc += num_actors
+    acc += num_writers
     type_accs['tag'] = acc
     tag2nid = {tag: i + acc for i, tag in enumerate(unique_tids)}
     for i, tag in enumerate(unique_tids):
@@ -1241,8 +1241,6 @@ def generate_ml25m_bi_graph(
     print('Building the item occurrence map...')
     item_count = ratings['iid'].value_counts()
     item_count.name = 'movie_count'
-    import pdb
-    pdb.set_trace()
     item_nid_occs = {}
     for iid in movies.iid:
         item_nid_occs[e2nid_dict['iid'][iid]] = ratings[ratings.iid == iid].iloc[0]['movie_count']

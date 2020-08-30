@@ -30,7 +30,7 @@ parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--meta_path_steps', type=str, default='2,2', help='')
+parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2', help='')
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
 
 # Train params
@@ -39,7 +39,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='7', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -132,26 +132,26 @@ class MPAGATRecsysModel(MPAGATRecsysModel):
         director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
         writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
         genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
-        age2user_edge_index = torch.from_numpy(dataset.edge_index_nps['age2user']).long().to(train_args['device'])
-        gender2user_edge_index = torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(train_args['device'])
-        occ2user_edge_index = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
+        genome_tag2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genome_tag2item']).long().to(train_args['device'])
+        tag2item_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2item']).long().to(train_args['device'])
+        tag2user_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(train_args['device'])
         meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
         meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-        # meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
-        # meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
-        # meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_8 = [genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_9 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_10 = [tag2user_edge_index, user2item_edge_index]
 
         meta_path_edge_index_list = [
             meta_path_edge_indicis_1, meta_path_edge_indicis_2,
-            # meta_path_edge_indicis_3,
-            # meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-            # meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-            # meta_path_edge_indicis_10
+            meta_path_edge_indicis_3,
+            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+            meta_path_edge_indicis_10
         ]
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
@@ -161,12 +161,11 @@ class MPAGATSolver(BaseSolver):
         super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_inids, list(neg_inids)
 
 
 if __name__ == '__main__':
