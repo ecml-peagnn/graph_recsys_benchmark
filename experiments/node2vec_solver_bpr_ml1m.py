@@ -137,12 +137,11 @@ class Node2VecSolver(BaseSolver):
         super(Node2VecSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']), dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_inids, list(neg_inids)
 
     def run(self):
         global_logger_path = self.train_args['logger_folder']
