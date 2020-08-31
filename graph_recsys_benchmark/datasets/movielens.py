@@ -357,10 +357,9 @@ def generate_mlsmall_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    # dataset_property_dict['neg_unid_inid_map'] = \
-    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
-    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
+    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    dataset_property_dict['neg_unid_inid_map'] = \
+        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -594,8 +593,7 @@ def generate_ml1m_hete_graph(
     edge_index_nps['writer2item'] = writer2item_edge_index_np
 
     print('Creating rating property edges...')
-    # train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
-    test_pos_unid_inid_map = {}
+    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -610,12 +608,12 @@ def generate_ml1m_hete_graph(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        # neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        # neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
+        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        # train_pos_unid_inid_map[unid] = train_pos_uid_inids
+        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        # neg_unid_inid_map[unid] = neg_uid_inids
+        neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -624,10 +622,9 @@ def generate_ml1m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    # dataset_property_dict['neg_unid_inid_map'] = \
-    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
-    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
+    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    dataset_property_dict['neg_unid_inid_map'] = \
+        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -846,8 +843,7 @@ def generate_ml25m_hete_graph(
     edge_index_nps['tag2item'] = tag2item_edge_index_np
 
     print('Creating rating property edges...')
-    # train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
-    test_pos_unid_inid_map = {}
+    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
@@ -862,12 +858,12 @@ def generate_ml25m_hete_graph(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        # neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        # neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
+        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        # train_pos_unid_inid_map[unid] = train_pos_uid_inids
+        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        # neg_unid_inid_map[unid] = neg_uid_inids
+        neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -876,10 +872,9 @@ def generate_ml25m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    # dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    # dataset_property_dict['neg_unid_inid_map'] = \
-    #     train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
-    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
+    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
+    dataset_property_dict['neg_unid_inid_map'] = \
+        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -1621,13 +1616,37 @@ class MovieLens(Dataset):
             )
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_inids = np.random.randint(
-                low=self.type_accs['movie'],
-                high=self.type_accs['movie'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
+            neg_inids = []
+            u_nids = pos_edge_index_trans_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
+                    self._cf_negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            self.train_pos_unid_inid_map,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+            train_data_np = np.hstack(
+                [
+                    np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
+                    np.vstack(neg_inids)
+                ]
             )
-            train_data_np = np.hstack([pos_inids, neg_inids])
+
+            # Random sampling from all items
+            # pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            # neg_inids = np.random.randint(
+            #     low=self.type_accs['movie'],
+            #     high=self.type_accs['movie'] + self.num_items,
+            #     size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
+            # )
+            # train_data_np = np.hstack([pos_inids, neg_inids])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()
