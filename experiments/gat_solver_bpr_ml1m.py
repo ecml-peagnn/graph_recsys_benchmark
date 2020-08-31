@@ -12,6 +12,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
+GRAPH_TYPE = 'hete'
 MODEL = 'GAT'
 
 parser = argparse.ArgumentParser()
@@ -21,7 +22,7 @@ parser.add_argument('--dataset', type=str, default='Movielens', help='')
 parser.add_argument('--dataset_name', type=str, default='1m', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
+parser.add_argument('--num_feat_core', type=int, default=10, help='')
 
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
@@ -64,7 +65,7 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
+    'num_core': args.num_core, 'num_feat_core': args.num_feat_core, 'type': GRAPH_TYPE,
     'cf_loss_type': LOSS_TYPE
 }
 model_args = {

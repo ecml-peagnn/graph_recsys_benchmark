@@ -1634,9 +1634,9 @@ class MovieLens(Dataset):
             if not hasattr(self, 'iid_feat_nids'):
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
                 if self.name != '1m':
-                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';').fillna('')
+                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
                 if self.name == '25m':
-                    genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';').fillna('')
+                    genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
                 iid_feat_nids = []
                 pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
                 for iid in pbar:

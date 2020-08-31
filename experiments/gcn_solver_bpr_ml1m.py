@@ -120,7 +120,7 @@ class GCNRecsysModel(GCNRecsysModel):
 
         cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
         reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
-        loss = cf_loss  + 0.1 * reg_los
+        loss = cf_loss # + 0.01 * reg_los
 
         return loss
 
