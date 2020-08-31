@@ -770,12 +770,12 @@ def generate_ml25m_hete_graph(
         nid2e_dict[i + acc] = ('writer', writer)
     acc += num_actors
     type_accs['tag'] = acc
-    tag2nid = {tag: i + acc for i, tag in enumerate(unique_tids)}
+    tag2nid = {tid: i + acc for i, tid in enumerate(unique_tids)}
     for i, tag in enumerate(unique_tids):
         nid2e_dict[i + acc] = ('tag', tag)
     acc += num_tags
     type_accs['genome_tag'] = acc
-    genome_tag2nid = {genome_tag: i + acc for i, genome_tag in enumerate(unique_genome_tids)}
+    genome_tag2nid = {genome_tid: i + acc for i, genome_tid in enumerate(unique_genome_tids)}
     for i, genome_tag in enumerate(unique_genome_tids):
         nid2e_dict[i + acc] = ('genome_tag', genome_tag)
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
@@ -1581,6 +1581,9 @@ class MovieLens(Dataset):
         return 'core_{}_type_{}'.format(self.num_core, self.type)
 
     def kg_negative_sampling(self):
+        """
+        Replace tail entities in existing tripples with random entities
+        """
         print('KG negative sampling...')
         pos_edge_index_r_nps = [
             (edge_index, np.ones((edge_index.shape[1], 1)) * self.edge_type_dict[edge_type])
@@ -1603,39 +1606,13 @@ class MovieLens(Dataset):
         self.train_data_length = train_data_t.shape[0]
 
     def cf_negative_sampling(self):
+        """
+        Replace postive items with random items
+        """
         print('CF negative sampling...')
         pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
         if self.cf_loss_type == 'BCE':
-            # pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
-            #
-            # neg_inids = []
-            # u_nids = pos_samples_np[:, 0]
-            # p_bar = tqdm.tqdm(u_nids)
-            # for u_nid in p_bar:
-            #     neg_inids.append(
-            #         self._cf_negative_sampling(
-            #             u_nid,
-            #             self.num_negative_samples,
-            #             (
-            #                 self.train_pos_unid_inid_map,
-            #                 self.test_pos_unid_inid_map,
-            #                 self.neg_unid_inid_map
-            #             ),
-            #             self.item_nid_occs
-            #         )
-            #     )
-            # neg_inids_np = np.vstack(neg_inids)
-            # neg_samples_np = np.hstack(
-            #     [
-            #         np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
-            #         neg_inids_np,
-            #         torch.zeros((neg_inids_np.shape[0], 1)).long()
-            #     ]
-            # )
-            #
-            # train_data_np = np.vstack([pos_samples_np, neg_samples_np])
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
-
             neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             neg_samples_np[:, 2] = 0
             neg_samples_np[:, 1] = np.random.randint(
@@ -1643,10 +1620,8 @@ class MovieLens(Dataset):
                 high=self.type_accs['movie'] + self.num_items,
                 size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
             )
-
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            # Random sampling from all items
             pos_pairs = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             neg_inids = np.random.randint(
                 low=self.type_accs['movie'],
@@ -1656,23 +1631,43 @@ class MovieLens(Dataset):
             train_data_np = np.hstack([pos_pairs, neg_inids])
 
             # add entity aware data to batches
-            iid_genre_nids = []
-            movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
-            pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
-            for iid in pbar:
-                i_genres = [genre for genre in self.unique_genres if movies.loc[movies['iid'] == iid][genre].item()]
-                genre_nids = [self.e2nid_dict['genre'][genre] for genre in i_genres]
-                iid_genre_nids.append(genre_nids)
-            pos_genre_nids = []
+            if not hasattr(self, 'iid_feat_nids'):
+                movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
+                if self.name != '1m':
+                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';').fillna('')
+                if self.name == '25m':
+                    genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';').fillna('')
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    iid_genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
+                    iid_actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
+                    iid_director_nids = [self.e2nid_dict['director'][director] for director in movies[movies['iid'] == iid]['directors'].item().split(',') if director != '']
+                    iid_writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
+                    feat_nids = iid_genre_nids + iid_actor_nids + iid_director_nids + iid_writer_nids
+                    if self.name != '1m':
+                        iid_tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging['iid'] == iid].tid]
+                        feat_nids += iid_tag_nids
+                    if self.name == '25m':
+                        iid_genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging['iid'] == iid].genome_tid]
+                        feat_nids += iid_genome_tag_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+            pos_entity_nids = []
             for inid in train_data_np[:, 1]:
-                pos_genre_nids.append(np.random.choice(iid_genre_nids[int(inid - self.type_accs['movie'])]))
-            pos_genre_nid = np.array(pos_genre_nids).reshape(-1, 1)
-            neg_genre_nid = np.random.randint(
+                try:
+                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
+                except:
+                    import pdb
+                    pdb.set_trace()
+            pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
+            neg_entity_nids = np.random.randint(
                 low=self.type_accs['genre'],
-                high=self.type_accs['genre'] + self.num_genres,
+                high=self.num_nodes,
                 size=(train_data_np.shape[0], 1)
             )
-            train_data_np = np.hstack([train_data_np, pos_genre_nid, neg_genre_nid])
+            train_data_np = np.hstack([train_data_np, pos_entity_nids, neg_entity_nids])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()

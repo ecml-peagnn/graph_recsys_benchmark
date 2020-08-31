@@ -36,7 +36,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='0', help='')
+parser.add_argument('--gpu_idx', type=str, default='6', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -114,8 +114,15 @@ class GCNRecsysModel(GCNRecsysModel):
             self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        pos_entity, neg_entity = batch[:, 3], batch[:, 4]
+        pos_reg = (self.x[batch[:, 1]] - self.x[pos_entity]) * (self.x[batch[:, 1]] - self.x[pos_entity])
+        pos_reg = pos_reg.sum(dim=-1)
+        neg_reg = (self.x[batch[:, 1]]- self.x[neg_entity]) * (self.x[batch[:, 1]] - self.x[neg_entity])
+        neg_reg = neg_reg.sum(dim=-1)
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
+        loss = cf_loss + 0.1 * reg_los
 
         return loss
 

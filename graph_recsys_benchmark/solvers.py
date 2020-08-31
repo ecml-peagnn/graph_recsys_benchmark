@@ -264,7 +264,7 @@ class BaseSolver(object):
                                 )
                             )
                             instantwrite(logger_file)
-                            clearcache()
+                            # clearcache()
 
                         if torch.cuda.is_available():
                             torch.cuda.synchronize()
