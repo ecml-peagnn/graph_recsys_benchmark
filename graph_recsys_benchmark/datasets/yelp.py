@@ -381,7 +381,7 @@ def generate_graph_data(
     edge_index_nps['checkincount2item'] = checkincount2item_edge_index_np
 
     print('Creating reviewtip property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -396,8 +396,11 @@ def generate_graph_data(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
+        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
+        neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -410,7 +413,8 @@ def generate_graph_data(
           np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -691,23 +695,86 @@ class Yelp(Dataset):
         if self.cf_loss_type == 'BCE':
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
 
-            neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_samples_np[:, 2] = 0
-            neg_samples_np[:, 1] = np.random.randint(
-                low=self.type_accs['items'],
-                high=self.type_accs['items'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
+            neg_inids = []
+            u_nids = pos_samples_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
+                    self._cf_negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            None,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+            neg_inids_np = np.vstack(neg_inids)
+            neg_samples_np = np.hstack(
+                [
+                    np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                    neg_inids_np,
+                    torch.zeros((neg_inids_np.shape[0], 1)).long()
+                ]
             )
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            # Random sampling from all items
-            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_inids = np.random.randint(
-                low=self.type_accs['items'],
-                high=self.type_accs['items'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
+            neg_inids = []
+            u_nids = pos_edge_index_trans_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
+                    self._cf_negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            None,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+
+            train_data_np = np.hstack(
+                [
+                    np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0),
+                    np.vstack(neg_inids)
+                ]
             )
-            train_data_np = np.hstack([pos_inids, neg_inids])
+
+            import pdb
+            pdb.set_trace()
+            # add entity aware data to batches
+            if not hasattr(self, 'iid_feat_nids'):
+                business = pd.read_pickle(join(self.processed_dir, 'business.pkl')).fillna('')
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    iid_attribute_nids = [self.e2nid_dict['itemattributes'][attribute] for attribute in
+                                      business[business['business_id'] == iid]['attributes'].item().split(',') if attribute != '']
+                    iid_category_nids = [self.e2nid_dict['itemcategories'][category] for category in
+                                         business[business['business_id'] == iid]['categories'].item().split(',') if category != '']
+                    feat_nids = iid_attribute_nids + iid_category_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+            pos_entity_nids = []
+            for inid in train_data_np[:, 1]:
+                try:
+                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['items'])]))
+                except:
+                    import pdb
+                    pdb.set_trace()
+            pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
+            neg_entity_nids = np.random.randint(
+                low=self.type_accs['itemattributes'],
+                high=self.type_accs['itemcheckincount'],
+                size=(train_data_np.shape[0], 1)
+            )
+            train_data_np = np.hstack([train_data_np, pos_entity_nids, neg_entity_nids])
         else:
             raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
         train_data_t = torch.from_numpy(train_data_np).long()
