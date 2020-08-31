@@ -137,21 +137,21 @@ class MPAGATRecsysModel(MPAGATRecsysModel):
         occ2user_edge_index = torch.from_numpy(dataset.edge_index_nps['occ2user']).long().to(train_args['device'])
         meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
         meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-        # meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        # meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
-        # meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
-        # meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+        meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
+        meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
 
         meta_path_edge_index_list = [
             meta_path_edge_indicis_1, meta_path_edge_indicis_2,
-            # meta_path_edge_indicis_3,
-            # meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-            # meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-            # meta_path_edge_indicis_10
+            meta_path_edge_indicis_3,
+            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+            meta_path_edge_indicis_10
         ]
         self.meta_path_edge_index_list = meta_path_edge_index_list
 
@@ -160,12 +160,12 @@ class MPAGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
-    def generate_candidates(self, dataset, u_nid):
-        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
-        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
-
-        return pos_inids, list(neg_inids)
+    # def generate_candidates(self, dataset, u_nid):
+    #     pos_inids = dataset.test_pos_unid_inid_map[u_nid]
+    #     neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
+    #     neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
+    #
+    #     return pos_inids, list(neg_inids)
 
 
 if __name__ == '__main__':
