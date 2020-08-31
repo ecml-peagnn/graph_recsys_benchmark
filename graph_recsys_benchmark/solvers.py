@@ -26,7 +26,13 @@ class BaseSolver(object):
         :param u_nid: user node ids
         :return:
         """
-        raise NotImplementedError
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), self.train_args['num_neg_candidates']),
+                                      dtype=int)
+
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
 
     def metrics(
             self,
@@ -45,7 +51,11 @@ class BaseSolver(object):
         """
         HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
 
-        u_nids = [dataset.e2nid_dict['uid'][uid] for uid in dataset.unique_uids]
+
+        test_pos_unid_inid_map, neg_unid_inid_map = \
+            dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
+
+        u_nids = list(test_pos_unid_inid_map.keys())
         test_bar = tqdm.tqdm(u_nids, total=len(u_nids))
         for u_idx, u_nid in enumerate(test_bar):
             pos_i_nids, neg_i_nids = self.generate_candidates(
