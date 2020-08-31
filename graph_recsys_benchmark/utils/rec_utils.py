@@ -21,7 +21,7 @@ def ndcg(hit_vec_np):
     for num_recs in range(5, NUM_RECS_RANGE + 1):
         hit_vec_atK_np = np.array(hit_vec_np[: num_recs], dtype=np.int)
         hit_vec_atK_np = hit_vec_atK_np.reshape(1, -1)
-        NDCGatK.append(sum(hit_vec_atK_np) / np.log2(np.argmax(hit_vec_atK_np) + 2))
+        NDCGatK.append(np.sum(hit_vec_atK_np) / (np.log2(np.argmax(hit_vec_atK_np) + 2)))
 
     return NDCGatK
 
