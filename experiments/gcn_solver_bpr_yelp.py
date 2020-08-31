@@ -109,8 +109,15 @@ class GCNRecsysModel(GCNRecsysModel):
             self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        pos_entity, neg_entity = batch[:, 3], batch[:, 4]
+        pos_reg = (self.x[batch[:, 1]] - self.x[pos_entity]) * (self.x[batch[:, 1]] - self.x[pos_entity])
+        pos_reg = pos_reg.sum(dim=-1)
+        neg_reg = (self.x[batch[:, 1]] - self.x[neg_entity]) * (self.x[batch[:, 1]] - self.x[neg_entity])
+        neg_reg = neg_reg.sum(dim=-1)
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
+        loss = cf_loss + 0.01 * reg_los
 
         return loss
 
@@ -124,13 +131,6 @@ class GCNRecsysModel(GCNRecsysModel):
 class GCNSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(GCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
-
-    def generate_candidates(self, dataset, u_nid):
-        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
-        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
-
-        return pos_inids, list(neg_inids)
 
 
 if __name__ == '__main__':
