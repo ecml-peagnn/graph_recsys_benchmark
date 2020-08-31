@@ -161,11 +161,13 @@ class KGATSolver(BaseSolver):
         super(KGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def generate_candidates(self, dataset, u_nid):
-        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
-        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
 
-        return pos_inids, list(neg_inids)
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']),
+                                      dtype=int)
+
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
 
 
     def metrics(
@@ -187,8 +189,8 @@ class KGATSolver(BaseSolver):
         HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
 
 
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = \
-            dataset.train_pos_unid_inid_map, dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
+        test_pos_unid_inid_map, neg_unid_inid_map = \
+            dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
 
         u_nids = list(test_pos_unid_inid_map.keys())
         test_bar = tqdm.tqdm(u_nids, total=len(u_nids))

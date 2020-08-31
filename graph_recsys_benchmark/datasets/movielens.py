@@ -328,7 +328,7 @@ def generate_mlsmall_hete_graph(
     edge_index_nps['tag2item'] = tag2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
@@ -346,7 +346,6 @@ def generate_mlsmall_hete_graph(
         neg_uid_iids = list(set(unique_iids) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
 
@@ -357,9 +356,8 @@ def generate_mlsmall_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -593,7 +591,7 @@ def generate_ml1m_hete_graph(
     edge_index_nps['writer2item'] = writer2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -611,7 +609,6 @@ def generate_ml1m_hete_graph(
         neg_uid_iids = list(set(unique_iids) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
 
@@ -622,9 +619,8 @@ def generate_ml1m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -843,7 +839,7 @@ def generate_ml25m_hete_graph(
     edge_index_nps['tag2item'] = tag2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
@@ -861,7 +857,6 @@ def generate_ml25m_hete_graph(
         neg_uid_iids = list(set(unique_iids) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
 
@@ -872,9 +867,8 @@ def generate_ml25m_hete_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -969,7 +963,7 @@ def generate_ml1m_bi_graph(
     e2nid_dict['iid'] = iid2nid
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -986,7 +980,6 @@ def generate_ml1m_bi_graph(
         neg_uid_iids = list(set(movies.iid) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
 
@@ -997,9 +990,8 @@ def generate_ml1m_bi_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -1196,7 +1188,7 @@ def generate_ml25m_bi_graph(
     edge_index_nps['tag2item'] = tag2item_edge_index_np
 
     print('Creating rating property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids[:100], total=len(unique_uids))
@@ -1213,7 +1205,6 @@ def generate_ml25m_bi_graph(
         neg_uid_iids = list(set(unique_iids) - set(uid_iids))
         neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
-        train_pos_unid_inid_map[unid] = train_pos_uid_inids
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
 
@@ -1224,9 +1215,8 @@ def generate_ml25m_bi_graph(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['train_pos_unid_inid_map'], dataset_property_dict['test_pos_unid_inid_map'], \
-    dataset_property_dict['neg_unid_inid_map'] = \
-        train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -1607,14 +1597,43 @@ class MovieLens(Dataset):
         pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
         if self.cf_loss_type == 'BCE':
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
-            neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_samples_np[:, 2] = 0
-            neg_samples_np[:, 1] = np.random.randint(
-                low=self.type_accs['movie'],
-                high=self.type_accs['movie'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
+
+            neg_inids = []
+            u_nids = pos_samples_np[:, 0]
+            p_bar = tqdm.tqdm(u_nids)
+            for u_nid in p_bar:
+                neg_inids.append(
+                    self._cf_negative_sampling(
+                        u_nid,
+                        self.num_negative_samples,
+                        (
+                            None,
+                            self.test_pos_unid_inid_map,
+                            self.neg_unid_inid_map
+                        ),
+                        self.item_nid_occs
+                    )
+                )
+            neg_inids_np = np.vstack(neg_inids)
+            neg_samples_np = np.hstack(
+                [
+                    np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                    neg_inids_np,
+                    torch.zeros((neg_inids_np.shape[0], 1)).long()
+                ]
             )
+
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+
+            # pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+            # neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            # neg_samples_np[:, 2] = 0
+            # neg_samples_np[:, 1] = np.random.randint(
+            #     low=self.type_accs['movie'],
+            #     high=self.type_accs['movie'] + self.num_items,
+            #     size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
+            # )
+            # train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
             neg_inids = []
             u_nids = pos_edge_index_trans_np[:, 0]
@@ -1625,7 +1644,7 @@ class MovieLens(Dataset):
                         u_nid,
                         self.num_negative_samples,
                         (
-                            self.train_pos_unid_inid_map,
+                            None,
                             self.test_pos_unid_inid_map,
                             self.neg_unid_inid_map
                         ),

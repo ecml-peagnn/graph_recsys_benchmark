@@ -160,13 +160,6 @@ class MPAGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(MPAGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
-    def generate_candidates(self, dataset, u_nid):
-        pos_inids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_iids = np.array(rd.sample(dataset.unique_iids, train_args['num_neg_candidates']), dtype=int)
-        neg_inids = [dataset.e2nid_dict['iid'][iid] for iid in neg_iids]
-
-        return pos_inids, list(neg_inids)
-
 
 if __name__ == '__main__':
     dataset_args['_cf_negative_sampling'] = _negative_sampling
