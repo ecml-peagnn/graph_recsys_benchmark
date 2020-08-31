@@ -1659,10 +1659,10 @@ class MovieLens(Dataset):
                 pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
                 for iid in pbar:
                     iid_genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
-                    iid_actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
+                    #iid_actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
                     iid_director_nids = [self.e2nid_dict['director'][director] for director in movies[movies['iid'] == iid]['directors'].item().split(',') if director != '']
-                    iid_writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
-                    feat_nids = iid_genre_nids + iid_actor_nids + iid_director_nids + iid_writer_nids
+                    #iid_writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
+                    feat_nids = iid_genre_nids + iid_director_nids #+ iid_actor_nids + iid_writer_nids
                     if self.name != '1m':
                         iid_tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging['iid'] == iid].tid]
                         feat_nids += iid_tag_nids
