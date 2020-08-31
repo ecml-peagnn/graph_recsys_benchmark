@@ -34,10 +34,10 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='4', help='')
+parser.add_argument('--gpu_idx', type=str, default='5', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
-parser.add_argument('--batch_size', type=int, default=128, help='')
+parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=4, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
@@ -120,7 +120,7 @@ class GCNRecsysModel(GCNRecsysModel):
 
         cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
         reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
-        loss = cf_loss  + 0.1 * reg_los
+        loss = cf_loss + 0.01 * reg_los
 
         return loss
 
