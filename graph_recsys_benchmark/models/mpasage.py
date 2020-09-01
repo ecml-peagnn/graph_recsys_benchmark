@@ -67,7 +67,7 @@ class MPASAGERecsysModel(GraphRecsysModel):
             self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        self.fc2 = torch.nn.Linear(kwargs['repr_dim'] * 2, 1)
+        self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
 
     def reset_parameters(self):
         for module in self.mpasage_channels:

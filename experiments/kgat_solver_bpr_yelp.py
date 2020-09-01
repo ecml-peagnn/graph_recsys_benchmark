@@ -2,6 +2,7 @@ import argparse
 import torch
 import os
 import numpy as np
+import pandas as pd
 import random as rd
 import time
 import tqdm
@@ -11,15 +12,16 @@ from GPUtil import showUtilization as gpu_usage
 sys.path.append('..')
 
 from torch.utils.data import DataLoader
+from torch_geometric.utils import softmax
 from graph_recsys_benchmark.models import KGATRecsysModel
 from graph_recsys_benchmark.solvers import BaseSolver
 from graph_recsys_benchmark.utils import *
 
 MODEL_TYPE = 'Graph'
+GRAPH_TYPE = 'hete'
 KG_LOSS_TYPE = 'BPR'
 CF_LOSS_TYPE = 'BPR'
 MODEL = 'KGAT'
-GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
 
@@ -110,9 +112,9 @@ def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_
 
 
 class KGATRecsysModel(KGATRecsysModel):
-    def cf_loss(self, batch):
+    def cf_loss(self, batch, att_map):
         if self.training:
-            self.cached_repr = self.forward()
+            self.cached_repr = self.forward(att_map)
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
 
@@ -157,6 +159,91 @@ class KGATSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
         super(KGATSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
+    def generate_candidates(self, dataset, u_nid):
+        pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
+        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+
+        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']),
+                                      dtype=int)
+
+        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+
+    def metrics(
+            self,
+            run,
+            epoch,
+            model,
+            dataset,
+            att_map
+    ):
+        """
+        Generate the positive and negative candidates for the recsys evaluation
+        :param run:
+        :param epoch:
+        :param model:
+        :param dataset:
+        :return: a tuple (pos_i_nids, neg_i_nids), two entries should be both list
+        """
+        HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
+
+
+        test_pos_unid_inid_map, neg_unid_inid_map = \
+            dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
+
+        u_nids = list(test_pos_unid_inid_map.keys())
+        test_bar = tqdm.tqdm(u_nids, total=len(u_nids))
+        for u_idx, u_nid in enumerate(test_bar):
+            pos_i_nids, neg_i_nids = self.generate_candidates(
+                dataset, u_nid
+            )
+            if len(pos_i_nids) == 0 or len(neg_i_nids) == 0:
+                raise ValueError("No pos or neg samples found in evaluation!")
+
+            pos_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(pos_i_nids))], 'pos_i_nid': pos_i_nids})
+            neg_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(neg_i_nids))], 'neg_i_nid': neg_i_nids})
+            pos_neg_pair_t = torch.from_numpy(
+                pd.merge(pos_i_nid_df, neg_i_nid_df, how='inner', on='u_nid').to_numpy()
+            ).to(self.train_args['device'])
+
+            if self.model_args['model_type'] == 'MF':
+                pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
+                pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
+            loss = model.cf_loss(pos_neg_pair_t, att_map).detach().cpu().item()
+
+            pos_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(pos_i_nids))])).to(
+                self.train_args['device'])
+            pos_i_nids_t = torch.from_numpy(np.array(pos_i_nids)).to(self.train_args['device'])
+            neg_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(neg_i_nids))])).to(
+                self.train_args['device'])
+            neg_i_nids_t = torch.from_numpy(np.array(neg_i_nids)).to(self.train_args['device'])
+            if self.model_args['model_type'] == 'MF':
+                pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
+                neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
+                pos_i_nids_t -= dataset.e2nid_dict['iid'][0]
+                neg_i_nids_t -= dataset.e2nid_dict['iid'][0]
+            pos_pred = model.predict(pos_u_nids_t, pos_i_nids_t).reshape(-1)
+            neg_pred = model.predict(neg_u_nids_t, neg_i_nids_t).reshape(-1)
+
+            _, indices = torch.sort(torch.cat([pos_pred, neg_pred]), descending=True)
+            hit_vec = (indices < len(pos_i_nids)).cpu().detach().numpy()
+            pos_pred = pos_pred.cpu().detach().numpy()
+            neg_pred = neg_pred.cpu().detach().numpy()
+
+            HRs = np.vstack([HRs, hit(hit_vec)])
+            NDCGs = np.vstack([NDCGs, ndcg(hit_vec)])
+            AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
+            eval_losses = np.vstack([eval_losses, loss])
+            test_bar.set_description(
+                'Run {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, eval loss: {:.4f}, '.format(
+                    run, epoch, HRs.mean(axis=0)[0], HRs.mean(axis=0)[5], HRs.mean(axis=0)[10], HRs.mean(axis=0)[15],
+                    NDCGs.mean(axis=0)[0], NDCGs.mean(axis=0)[5], NDCGs.mean(axis=0)[10], NDCGs.mean(axis=0)[15],
+                    AUC.mean(axis=0)[0], eval_losses.mean(axis=0)[0])
+            )
+        print("GPU Usage after each epoch")
+        gpu_usage()
+        return np.mean(HRs, axis=0), np.mean(NDCGs, axis=0), np.mean(AUC, axis=0), np.mean(eval_losses, axis=0)
+
     def run(self):
         global_logger_path = self.train_args['logger_folder']
         if not os.path.exists(global_logger_path):
@@ -183,7 +270,6 @@ class KGATSolver(BaseSolver):
                     gpu_usage()
 
                     # Create the dataset
-                    self.dataset_args['seed'] = seed
                     dataset = load_dataset(self.dataset_args)
 
                     print("GPU Usage after data load")
@@ -217,13 +303,13 @@ class KGATSolver(BaseSolver):
                         rec_metrics
 
                     if torch.cuda.is_available():
-                        torch.cuda.synchronize()
+                        torch.cuda.synchronize(self.train_args['device'])
 
                     start_epoch = last_epoch + 1
                     if start_epoch == 1 and self.train_args['init_eval']:
-                        model.eval()
+                        model.kg_eval()
                         HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
-                            self.metrics(run, 0, model, dataset)
+                            BaseSolver.metrics(run, 0, model, dataset)
                         print(
                             'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
                             'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
@@ -276,7 +362,7 @@ class KGATSolver(BaseSolver):
                                 )
 
                             # Evaluate KG train
-                            model.eval()
+                            model.kg_eval()
                             kg_loss_per_batch = []
                             dataset.kg_negative_sampling()
                             dataloader = DataLoader(
@@ -298,6 +384,16 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, kg eval loss: {:.4f}'.format(run, epoch, kg_eval_loss)
                                 )
 
+                            # Update attention map
+                            with torch.no_grad():
+                                signs = torch.sign(model.edge_attr[:, 0])
+                                signs[signs == 0] = 1
+                                abs_val = torch.abs(model.edge_attr[:, 0])
+                                trans_vec = model.r[abs_val] * signs.view(-1, 1)
+                                alpha = torch.mm(model.x[model.edge_index[1]], model.proj_mat) * torch.tanh(torch.mm(model.x[model.edge_index[0]], model.proj_mat) + trans_vec)
+                                alpha = alpha.sum(-1).detach()
+                                att_map = softmax(alpha, model.edge_index[1], dataset.num_nodes)
+
                             # Train CF part
                             model.train()
                             cf_loss_per_batch = []
@@ -313,7 +409,7 @@ class KGATSolver(BaseSolver):
                                 batch = batch.to(self.train_args['device'])
 
                                 optimizer.zero_grad()
-                                loss = model.cf_loss(batch)
+                                loss = model.cf_loss(batch, att_map)
                                 loss.backward()
                                 optimizer.step()
 
@@ -323,8 +419,8 @@ class KGATSolver(BaseSolver):
                                     'Run: {}, epoch: {}, cf train loss: {:.4f}'.format(run, epoch, cf_train_loss)
                                 )
 
-                            model.eval()
-                            HRs, NDCGs, AUC, cf_eval_loss = self.metrics(run, epoch, model, dataset)
+                            model.cf_eval(att_map)
+                            HRs, NDCGs, AUC, cf_eval_loss = self.metrics(run, epoch, model, dataset, att_map)
 
                             # Sumarize the epoch
                             HRs_per_epoch_np = np.vstack([HRs_per_epoch_np, HRs])
@@ -380,7 +476,7 @@ class KGATSolver(BaseSolver):
                             clearcache()
 
                         if torch.cuda.is_available():
-                            torch.cuda.synchronize()
+                            torch.cuda.synchronize(self.train_args['device'])
                     t_end = time.perf_counter()
 
                     HRs_per_run_np = np.vstack([HRs_per_run_np, np.max(HRs_per_epoch_np, axis=0)])
@@ -430,7 +526,7 @@ class KGATSolver(BaseSolver):
                     print("GPU Usage after each run")
                     gpu_usage()
 
-                    del model, optimizer, loss, kg_loss_per_batch, rec_metrics
+                    del model, optimizer, loss, kg_loss_per_batch, cf_loss_per_batch, rec_metrics
                     clearcache()
             print(
                 'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, \
