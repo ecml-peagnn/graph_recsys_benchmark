@@ -448,9 +448,10 @@ class Yelp(Dataset):
         self.type = kwargs['type']
         assert self.type in ['hete', 'bipartite']
         self.num_core = kwargs['num_core']
+        self.entity_aware = kwargs['entity_aware']
         self.num_negative_samples = kwargs['num_negative_samples']
+        self.sampling_strategy = kwargs['sampling_strategy']
         self.cf_loss_type = kwargs['cf_loss_type']
-        # self._cf_negative_sampling = kwargs['_cf_negative_sampling']
         self.kg_loss_type = kwargs.get('kg_loss_type', None)
         self.dataset = kwargs['dataset']
 
@@ -668,6 +669,9 @@ class Yelp(Dataset):
         return 'core_{}_type_{}'.format(self.num_core, self.type)
 
     def kg_negative_sampling(self):
+        """
+        Replace tail entities in existing triples with random entities
+        """
         print('KG negative sampling...')
         pos_edge_index_r_nps = [
             (edge_index, np.ones((edge_index.shape[1], 1)) * self.edge_type_dict[edge_type])
@@ -676,44 +680,102 @@ class Yelp(Dataset):
         pos_edge_index_trans_np = np.hstack([_[0] for _ in pos_edge_index_r_nps]).T
         pos_r_np = np.vstack([_[1] for _ in pos_edge_index_r_nps])
         neg_t_np = np.random.randint(low=0, high=self.num_nodes, size=(pos_edge_index_trans_np.shape[0], 1))
-        if self.cf_loss_type == 'BCE':
-            pos_samples_np = np.hstack([pos_edge_index_trans_np, pos_r_np])
-            neg_samples_np = np.hstack([pos_edge_index_trans_np[:, 0], neg_t_np, pos_r_np])
-            train_data_np = np.vstack([pos_samples_np, neg_samples_np])
-        elif self.cf_loss_type == 'BPR':
-            train_data_np = np.hstack([pos_edge_index_trans_np, neg_t_np, pos_r_np])
-        else:
-            raise NotImplementedError('KG loss type not specified or not implemented!')
+        train_data_np = np.hstack([pos_edge_index_trans_np, neg_t_np, pos_r_np])
         train_data_t = torch.from_numpy(train_data_np).long()
         shuffle_idx = torch.randperm(train_data_t.shape[0])
         self.train_data = train_data_t[shuffle_idx]
         self.train_data_length = train_data_t.shape[0]
 
     def cf_negative_sampling(self):
+        """
+        Replace positive items with random/unseen items
+        """
         print('CF negative sampling...')
         pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
+        num_interactions = pos_edge_index_trans_np.shape[0]
         if self.cf_loss_type == 'BCE':
             pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
-
-            neg_samples_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_samples_np[:, 2] = 0
-            neg_samples_np[:, 1] = np.random.randint(
-                low=self.type_accs['items'],
-                high=self.type_accs['items'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples,)
-            )
+            if self.sampling_strategy == 'random':
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.random.randint(
+                            low=self.type_accs['items'],
+                            high=self.type_accs['items'] + self.num_items,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        ),
+                        torch.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_samples_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    neg_inids.append(negative_inids)
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.vstack(neg_inids),
+                        np.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            else:
+                raise NotImplementedError
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
         elif self.cf_loss_type == 'BPR':
-            # Random sampling from all items
-            pos_inids = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
-            neg_inids = np.random.randint(
-                low=self.type_accs['items'],
-                high=self.type_accs['items'] + self.num_items,
-                size=(pos_edge_index_trans_np.shape[0] * self.num_negative_samples, 1)
-            )
-            train_data_np = np.hstack([pos_inids, neg_inids])
+            train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            if self.sampling_strategy == 'random':
+                neg_inid_np = np.random.randint(
+                            low=self.type_accs['items'],
+                            high=self.type_accs['items'] + self.num_items,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_edge_index_trans_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    neg_inids.append(negative_inids)
+                neg_inid_np = np.vstack(neg_inids)
+            else:
+                raise NotImplementedError
+            train_data_np = np.hstack([train_data_np, neg_inid_np])
+
+            if self.entity_aware:
+                # add entity aware data to batches
+                if not hasattr(self, 'iid_feat_nids'):
+                    business = pd.read_pickle(join(self.processed_dir, 'business.pkl')).fillna('')
+                    iid_feat_nids = []
+                    pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                    for iid in pbar:
+                            pbar.set_description('Sampling item entities...')
+                            iid_attribute_nids = [self.e2nid_dict['itemattributes'][attribute] for attribute in
+                                                  business[business['business_id'] == iid]['attributes'].item().split(',')
+                                                  if attribute != '']
+                            iid_category_nids = [self.e2nid_dict['itemcategories'][category] for category in
+                                                 business[business['business_id'] == iid]['categories'].item().split(',') if
+                                                 category != '']
+                            feat_nids = iid_attribute_nids + iid_category_nids
+                            iid_feat_nids.append(feat_nids)
+                    self.iid_feat_nids = iid_feat_nids
+
+                pos_entity_nids = []
+                for inid in train_data_np[:, 1]:
+                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
+                pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
+                neg_entity_nids = np.random.randint(
+                    low=self.type_accs['itemattributes'],
+                    high=self.type_accs['itemcheckincount'],
+                    size=(train_data_np.shape[0], 1)
+                )
+                train_data_np = np.hstack([train_data_np, pos_entity_nids, neg_entity_nids])
         else:
-            raise NotImplementedError('No negative sampling for loss type: {}.'.format(self.cf_loss_type))
+            raise NotImplementedError
         train_data_t = torch.from_numpy(train_data_np).long()
         shuffle_idx = torch.randperm(train_data_t.shape[0])
         self.train_data = train_data_t[shuffle_idx]
@@ -743,16 +805,3 @@ class Yelp(Dataset):
 
     def __repr__(self):
         return '{}-{}'.format(self.__class__.__name__, self.name.capitalize())
-
-
-if __name__ == '__main__':
-    import os.path as osp
-
-    root = osp.join('.', 'tmp', 'yelp')
-    name = 'Yelp'
-    seed = 2020
-    dataset = Yelp(root=root)
-    dataloader = DataLoader(dataset)
-    for u_nids, pos_inids, neg_inids in dataloader:
-        pass
-    print('stop')

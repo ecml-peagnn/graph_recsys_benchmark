@@ -17,7 +17,7 @@ class GraphRecsysModel(torch.nn.Module):
     def reset_parameters(self):
         raise NotImplementedError
 
-    def cf_loss(self, pos_neg_pair_t):
+    def loss(self, pos_neg_pair_t):
         if self.training:
             self.cached_repr = self.forward()
         pos_pred = self.predict(pos_neg_pair_t[:, 0], pos_neg_pair_t[:, 1])
