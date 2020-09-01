@@ -276,8 +276,6 @@ class KGATSolver(BaseSolver):
                     gpu_usage()
 
                     # Create model and optimizer
-                    if self.model_args['if_use_features']:
-                        self.model_args['emb_dim'] = dataset.data.x.shape[1]
                     self.model_args['num_nodes'] = dataset.num_nodes
                     self.model_args['dataset'] = dataset
 
@@ -306,31 +304,6 @@ class KGATSolver(BaseSolver):
                         torch.cuda.synchronize(self.train_args['device'])
 
                     start_epoch = last_epoch + 1
-                    if start_epoch == 1 and self.train_args['init_eval']:
-                        model.kg_eval()
-                        HRs_before_np, NDCGs_before_np, AUC_before_np, cf_eval_loss_before_np = \
-                            BaseSolver.metrics(run, 0, model, dataset)
-                        print(
-                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
-                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
-                            'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
-                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
-                                AUC_before_np[0], cf_eval_loss_before_np[0]
-                            )
-                        )
-                        logger_file.write(
-                            'Initial performance HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
-                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, '
-                            'AUC: {:.4f}, eval loss: {:.4f} \n'.format(
-                                HRs_before_np[0], HRs_before_np[5], HRs_before_np[10], HRs_before_np[15],
-                                NDCGs_before_np[0], NDCGs_before_np[5], NDCGs_before_np[10], NDCGs_before_np[15],
-                                AUC_before_np[0], cf_eval_loss_before_np[0]
-                            )
-                        )
-                        instantwrite(logger_file)
-                        clearcache()
-
                     t_start = time.perf_counter()
                     if start_epoch <= self.train_args['epochs']:
                         # Start training model
