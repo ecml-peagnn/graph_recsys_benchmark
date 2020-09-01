@@ -676,7 +676,7 @@ def generate_ml25m_hete_graph(
     unique_iids = list(np.sort(ratings.iid.unique()))
     num_items = len(unique_iids)
 
-    unique_genres = list(movies.keys()[3:22])
+    unique_genres = list(movies.keys()[3:23])
     num_genres = len(unique_genres)
 
     unique_years = list(movies.year.unique())

@@ -13,6 +13,7 @@ from graph_recsys_benchmark.solvers import BaseSolver
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
 MODEL = 'MPASAGE'
+GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
 
@@ -67,7 +68,7 @@ dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'cf_loss_type': LOSS_TYPE
+    'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE
 }
 model_args = {
     'model_type': MODEL_TYPE,

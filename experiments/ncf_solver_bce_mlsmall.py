@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='1m', help='')
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
@@ -65,12 +65,12 @@ dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'cf_loss_type': LOSS_TYPE
+    'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE
 }
 model_args = {
     'model_type': MODEL_TYPE, 'dropout': args.dropout,
     'factor_num': args.factor_num, 'if_use_features': args.if_use_features.lower() == 'true',
-    'num_layers': args.num_layers, 'loss_type': LOSS_TYPE, 'type': GRAPH_TYPE,
+    'num_layers': args.num_layers, 'loss_type': LOSS_TYPE
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
