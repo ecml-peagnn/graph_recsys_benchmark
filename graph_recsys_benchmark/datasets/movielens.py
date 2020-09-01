@@ -677,7 +677,7 @@ def generate_ml25m_hete_graph(
     unique_iids = list(np.sort(ratings.iid.unique()))
     num_items = len(unique_iids)
 
-    unique_genres = list(movies.keys()[3:22])
+    unique_genres = list(movies.keys()[3:23])
     num_genres = len(unique_genres)
 
     unique_years = list(movies.year.unique())
@@ -1674,11 +1674,7 @@ class MovieLens(Dataset):
 
             pos_entity_nids = []
             for inid in train_data_np[:, 1]:
-                try:
-                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
-                except:
-                    import pdb
-                    pdb.set_trace()
+                pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
             pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
             neg_entity_nids = np.random.randint(
                 low=self.type_accs['genre'],
