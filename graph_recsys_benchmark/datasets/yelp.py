@@ -381,7 +381,7 @@ def generate_graph_data(
     edge_index_nps['checkincount2item'] = checkincount2item_edge_index_np
 
     print('Creating reviewtip property edges...')
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = {}, {}, {}
+    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
     user2item_edge_index_np = np.zeros((2, 0))
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -396,8 +396,11 @@ def generate_graph_data(
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
+        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
+        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
 
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
+        neg_unid_inid_map[unid] = neg_uid_inids
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -410,7 +413,8 @@ def generate_graph_data(
           np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_users)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['test_pos_unid_inid_map'] = test_pos_unid_inid_map
+    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
+        test_pos_unid_inid_map, neg_unid_inid_map
 
     print('Building edge type map...')
     edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
@@ -446,7 +450,7 @@ class Yelp(Dataset):
         self.num_core = kwargs['num_core']
         self.num_negative_samples = kwargs['num_negative_samples']
         self.cf_loss_type = kwargs['cf_loss_type']
-        self._cf_negative_sampling = kwargs['_cf_negative_sampling']
+        # self._cf_negative_sampling = kwargs['_cf_negative_sampling']
         self.kg_loss_type = kwargs.get('kg_loss_type', None)
         self.dataset = kwargs['dataset']
 
