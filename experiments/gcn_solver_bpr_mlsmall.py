@@ -2,7 +2,6 @@ import argparse
 import torch
 import os
 import numpy as np
-import random as rd
 import sys
 
 sys.path.append('..')
@@ -23,11 +22,15 @@ parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')
+parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
-parser.add_argument('--dropout', type=float, default=0.5, help='')
+parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
+
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
@@ -63,13 +66,16 @@ dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE
+    'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE,
+    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true'
 }
 model_args = {
     'model_type': MODEL_TYPE,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'repr_dim': args.repr_dim, 'dropout': args.dropout
+    'repr_dim': args.repr_dim, 'dropout': args.dropout,
+    'entity_aware': args.entity_aware.lower() == 'true',
+    'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -87,36 +93,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
-    '''
-    The negative sampling methods used for generating the training batches
-    :param u_nid:
-    :return:
-    '''
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
-    # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
-    # nid_occs = nid_occs / np.sum(nid_occs)
-    # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
-    # negative_inids = negative_inids
-
-    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
-
-    return np.array(negative_inids).reshape(-1, 1)
-
-
 class GCNRecsysModel(GCNRecsysModel):
-    def cf_loss(self, batch):
-        if self.training:
-            self.cached_repr = self.forward()
-        pos_pred = self.predict(batch[:, 0], batch[:, 1])
-        neg_pred = self.predict(batch[:, 0], batch[:, 2])
-
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
-
-        return loss
-
     def update_graph_input(self, dataset):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
@@ -124,12 +101,6 @@ class GCNRecsysModel(GCNRecsysModel):
         return self.x, edge_index
 
 
-class GCNSolver(BaseSolver):
-    def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(GCNSolver, self).__init__(model_class, dataset_args, model_args, train_args)
-
-
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = GCNSolver(GCNRecsysModel, dataset_args, model_args, train_args)
+    solver = BaseSolver(GCNRecsysModel, dataset_args, model_args, train_args)
     solver.run()

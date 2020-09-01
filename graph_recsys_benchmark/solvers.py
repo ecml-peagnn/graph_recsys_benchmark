@@ -27,12 +27,9 @@ class BaseSolver(object):
         :return:
         """
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        neg_i_nids = list(np.random.choice(dataset.neg_unid_inid_map[u_nid], size=(self.train_args['num_neg_candidates'],)))
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), self.train_args['num_neg_candidates']),
-                                      dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_i_nids, neg_i_nids
 
     def metrics(
             self,
