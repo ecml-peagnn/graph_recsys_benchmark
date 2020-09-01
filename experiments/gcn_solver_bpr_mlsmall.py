@@ -113,9 +113,9 @@ class GCNRecsysModel(GCNRecsysModel):
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
         pos_entity, neg_entity = batch[:, 3], batch[:, 4]
-        pos_reg = (self.x[batch[:, 1]] - self.x[pos_entity]) * (self.x[batch[:, 1]] - self.x[pos_entity])
+        pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
         pos_reg = pos_reg.sum(dim=-1)
-        neg_reg = (self.x[batch[:, 1]] - self.x[neg_entity]) * (self.x[batch[:, 1]] - self.x[neg_entity])
+        neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
         neg_reg = neg_reg.sum(dim=-1)
 
         cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()

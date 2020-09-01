@@ -116,11 +116,17 @@ class SAGERecsysModel(SAGERecsysModel):
             self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        pos_entity, neg_entity = batch[:, 3], batch[:, 4]
+        pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
+        pos_reg = pos_reg.sum(dim=-1)
+        neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
+        neg_reg = neg_reg.sum(dim=-1)
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
+        loss = cf_loss + 0.01 * reg_los
 
         return loss
-
     def update_graph_input(self, dataset):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
