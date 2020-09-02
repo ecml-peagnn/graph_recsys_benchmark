@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='1m', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
@@ -28,7 +28,7 @@ parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2,2,2 (for yelp)
+parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2,2(for 1m,25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 

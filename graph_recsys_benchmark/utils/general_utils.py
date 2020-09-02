@@ -243,6 +243,39 @@ def clearcache():
 
 def update_pea_graph_input(dataset_args, train_args, dataset):
     if dataset_args['dataset'] == "Movielens":
+        if dataset_args['name'] == "latest-small":
+            user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
+                train_args['device'])
+            year2item_edge_index = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(
+                train_args['device'])
+            actor2item_edge_index = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(
+                train_args['device'])
+            director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(
+                train_args['device'])
+            writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(
+                train_args['device'])
+            genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(
+                train_args['device'])
+            tag2item_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2item']).long().to(
+                train_args['device'])
+            tag2user_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(
+                train_args['device'])
+            meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+            meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_8 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_9 = [tag2user_edge_index, user2item_edge_index]
+
+            meta_path_edge_index_list = [
+                meta_path_edge_indicis_1, meta_path_edge_indicis_2,meta_path_edge_indicis_3,
+                meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9
+            ]
+
         if dataset_args['name'] == "1m":
             user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
                 train_args['device'])
@@ -272,6 +305,13 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
             meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
             meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
+
+            meta_path_edge_index_list = [
+                meta_path_edge_indicis_1, meta_path_edge_indicis_2,meta_path_edge_indicis_3,
+                meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                meta_path_edge_indicis_10
+            ]
 
         if dataset_args['name'] == "25m":
             user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
@@ -303,13 +343,12 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_9 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
             meta_path_edge_indicis_10 = [tag2user_edge_index, user2item_edge_index]
 
-        meta_path_edge_index_list = [
-            meta_path_edge_indicis_1, meta_path_edge_indicis_2,
-            meta_path_edge_indicis_3,
-            meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-            meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-            meta_path_edge_indicis_10
-        ]
+            meta_path_edge_index_list = [
+                meta_path_edge_indicis_1, meta_path_edge_indicis_2,meta_path_edge_indicis_3,
+                meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                meta_path_edge_indicis_10
+            ]
     if dataset_args['dataset'] == "Yelp":
         user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
         stars2item_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2item']).long().to(
