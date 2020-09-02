@@ -66,7 +66,18 @@ class MFRecsysModel(torch.nn.Module):
         raise NotImplementedError
 
     def loss(self, pos_neg_pair_t):
-        raise NotImplementedError
+        loss_func = torch.nn.BCEWithLogitsLoss()
+        if self.training:
+            pred = self.predict(pos_neg_pair_t[:, 0], pos_neg_pair_t[:, 1])
+            label = pos_neg_pair_t[:, -1].float()
+        else:
+            pos_pred = self.predict(pos_neg_pair_t[:, 0], pos_neg_pair_t[:, 1])[:1]
+            neg_pred = self.predict(pos_neg_pair_t[:, 0], pos_neg_pair_t[:, 2])
+            pred = torch.cat([pos_pred, neg_pred])
+            label = torch.cat([torch.ones_like(pos_pred), torch.zeros_like(neg_pred)]).float()
+
+        loss = loss_func(pred, label)
+        return loss
 
     def predict(self, unids, inids):
         return self.forward(unids, inids)

@@ -766,7 +766,13 @@ class Yelp(Dataset):
 
                 pos_entity_nids = []
                 for inid in train_data_np[:, 1]:
-                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
+                    # pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['items'])]))
+                    try:
+                        pos_entity_nids.append(
+                            np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['items'])]))
+                    except:
+                        import pdb
+                        pdb.set_trace()
                 pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
                 neg_entity_nids = np.random.randint(
                     low=self.type_accs['itemattributes'],

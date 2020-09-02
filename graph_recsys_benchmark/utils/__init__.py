@@ -22,5 +22,6 @@ __all__ = [
     'clearcache',
     'load_random_walk_model',
     'load_random_walk_global_logger',
-    'save_random_walk_logger'
+    'save_random_walk_logger',
+    'update_pea_graph_input'
 ]
