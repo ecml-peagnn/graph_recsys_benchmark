@@ -19,7 +19,7 @@ class GCNRecsysModel(GraphRecsysModel):
             self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))
         else:
             raise NotImplementedError('Feature not implemented!')
-        self.x, self.edge_index = self.update_graph_input(kwargs['dataset'])
+        self.edge_index = self.update_graph_input(kwargs['dataset'])
 
         self.conv1 = GCNConv(kwargs['emb_dim'], kwargs['hidden_size'])
         self.conv2 = GCNConv(kwargs['hidden_size'], kwargs['hidden_size'] // 2)
@@ -36,10 +36,8 @@ class GCNRecsysModel(GraphRecsysModel):
         self.conv2.reset_parameters()
 
     def forward(self):
-        x, edge_index = self.x, self.edge_index
-        x = F.normalize(x)
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x, edge_index = F.normalize(self.x), self.edge_index
+        x = F.dropout(F.relu(self.conv1(x, edge_index)), p=self.dropout, training=self.training)
         x = F.normalize(x)
         x = self.conv2(x, edge_index)
         x = F.normalize(x)

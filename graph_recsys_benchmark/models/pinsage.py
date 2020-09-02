@@ -1,7 +1,8 @@
 import torch
 import torch.nn.functional as F
+from torch.nn import Parameter
 from graph_recsys_benchmark.nn import PinSAGEConv
-from torch_geometric.nn.inits import glorot
+from torch_geometric.nn.inits import glorot, zeros
 from torch_scatter import scatter_add
 
 
@@ -18,7 +19,7 @@ class SAGERecsysModel(GraphRecsysModel):
         self.margin = kwargs['margin']
 
         if not self.if_use_features:
-            self.x = torch.nn.Embedding(kwargs['dataset']['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
+            self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))
         else:
             raise NotImplementedError('Feature not implemented!')
         self.x, self.edge_index = self.update_graph_input(kwargs['dataset'])
@@ -34,25 +35,24 @@ class SAGERecsysModel(GraphRecsysModel):
         sum_deg = torch.cat(sum_deg)
         self.edge_weight = deg[self.edge_index[0, :].long()] / sum_deg[self.edge_index[1, :].long()]
 
-        self.fc1 = torch.nn.Linear(kwargs['hidden_size'], kwargs['hidden_size'])
-        self.fc2 = torch.nn.Linear(kwargs['hidden_size'], 1)
+        self.bias = Parameter(torch.Tensor(1))
 
     def reset_parameters(self):
         if not self.if_use_features:
             glorot(self.x)
-        glorot(self.fc1.weight)
-        glorot(self.fc2.weight)
+        zeros(self.bias)
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
 
     def forward(self):
-        x, edge_index = self.x, self.edge_index
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x, edge_index = F.normalize(self.x), self.edge_index
+        x = F.dropout(F.relu(self.conv1(x, edge_index)), p=self.dropout, training=self.training)
+        x = F.normalize(x)
         x = self.conv2(x, edge_index)
+        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):
         u_repr = self.cached_repr[unids]
         i_repr = self.cached_repr[inids]
-        return torch.sum(u_repr * i_repr, dim=-1)
+        return torch.sum(u_repr * i_repr, dim=-1) + self.bias

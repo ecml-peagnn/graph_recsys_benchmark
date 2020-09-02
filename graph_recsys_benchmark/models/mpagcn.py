@@ -76,7 +76,8 @@ class MPAGCNRecsysModel(GraphRecsysModel):
             glorot(self.att.weight)
 
     def forward(self):
-        x = [module(self.x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpagcn_channels)]
+        x = F.normalize(self.x)
+        x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpagcn_channels)]
         x = torch.cat(x, dim=-2)
         if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)

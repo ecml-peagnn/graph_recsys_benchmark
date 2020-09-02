@@ -18,12 +18,12 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset_name', type=str, default='1m', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
-parser.add_argument('--entity_aware', type=str, default='true', help='')
+parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
@@ -99,7 +99,7 @@ class GCNRecsysModel(GCNRecsysModel):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
         edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
-        return self.x, edge_index
+        return edge_index
 
 
 if __name__ == '__main__':

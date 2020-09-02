@@ -98,7 +98,6 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-
 class MPAGATRecsysModel(MPAGATRecsysModel):
     def update_graph_input(self, dataset):
         self.meta_path_edge_index_list = update_pea_graph_input(dataset_args, train_args, dataset)

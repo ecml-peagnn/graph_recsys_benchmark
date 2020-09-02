@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.nn import Parameter
 from torch_geometric.nn import SAGEConv
 from torch_geometric.nn.inits import glorot
 
@@ -33,6 +34,7 @@ class MPASAGEChannel(torch.nn.Module):
 
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.sage_layers[step_idx](x, edge_index_list[step_idx]))
+            x = F.normalize(x)
         x = self.sage_layers[-1](x, edge_index_list[-1])
         return x
 
@@ -47,7 +49,7 @@ class MPASAGERecsysModel(GraphRecsysModel):
         self.channel_aggr = kwargs['channel_aggr']
 
         if not self.if_use_features:
-            self.x = torch.nn.Embedding(kwargs['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
+            self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))
         else:
             raise NotImplementedError('Feature not implemented!')
         self.update_graph_input(kwargs['dataset'])
@@ -78,7 +80,8 @@ class MPASAGERecsysModel(GraphRecsysModel):
             glorot(self.att.weight)
 
     def forward(self):
-        x = [module(self.x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpasage_channels)]
+        x = F.normalize(self.x)
+        x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpasage_channels)]
         x = torch.cat(x, dim=-2)
         if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)

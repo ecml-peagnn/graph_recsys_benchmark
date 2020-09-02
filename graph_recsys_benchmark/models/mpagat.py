@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.nn import Parameter
 from torch_geometric.nn import GATConv
 from torch_geometric.nn.inits import glorot
 
@@ -48,7 +49,7 @@ class MPAGATRecsysModel(GraphRecsysModel):
         self.channel_aggr = kwargs['channel_aggr']
 
         if not self.if_use_features:
-            self.x = torch.nn.Embedding(kwargs['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
+            self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))
         else:
             raise NotImplementedError('Feature not implemented!')
         self.update_graph_input(kwargs['dataset'])

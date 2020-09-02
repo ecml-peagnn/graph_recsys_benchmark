@@ -118,7 +118,7 @@ def load_kgat_model(file_path, model, optim, device):
     else:
         print("No checkpoint_backup found at '{}'".format(file_path))
         epoch = 0
-        rec_metrics = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
+        rec_metrics = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
 
     return model, optim, epoch, rec_metrics
 
@@ -139,13 +139,13 @@ def save_kgat_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
         kg_train_loss_per_run, cf_train_loss_per_run,
-        kg_eval_loss_per_run, cf_eval_loss_per_run
+        cf_eval_loss_per_run
 ):
     with open(global_logger_filepath, 'wb') as f:
         pickle.dump(
             [
                 HR_per_run, NDCG_per_run, AUC_per_run,
-                kg_train_loss_per_run, cf_train_loss_per_run, kg_eval_loss_per_run, cf_eval_loss_per_run
+                kg_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run
             ],
             f
         )
@@ -191,16 +191,16 @@ def load_kgat_global_logger(global_logger_filepath):
     if os.path.isfile(global_logger_filepath):
         with open(global_logger_filepath, 'rb') as f:
             HRs_per_run, NDCGs_per_run, AUC_per_run, \
-            kg_train_loss_per_run, cf_train_loss_per_run, kg_eval_loss_per_run, cf_eval_loss_per_run = pickle.load(f)
+            kg_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run = pickle.load(f)
     else:
         print("No loggers found at '{}'".format(global_logger_filepath))
         HRs_per_run, NDCGs_per_run, AUC_per_run, \
-        kg_train_loss_per_run, cf_train_loss_per_run, kg_eval_loss_per_run, cf_eval_loss_per_run = \
+        kg_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run = \
             np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), \
-            np.zeros((0, 1)), np.zeros((0, 1)), np.zeros((0, 1))
+            np.zeros((0, 1)), np.zeros((0, 1))
 
     return HRs_per_run, NDCGs_per_run, AUC_per_run, \
-           kg_train_loss_per_run, cf_train_loss_per_run, kg_eval_loss_per_run, cf_eval_loss_per_run, \
+           kg_train_loss_per_run, cf_train_loss_per_run, cf_eval_loss_per_run, \
            HRs_per_run.shape[0]
 
 
@@ -244,22 +244,22 @@ def clearcache():
 def update_pea_graph_input(dataset_args, train_args, dataset):
     if dataset_args['dataset'] == "Movielens":
         if dataset_args['name'] == "latest-small":
-            user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
-                train_args['device'])
-            year2item_edge_index = torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(
-                train_args['device'])
-            actor2item_edge_index = torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(
-                train_args['device'])
-            director2item_edge_index = torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(
-                train_args['device'])
-            writer2item_edge_index = torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(
-                train_args['device'])
-            genre2item_edge_index = torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(
-                train_args['device'])
-            tag2item_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2item']).long().to(
-                train_args['device'])
-            tag2user_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(
-                train_args['device'])
+            user2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
+            year2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['year2item']).long().to(train_args['device'])
+            actor2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['actor2item']).long().to(train_args['device'])
+            director2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['director2item']).long().to(train_args['device'])
+            writer2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['writer2item']).long().to(train_args['device'])
+            genre2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(train_args['device'])
+            tag2item_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['tag2item']).long().to(train_args['device'])
+            tag2user_edge_index = \
+                torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(train_args['device'])
             meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
             meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
             meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
@@ -349,7 +349,7 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
                 meta_path_edge_indicis_10
             ]
-    if dataset_args['dataset'] == "Yelp":
+    elif dataset_args['dataset'] == "Yelp":
         user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
         stars2item_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2item']).long().to(
             train_args['device'])
@@ -386,4 +386,6 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_5, meta_path_edge_indicis_6, meta_path_edge_indicis_7, meta_path_edge_indicis_8,
             meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11
         ]
+    else:
+        raise NotImplementedError
     return meta_path_edge_index_list
