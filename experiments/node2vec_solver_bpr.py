@@ -10,7 +10,8 @@ import sys
 from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MetaPath2Vec
+
+from torch_geometric.nn.models import Node2Vec
 from torch.utils.data import DataLoader
 
 from graph_recsys_benchmark.models import WalkBasedRecsysModel
@@ -19,18 +20,19 @@ from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Walk'
 LOSS_TYPE = 'BPR'
+MODEL = 'Node2Vec'
 GRAPH_TYPE = 'hete'
-MODEL = 'MetaPath2Vec'
 
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
+parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
-
+parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--walks_per_node', type=int, default=1000, help='')
@@ -38,6 +40,7 @@ parser.add_argument('--walk_length', type=int, default=100, help='')
 parser.add_argument('--context_size', type=int, default=7, help='')
 parser.add_argument('--random_walk_num_negative_samples', type=int, default=5, help='')
 parser.add_argument('--sparse', type=str, default='true', help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -49,15 +52,15 @@ parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
-parser.add_argument('--batch_size', type=int, default=1028, help='')
-parser.add_argument('--num_workers', type=int, default=4, help='')
+parser.add_argument('--batch_size', type=int, default=1024, help='')
+parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--random_walk_opt', type=str, default='SparseAdam', help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--random_walk_lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
@@ -77,14 +80,16 @@ else:
 dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name,
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
-    'num_core': args.num_core, 'num_feat_core': args.num_core, 'type': GRAPH_TYPE,
-    'cf_loss_type': LOSS_TYPE
+    'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
+    'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE,
+    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true'
 }
 model_args = {
     'embedding_dim': args.emb_dim, 'model_type': MODEL_TYPE,
     'walk_length': args.walk_length, 'context_size': args.context_size,
     'walks_per_node': args.walks_per_node, 'num_negative_samples': args.random_walk_num_negative_samples,
-    'sparse': args.sparse.lower() == 'true'
+    'sparse': args.sparse.lower() == 'true', 'entity_aware': args.entity_aware.lower() == 'true',
+    'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -103,38 +108,34 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
-    '''
-    The negative sampling methods used for generating the training batches
-    :param u_nid:
-    :return:
-    '''
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
-    # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
-    # nid_occs = nid_occs / np.sum(nid_occs)
-    # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
-    # negative_inids = negative_inids
-
-    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
-
-    return np.array(negative_inids).reshape(-1, 1)
-
-
-class MetaPath2VecRecsysModel(WalkBasedRecsysModel):
-    def cf_loss(self, batch):
+class Node2VecRecsysModel(WalkBasedRecsysModel):
+    def loss(self, batch):
+        if self.training:
+            self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        if self.entity_aware and self.training:
+            pos_entity, neg_entity = batch[:, 3], batch[:, 4]
+            pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (
+                        self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
+            pos_reg = pos_reg.sum(dim=-1)
+            neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (
+                        self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
+            neg_reg = neg_reg.sum(dim=-1)
+            reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
+
+            loss = cf_loss + self.entity_aware_coff * reg_los
+        else:
+            loss = cf_loss
 
         return loss
 
 
-class MetaPath2VecSolver(BaseSolver):
+class Node2VecSolver(BaseSolver):
     def __init__(self, model_class, dataset_args, model_args, train_args):
-        super(MetaPath2VecSolver, self).__init__(model_class, dataset_args, model_args, train_args)
+        super(Node2VecSolver, self).__init__(model_class, dataset_args, model_args, train_args)
 
     def run(self):
         global_logger_path = self.train_args['logger_folder']
@@ -158,34 +159,25 @@ class MetaPath2VecSolver(BaseSolver):
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
 
+                    print("GPU Usage before data load")
+                    gpu_usage()
+
                     # Create the dataset
                     self.dataset_args['seed'] = seed
                     dataset = load_dataset(self.dataset_args)
 
+                    print("GPU Usage after data load")
+                    gpu_usage()
+
                     # Create random walk model
-                    edge_index_dict = {
-                        ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                        ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                        ('user', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
-                        ('gender', 'as the gender of', 'user'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
-                        ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                        ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
-                    }
-                    metapath = [
-                        ('user', 'has watched', 'movie'),
-                        ('movie', 'has the genre', 'genre'),
-                        ('genre', 'as the genre of', 'movie'),
-                        ('movie', 'has been watched by', 'user'),
-                    ]
-                    self.model_args['metapath'] = metapath
-                    self.model_args['edge_index_dict'] = edge_index_dict
+                    edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
+                    edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
+                    edge_index = torch.from_numpy(edge_index_np).long().to(self.train_args['device'])
+                    self.model_args['edge_index'] = edge_index
 
-                    random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(MetaPath2Vec.__init__).parameters}
-                    random_walk_model_args['types'] = dataset.types
-                    random_walk_model_args['num_nodes_dict'] = dataset.num_nodes_dict
-                    random_walk_model_args['type_accs'] = dataset.type_accs
-
-                    random_walk_model = MetaPath2Vec(**random_walk_model_args).to(self.train_args['device'])
+                    random_walk_model_args = {k: v for k, v in self.model_args.items() if k in inspect.signature(Node2Vec.__init__).parameters}
+                    # random_walk_model_args['num_nodes'] = dataset.num_nodes
+                    random_walk_model = Node2Vec(**random_walk_model_args).to(self.train_args['device'])
                     opt_class = get_opt_class(self.train_args['random_walk_opt'])
                     random_walk_optimizer = opt_class(
                         params=random_walk_model.parameters(),
@@ -200,8 +192,7 @@ class MetaPath2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
-                            load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
                         print("Train new random walk model, since no random walk model checkpoint_backup found at '{}'".format(weights_file))
@@ -227,8 +218,7 @@ class MetaPath2VecSolver(BaseSolver):
                         random_walk_model.eval()
                         self.model_args['embedding'] = torch.tensor(random_walk_model.embedding.weight, requires_grad=False)
                     # Do cleaning
-                    del self.model_args['metapath']
-                    del self.model_args['edge_index_dict']
+                    del self.model_args['edge_index']
                     del random_walk_model
                     torch.cuda.empty_cache()
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
@@ -276,6 +266,8 @@ class MetaPath2VecSolver(BaseSolver):
                                 AUC_before_np[0], eval_loss_before_np[0]
                             )
                         )
+                        instantwrite(logger_file)
+                        clearcache()
 
                     t_start = time.perf_counter()
                     if start_epoch <= self.train_args['epochs']:
@@ -303,7 +295,7 @@ class MetaPath2VecSolver(BaseSolver):
                                 batch = batch.to(self.train_args['device'])
 
                                 optimizer.zero_grad()
-                                loss = model.cf_loss(batch)
+                                loss = model.loss(batch)
                                 loss.backward()
                                 optimizer.step()
 
@@ -429,6 +421,5 @@ class MetaPath2VecSolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _negative_sampling
-    solver = MetaPath2VecSolver(MetaPath2VecRecsysModel, dataset_args, model_args, train_args)
+    solver = Node2VecSolver(Node2VecRecsysModel, dataset_args, model_args, train_args)
     solver.run()

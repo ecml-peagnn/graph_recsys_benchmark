@@ -5,28 +5,29 @@ import numpy as np
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import GCNRecsysModel
+from graph_recsys_benchmark.models import GATRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
+MODEL = 'GAT'
 GRAPH_TYPE = 'hete'
-MODEL = 'GCN'
 
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
+parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')
+parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
+parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
@@ -41,11 +42,12 @@ parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
-parser.add_argument('--num_workers', type=int, default=4, help='')
+parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
-parser.add_argument('--weight_decay', type=float, default=0.001, help='')
-parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
+parser.add_argument('--weight_decay', type=float, default=0, help='')
+parser.add_argument('--early_stopping', type=int, default=20, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
@@ -74,7 +76,7 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'entity_aware': args.entity_aware.lower() == 'true',
+    'num_heads': args.num_heads, 'entity_aware': args.entity_aware.lower() == 'true',
     'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {
@@ -93,14 +95,14 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class GCNRecsysModel(GCNRecsysModel):
+class GATRecsysModel(GATRecsysModel):
     def update_graph_input(self, dataset):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
         edge_index = torch.from_numpy(edge_index_np).long().to(train_args['device'])
-        return self.x, edge_index
+        return edge_index
 
 
 if __name__ == '__main__':
-    solver = BaseSolver(GCNRecsysModel, dataset_args, model_args, train_args)
+    solver = BaseSolver(GATRecsysModel, dataset_args, model_args, train_args)
     solver.run()

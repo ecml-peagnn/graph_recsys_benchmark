@@ -17,23 +17,25 @@ from graph_recsys_benchmark.solvers import BaseSolver
 from graph_recsys_benchmark.utils import *
 
 MODEL_TYPE = 'Graph'
-GRAPH_TYPE = 'hete'
 KG_LOSS_TYPE = 'BPR'
 CF_LOSS_TYPE = 'BPR'
 MODEL = 'KGAT'
+GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')
-parser.add_argument('--num_feat_core', type=int, default=10, help='')
-
+parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -45,11 +47,12 @@ parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
-parser.add_argument('--num_workers', type=int, default=4, help='')
+parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='')
-parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
+parser.add_argument('--early_stopping', type=int, default=20, help='')
+parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
@@ -70,12 +73,14 @@ dataset_args = {
     'root': data_folder, 'dataset': args.dataset, 'name': args.dataset_name, 'type': GRAPH_TYPE,
     'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
-    'kg_loss_type': KG_LOSS_TYPE, 'cf_loss_type': CF_LOSS_TYPE
+    'kg_loss_type': KG_LOSS_TYPE, 'cf_loss_type': CF_LOSS_TYPE,
+    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true'
 }
 model_args = {
     'model_type': MODEL_TYPE,
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
-    'dropout': args.dropout,
+    'dropout': args.dropout, 'entity_aware': args.entity_aware.lower() == 'true',
+    'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -93,24 +98,6 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-def _cf_negative_sampling(u_nid, num_negative_samples, train_splition, item_nid_occs):
-    '''
-    The negative sampling methods used for generating the training batches
-    :param u_nid:
-    :return:
-    '''
-    train_pos_unid_inid_map, test_pos_unid_inid_map, neg_unid_inid_map = train_splition
-    # negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    # nid_occs = np.array([item_nid_occs[nid] for nid in negative_inids])
-    # nid_occs = nid_occs / np.sum(nid_occs)
-    # negative_inids = rd.choices(population=negative_inids, weights=nid_occs, k=num_negative_samples)
-    # negative_inids = negative_inids
-
-    negative_inids = test_pos_unid_inid_map[u_nid] + neg_unid_inid_map[u_nid]
-    negative_inids = rd.choices(population=negative_inids, k=num_negative_samples)
-
-    return np.array(negative_inids).reshape(-1, 1)
-
 
 class KGATRecsysModel(KGATRecsysModel):
     def cf_loss(self, batch, att_map):
@@ -118,8 +105,21 @@ class KGATRecsysModel(KGATRecsysModel):
             self.cached_repr = self.forward(att_map)
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
+        cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
 
-        loss = -(pos_pred - neg_pred).sigmoid().log().sum()
+        if self.entity_aware and self.training:
+            pos_entity, neg_entity = batch[:, 3], batch[:, 4]
+            pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (
+                        self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
+            pos_reg = pos_reg.sum(dim=-1)
+            neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (
+                        self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
+            neg_reg = neg_reg.sum(dim=-1)
+            reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
+
+            loss = cf_loss + self.entity_aware_coff * reg_los
+        else:
+            loss = cf_loss
 
         return loss
 
@@ -162,12 +162,9 @@ class KGATSolver(BaseSolver):
 
     def generate_candidates(self, dataset, u_nid):
         pos_i_nids = dataset.test_pos_unid_inid_map[u_nid]
-        neg_i_nids = np.array(dataset.neg_unid_inid_map[u_nid])
+        neg_i_nids = list(np.random.choice(dataset.neg_unid_inid_map[u_nid], size=(self.train_args['num_neg_candidates'],)))
 
-        neg_i_nids_indices = np.array(rd.sample(range(neg_i_nids.shape[0]), train_args['num_neg_candidates']),
-                                      dtype=int)
-
-        return pos_i_nids, list(neg_i_nids[neg_i_nids_indices])
+        return pos_i_nids, neg_i_nids
 
 
     def metrics(
@@ -268,8 +265,14 @@ class KGATSolver(BaseSolver):
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
 
+                    print("GPU Usage before data load")
+                    gpu_usage()
+
                     # Create the dataset
                     dataset = load_dataset(self.dataset_args)
+
+                    print("GPU Usage after data load")
+                    gpu_usage()
 
                     # Create model and optimizer
                     self.model_args['num_nodes'] = dataset.num_nodes
@@ -526,6 +529,5 @@ class KGATSolver(BaseSolver):
 
 
 if __name__ == '__main__':
-    dataset_args['_cf_negative_sampling'] = _cf_negative_sampling
     solver = KGATSolver(KGATRecsysModel, dataset_args, model_args, train_args)
     solver.run()
