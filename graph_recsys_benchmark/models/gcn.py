@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.nn import Parameter
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn.inits import glorot
 
@@ -15,7 +16,7 @@ class GCNRecsysModel(GraphRecsysModel):
         self.dropout = kwargs['dropout']
 
         if not self.if_use_features:
-            self.x = torch.nn.Embedding(kwargs['dataset']['num_nodes'], kwargs['emb_dim'], max_norm=1).weight
+            self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))
         else:
             raise NotImplementedError('Feature not implemented!')
         self.x, self.edge_index = self.update_graph_input(kwargs['dataset'])
@@ -36,9 +37,12 @@ class GCNRecsysModel(GraphRecsysModel):
 
     def forward(self):
         x, edge_index = self.x, self.edge_index
+        x = F.normalize(x)
         x = F.relu(self.conv1(x, edge_index))
         x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.normalize(x)
         x = self.conv2(x, edge_index)
+        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):
