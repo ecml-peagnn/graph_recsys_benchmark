@@ -35,8 +35,8 @@ class MPAGATChannel(torch.nn.Module):
 
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.gat_layers[step_idx](x, edge_index_list[step_idx]))
-            x = F.normalize(x)
         x = self.gat_layers[-1](x, edge_index_list[-1])
+        x = F.normalize(x)
         return x
 
 
@@ -82,11 +82,12 @@ class PEAGATRecsysModel(GraphRecsysModel):
             glorot(self.att.weight)
 
     def forward(self):
-        x = F.normalize(self.x)
+        x = self.x
         x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpagat_channels)]
         x = torch.cat(x, dim=-2)
         if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)
+            x = F.normalize(x)
         elif self.channel_aggr == 'mean':
             x = x.mean(dim=-2)
         elif self.channel_aggr == 'att':
@@ -94,7 +95,6 @@ class PEAGATRecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=-2)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):
