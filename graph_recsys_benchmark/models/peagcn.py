@@ -36,7 +36,6 @@ class MPAGCNChannel(torch.nn.Module):
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.gcn_layers[step_idx](x, edge_index_list[step_idx]))
             x = F.dropout(x, p=self.dropout, training=self.training)
-            x = F.normalize(x)
         x = self.gcn_layers[-1](x, edge_index_list[-1])
         x = F.normalize(x)
         return x
