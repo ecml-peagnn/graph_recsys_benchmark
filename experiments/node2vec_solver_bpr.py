@@ -10,7 +10,6 @@ import sys
 from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
-
 from torch_geometric.nn.models import Node2Vec
 from torch.utils.data import DataLoader
 

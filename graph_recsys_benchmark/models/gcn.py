@@ -38,9 +38,7 @@ class GCNRecsysModel(GraphRecsysModel):
     def forward(self):
         x, edge_index = F.normalize(self.x), self.edge_index
         x = F.dropout(F.relu(self.conv1(x, edge_index)), p=self.dropout, training=self.training)
-        x = F.normalize(x)
         x = self.conv2(x, edge_index)
-        x = F.normalize(x)
         return x
 
     def predict(self, unids, inids):

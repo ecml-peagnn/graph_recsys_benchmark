@@ -4,13 +4,13 @@ import os
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MPAGCNRecsysModel
+from graph_recsys_benchmark.models import PEASAGERecsysModel
 from graph_recsys_benchmark.utils import get_folder_path, update_pea_graph_input
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'MPAGCN'
+MODEL = 'MPASAGE'
 GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
@@ -24,13 +24,13 @@ parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(
 parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
-parser.add_argument('--dropout', type=float, default=0.5, help='')
+parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2,2(for 1m,25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.01, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -51,6 +51,7 @@ parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
+
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
@@ -95,11 +96,11 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class MPAGCNRecsysModel(MPAGCNRecsysModel):
+class MPASAGERecsysModel(PEASAGERecsysModel):
     def update_graph_input(self, dataset):
-        self.meta_path_edge_index_list = update_pea_graph_input(dataset_args, train_args, dataset)
+        return update_pea_graph_input(dataset_args, train_args, dataset)
 
 
 if __name__ == '__main__':
-    solver = BaseSolver(MPAGCNRecsysModel, dataset_args, model_args, train_args)
+    solver = BaseSolver(MPASAGERecsysModel, dataset_args, model_args, train_args)
     solver.run()

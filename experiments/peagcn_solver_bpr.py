@@ -4,13 +4,13 @@ import os
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import MPAGATRecsysModel
+from graph_recsys_benchmark.models import PEAGCNRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path, update_pea_graph_input
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'MPAGAT'
+MODEL = 'MPAGCN'
 GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
@@ -21,18 +21,16 @@ parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
-parser.add_argument('--entity_aware', type=str, default='true', help='')
+parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
-parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2,2(for 1m,25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
-
+parser.add_argument('--entity_aware_coff', type=float, default=0.01, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -40,7 +38,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='0', help='')
+parser.add_argument('--gpu_idx', type=str, default='1', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
@@ -53,7 +51,6 @@ parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')
 
 args = parser.parse_args()
-
 
 # Setup data and weights file path
 data_folder, weights_folder, logger_folder = \
@@ -78,8 +75,8 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
-    'channel_aggr': args.channel_aggr, 'entity_aware': args.entity_aware.lower() == 'true',
+    'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')], 'channel_aggr': args.channel_aggr,
+    'entity_aware': args.entity_aware.lower() == 'true',
     'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {
@@ -98,11 +95,11 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class MPAGATRecsysModel(MPAGATRecsysModel):
+class MPAGCNRecsysModel(PEAGCNRecsysModel):
     def update_graph_input(self, dataset):
-        self.meta_path_edge_index_list = update_pea_graph_input(dataset_args, train_args, dataset)
+        return update_pea_graph_input(dataset_args, train_args, dataset)
 
 
 if __name__ == '__main__':
-    solver = BaseSolver(MPAGATRecsysModel, dataset_args, model_args, train_args)
+    solver = BaseSolver(MPAGCNRecsysModel, dataset_args, model_args, train_args)
     solver.run()

@@ -1,4 +1,5 @@
 import torch
+from torch.nn import functional as F
 
 
 class GraphRecsysModel(torch.nn.Module):
@@ -26,12 +27,21 @@ class GraphRecsysModel(torch.nn.Module):
 
         if self.entity_aware and self.training:
             pos_entity, neg_entity = pos_neg_pair_t[:, 3], pos_neg_pair_t[:, 4]
-            pos_reg = (self.cached_repr[pos_neg_pair_t[:, 1]] - self.cached_repr[pos_entity]) * (
-                        self.cached_repr[pos_neg_pair_t[:, 1]] - self.cached_repr[pos_entity])
+            x = F.normalize(self.cached_repr)
+
+            # l2 norm
+            pos_reg = (x[pos_neg_pair_t[:, 1]] - x[pos_entity]) * (
+                        x[pos_neg_pair_t[:, 1]] - x[pos_entity])
+            neg_reg = (x[pos_neg_pair_t[:, 1]] - x[neg_entity]) * (
+                        x[pos_neg_pair_t[:, 1]] - x[neg_entity])
+
+            # # cos distance
+            # pos_reg = - (x[pos_neg_pair_t[:, 1]] * x[pos_entity])
+            # neg_reg = - (x[pos_neg_pair_t[:, 1]] * x[neg_entity])
+
             pos_reg = pos_reg.sum(dim=-1)
-            neg_reg = (self.cached_repr[pos_neg_pair_t[:, 1]] - self.cached_repr[neg_entity]) * (
-                        self.cached_repr[pos_neg_pair_t[:, 1]] - self.cached_repr[neg_entity])
             neg_reg = neg_reg.sum(dim=-1)
+
             reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
 
             loss = cf_loss + self.entity_aware_coff * reg_los
