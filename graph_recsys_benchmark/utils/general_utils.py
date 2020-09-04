@@ -135,6 +135,21 @@ def save_global_logger(
         )
 
 
+def save_kg_global_logger(
+        global_logger_filepath,
+        HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
+        kg_train_loss_per_run_np, kg_eval_loss_per_run_np
+):
+    with open(global_logger_filepath, 'wb') as f:
+        pickle.dump(
+            [
+                HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np,
+                kg_train_loss_per_run_np, kg_eval_loss_per_run_np
+            ],
+            f
+        )
+
+
 def save_kgat_global_logger(
         global_logger_filepath,
         HR_per_run, NDCG_per_run, AUC_per_run,
@@ -185,6 +200,23 @@ def load_random_walk_model(file_path, model, optim, device):
             if isinstance(v, torch.Tensor):
                 state[k] = v.to(device)
     return model, optim, train_loss
+
+
+def load_kg_global_logger(global_logger_filepath):
+    if os.path.isfile(global_logger_filepath):
+        with open(global_logger_filepath, 'rb') as f:
+            HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np, \
+            kg_train_loss_per_run_np, kg_eval_loss_per_run_np = pickle.load(f)
+    else:
+        print("No loggers found at '{}'".format(global_logger_filepath))
+        HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np, \
+        kg_train_loss_per_run_np, kg_eval_loss_per_run_np = \
+            np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1)), \
+            np.zeros((0, 1))
+
+    return HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np, \
+            kg_train_loss_per_run_np, kg_eval_loss_per_run_np, \
+           HRs_per_run_np.shape[0]
 
 
 def load_kgat_global_logger(global_logger_filepath):

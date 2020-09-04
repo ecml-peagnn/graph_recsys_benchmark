@@ -23,5 +23,7 @@ __all__ = [
     'load_random_walk_model',
     'load_random_walk_global_logger',
     'save_random_walk_logger',
-    'update_pea_graph_input'
+    'update_pea_graph_input',
+    'load_kg_global_logger',
+    'save_kg_global_logger'
 ]

@@ -914,7 +914,6 @@ class MovieLens(Dataset):
         self.num_negative_samples = kwargs['num_negative_samples']
         self.sampling_strategy = kwargs['sampling_strategy']
         self.cf_loss_type = kwargs['cf_loss_type']
-        self.kg_loss_type = kwargs.get('kg_loss_type', None)
 
         super(MovieLens, self).__init__(root, transform, pre_transform, pre_filter)
 

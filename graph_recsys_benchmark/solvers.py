@@ -230,7 +230,8 @@ class BaseSolver(object):
                                 )
 
                             model.eval()
-                            HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
+                            with torch.no_grad():
+                                HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
                             HRs_per_epoch_np = np.vstack([HRs_per_epoch_np, HRs])
                             NDCGs_per_epoch_np = np.vstack([NDCGs_per_epoch_np, NDCGs])
                             AUC_per_epoch_np = np.vstack([AUC_per_epoch_np, AUC])

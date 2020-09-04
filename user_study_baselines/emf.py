@@ -13,7 +13,7 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 
 DS = 'Movielens1m'
-DEVICE = 'cuda:2'
+DEVICE = 'cuda:3'
 EMBEDDING_DIM = 30
 BATCH_SIZE = 1024
 EPOCHS = 100
@@ -23,7 +23,10 @@ LR = 0.001
 K = 10
 THETA = 0.0
 
-embedding_file = 'checkpoint/weights/{}/EMF/embedding.pkl'.format(DS)
+embedding_path = 'checkpoint/weights/{}/EMF'.format(DS)
+if not os.path.exists(embedding_path):
+    os.makedirs(embedding_path, exist_ok=True)
+embedding_filepath = embedding_path + '/embedding.pkl'
 
 # Import rating
 ratings_df = pd.read_csv('checkpoint/data/{}/processed/ratings.csv'.format(DS), sep=';')
@@ -58,10 +61,10 @@ user_embedding = torch.nn.Embedding(num_users, EMBEDDING_DIM).to(DEVICE)
 item_embedding = torch.nn.Embedding(num_items, EMBEDDING_DIM).to(DEVICE)
 
 
-if not os.path.exists(embedding_file):
+if not os.path.exists(embedding_filepath):
     print('No embedding file found! Initialization done.')
 else:
-    with open(embedding_file, mode='rb+') as f:
+    with open(embedding_filepath, mode='rb+') as f:
         checkpoint = torch.load(f, map_location=DEVICE)
     user_embedding.weight = checkpoint['user_embedding']
     item_embedding.weight = checkpoint['item_embedding']
@@ -145,6 +148,6 @@ for epoch in range(EPOCHS):
 
 # Save files
 states = {'user_embedding': user_embedding, 'item_embedding': item_embedding, 'all_neighbours': all_neighbours}
-with open(embedding_file, mode='wb+') as f:
+with open(embedding_filepath, mode='wb+') as f:
     torch.save(states, f)
 print('Embedding saved!')
