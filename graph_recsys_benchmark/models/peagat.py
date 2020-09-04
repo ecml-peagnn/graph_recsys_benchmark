@@ -36,7 +36,6 @@ class MPAGATChannel(torch.nn.Module):
         for step_idx in range(self.num_steps - 1):
             x = F.relu(self.gat_layers[step_idx](x, edge_index_list[step_idx]))
         x = self.gat_layers[-1](x, edge_index_list[-1])
-        x = F.normalize(x)
         return x
 
 
