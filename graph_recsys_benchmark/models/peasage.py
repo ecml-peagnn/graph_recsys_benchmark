@@ -37,6 +37,7 @@ class MPASAGEChannel(torch.nn.Module):
             x = F.relu(self.sage_layers[step_idx](x, edge_index_list[step_idx]))
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.sage_layers[-1](x, edge_index_list[-1])
+        x = F.normalize(x)
         return x
 
 
@@ -84,7 +85,7 @@ class PEASAGERecsysModel(GraphRecsysModel):
             glorot(self.att.weight)
 
     def forward(self):
-        x = F.normalize(self.x)
+        x = self.x
         x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpasage_channels)]
         x = torch.cat(x, dim=-2)
         x = F.normalize(x, dim=-2)

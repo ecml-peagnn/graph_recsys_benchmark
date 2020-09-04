@@ -217,7 +217,7 @@ def generate_mlsmall_hete_graph(
     num_node_types = 8
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tags']
+    types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tag']
     num_nodes_dict = {'user': num_users, 'movie': num_items, 'genre': num_genres, 'year': num_years, 'director': num_directors,
                       'actor': num_actors, 'writer': num_writers, 'tag': num_tags}
 
