@@ -36,7 +36,7 @@ class GCNRecsysModel(GraphRecsysModel):
         self.conv2.reset_parameters()
 
     def forward(self):
-        x, edge_index = F.normalize(self.x), self.edge_index
+        x, edge_index = self.x, self.edge_index
         x = F.dropout(F.relu(self.conv1(x, edge_index)), p=self.dropout, training=self.training)
         x = self.conv2(x, edge_index)
         return x

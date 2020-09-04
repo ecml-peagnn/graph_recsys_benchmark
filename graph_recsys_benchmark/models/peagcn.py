@@ -37,7 +37,6 @@ class MPAGCNChannel(torch.nn.Module):
             x = F.relu(self.gcn_layers[step_idx](x, edge_index_list[step_idx]))
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.gcn_layers[-1](x, edge_index_list[-1])
-        x = F.normalize(x)
         return x
 
 
@@ -86,6 +85,7 @@ class PEAGCNRecsysModel(GraphRecsysModel):
         x = self.x
         x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(-2) for idx, module in enumerate(self.mpagcn_channels)]
         x = torch.cat(x, dim=-2)
+        x = F.normalize(x, dim=-2)
         if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)
             x = F.normalize(x)

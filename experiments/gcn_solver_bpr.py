@@ -17,12 +17,12 @@ GRAPH_TYPE = 'hete'
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset', type=str, default='Movielens', help='')        # Movielens, Yelp
+parser.add_argument('--dataset_name', type=str, default='1m', help='')          # 1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--num_core', type=int, default=10, help='')                # 10, 20(only for 25m)
+parser.add_argument('--num_feat_core', type=int, default=10, help='')           # 10, 20(only for 25m)
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='') # unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')

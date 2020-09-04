@@ -27,27 +27,18 @@ class GraphRecsysModel(torch.nn.Module):
 
         if self.entity_aware and self.training:
             pos_entity, neg_entity = pos_neg_pair_t[:, 3], pos_neg_pair_t[:, 4]
-            # x = F.normalize(self.cached_repr)
 
             # l2 norm
             x = self.x
-            # x = F.normalize(x)
             pos_reg = (x[pos_neg_pair_t[:, 1]] - x[pos_entity]) * (
                         x[pos_neg_pair_t[:, 1]] - x[pos_entity])
             neg_reg = (x[pos_neg_pair_t[:, 1]] - x[neg_entity]) * (
                         x[pos_neg_pair_t[:, 1]] - x[neg_entity])
-
-            # cos distance
-            # x = self.cached_repr
-            # x = F.normalize(x)
-            # pos_reg = - (x[pos_neg_pair_t[:, 1]] * x[pos_entity])
-            # neg_reg = - (x[pos_neg_pair_t[:, 1]] * x[neg_entity])
-
             pos_reg = pos_reg.sum(dim=-1)
             neg_reg = neg_reg.sum(dim=-1)
-
             reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
 
+            # two parts of loss
             loss = cf_loss + self.entity_aware_coff * reg_los
         else:
             loss = cf_loss

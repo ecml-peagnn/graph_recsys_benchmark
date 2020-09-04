@@ -52,7 +52,7 @@ class KGATRecsysModel(GraphRecsysModel):
         self.conv3.reset_parameters()
 
     def forward(self, att_map):
-        x, edge_index, edge_attr = F.normalize(self.x), self.edge_index, self.edge_attr
+        x, edge_index, edge_attr = self.x, self.edge_index, self.edge_attr
         x_1 = F.normalize(F.dropout(self.conv1(x, edge_index, att_map), p=self.dropout, training=self.training), p=2, dim=-1)
         x_2 = F.normalize(F.dropout(self.conv2(x_1, edge_index, att_map), p=self.dropout, training=self.training), p=2, dim=-1)
         x_3 = F.normalize(F.dropout(self.conv3(x_2, edge_index, att_map), p=self.dropout, training=self.training), p=2, dim=-1)
