@@ -30,13 +30,13 @@ parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movie
 parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
-parser.add_argument('--entity_aware', type=str, default='false', help='')
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='true', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0.5, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.01, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -109,11 +109,15 @@ class KGATRecsysModel(KGATRecsysModel):
 
         if self.entity_aware and self.training:
             pos_entity, neg_entity = batch[:, 3], batch[:, 4]
-            pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (
-                        self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
+
+            # l2 norm
+            x = self.x
+            pos_reg = (x[batch[:, 1]] - x[pos_entity]) * (
+                    x[batch[:, 1]] - x[pos_entity])
+            neg_reg = (x[batch[:, 1]] - x[neg_entity]) * (
+                    x[batch[:, 1]] - x[neg_entity])
+
             pos_reg = pos_reg.sum(dim=-1)
-            neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (
-                        self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
             neg_reg = neg_reg.sum(dim=-1)
             reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
 
