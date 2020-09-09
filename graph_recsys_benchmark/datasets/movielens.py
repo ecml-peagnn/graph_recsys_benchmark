@@ -421,8 +421,8 @@ def generate_ml1m_hete_graph(
     unique_genders = list(users.gender.unique())
     num_genders = len(unique_genders)
 
-    unique_occupations = list(users.occupation.unique())
-    num_occupations = len(unique_occupations)
+    unique_occs = list(users.occupation.unique())
+    num_occs = len(unique_occs)
 
     unique_ages = list(users.age.unique())
     num_ages = len(unique_ages)
@@ -444,8 +444,8 @@ def generate_ml1m_hete_graph(
     dataset_property_dict['num_iids'] = len(unique_iids)
     dataset_property_dict['unique_genders'] = unique_genders
     dataset_property_dict['num_genders'] = num_genders
-    dataset_property_dict['unique_occupations'] = unique_occupations
-    dataset_property_dict['num_occupations'] = num_occupations
+    dataset_property_dict['unique_occs'] = unique_occs
+    dataset_property_dict['num_occs'] = num_occs
     dataset_property_dict['unique_ages'] = unique_ages
     dataset_property_dict['num_ages'] = num_ages
     dataset_property_dict['unique_genres'] = unique_genres
@@ -460,13 +460,13 @@ def generate_ml1m_hete_graph(
     dataset_property_dict['num_writers'] = num_writers
 
     #########################  Define number of entities  #########################
-    num_nodes = num_uids + num_iids + num_genders + num_occupations + num_ages + num_genres + num_years + \
+    num_nodes = num_uids + num_iids + num_genders + num_occs + num_ages + num_genres + num_years + \
                 num_directors + num_actors + num_writers
     num_node_types = 10
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
     types = ['user', 'movie', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
-    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'gender': num_genders, 'occupation': num_occupations,
+    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'gender': num_genders, 'occupation': num_occs,
                       'age': num_ages, 'genre': num_genres, 'year': num_years, 'director': num_directors,
                       'actor': num_actors, 'writer': num_writers}
 
@@ -474,12 +474,12 @@ def generate_ml1m_hete_graph(
     type_accs = {}
     nid2e_dict = {}
     acc = 0
-    type_accs['user'] = acc
+    type_accs['uid'] = acc
     uid2nid = {uid: i + acc for i, uid in enumerate(users['uid'])}
     for i, uid in enumerate(users['uid']):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_uids
-    type_accs['movie'] = acc
+    type_accs['iid'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(movies['iid'])}
     for i, iid in enumerate(movies['iid']):
         nid2e_dict[i + acc] = ('iid', iid)
@@ -489,11 +489,11 @@ def generate_ml1m_hete_graph(
     for i, gender in enumerate(unique_genders):
         nid2e_dict[i + acc] = ('gender', gender)
     acc += num_genders
-    type_accs['occupation'] = acc
-    occ2nid = {occupation: i + acc for i, occupation in enumerate(unique_occupations)}
-    for i, occ in enumerate(unique_occupations):
+    type_accs['occ'] = acc
+    occ2nid = {occ: i + acc for i, occ in enumerate(unique_occs)}
+    for i, occ in enumerate(unique_occs):
         nid2e_dict[i + acc] = ('occ', occ)
-    acc += num_occupations
+    acc += num_occs
     type_accs['age'] = acc
     age2nid = {age: i + acc for i, age in enumerate(unique_ages)}
     for i, age in enumerate(unique_ages):
@@ -1288,7 +1288,8 @@ class MovieLens(Dataset):
                 p_bar = tqdm.tqdm(u_nids)
                 for u_nid in p_bar:
                     negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
-                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    negative_inids = rd.choices(negative_inids, k=self.num_negative_samples)
+                    negative_inids = np.array(negative_inids, dtype=np.long).reshape(-1, 1)
                     neg_inids.append(negative_inids)
                 neg_inid_np = np.vstack(neg_inids)
             else:
@@ -1342,13 +1343,13 @@ class MovieLens(Dataset):
                     feat_nids = []
 
                     if self.name == '1m':
-                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in self.unique_occs if users[users.uid == uid][occ].item()]
+                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in users[users.uid == uid].occupation]
                         feat_nids += occ_nids
 
-                        age_nids = [self.e2nid_dict['age'][age] for age in self.unique_ages if users[users.uid == uid][age].item()]
+                        age_nids = [self.e2nid_dict['age'][age] for age in users[users.uid == uid].age]
                         feat_nids += age_nids
 
-                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in self.unique_genders if users[users.uid == uid][gender].item()]
+                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in users[users.uid == uid].gender]
                         feat_nids += gender_nids
                     else:
                         tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
