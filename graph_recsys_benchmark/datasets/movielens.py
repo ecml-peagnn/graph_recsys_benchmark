@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import DataLoader
+import random as rd
 from os.path import join
 from os.path import isfile
 import numpy as np
@@ -175,10 +175,10 @@ def generate_mlsmall_hete_graph(
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
-    num_users = len(unique_uids)
+    num_uids = len(unique_uids)
 
     unique_iids = list(np.sort(ratings.iid.unique()))
-    num_items = len(unique_iids)
+    num_iids = len(unique_iids)
 
     unique_genres = list(movies.keys()[3:22])
     num_genres = len(unique_genres)
@@ -190,14 +190,14 @@ def generate_mlsmall_hete_graph(
     unique_actors, num_actors = get_concept_num_from_str(movies, 'actors')
     unique_writers, num_writers = get_concept_num_from_str(movies, 'writers')
 
-    unique_tags = list(np.sort(tagging.tid.unique()))
-    num_tags = len(unique_tags)
+    unique_tids = list(np.sort(tagging.tid.unique()))
+    num_tids = len(unique_tids)
 
     dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
-    dataset_property_dict['num_users'] = num_users
+    dataset_property_dict['num_uids'] = num_uids
     dataset_property_dict['unique_iids'] = unique_iids
-    dataset_property_dict['num_items'] = num_items
+    dataset_property_dict['num_iids'] = num_iids
     dataset_property_dict['unique_genres'] = unique_genres
     dataset_property_dict['num_genres'] = num_genres
     dataset_property_dict['unique_years'] = unique_years
@@ -208,33 +208,33 @@ def generate_mlsmall_hete_graph(
     dataset_property_dict['num_actors'] = num_actors
     dataset_property_dict['unique_writers'] = unique_writers
     dataset_property_dict['num_writers'] = num_writers
-    dataset_property_dict['unique_tags'] = unique_tags
-    dataset_property_dict['num_tags'] = num_tags
+    dataset_property_dict['unique_tids'] = unique_tids
+    dataset_property_dict['num_tids'] = num_tids
 
     #########################  Define number of entities  #########################
-    num_nodes = num_users + num_items + num_genres + num_years + num_directors + num_actors + num_writers + \
-                num_tags
+    num_nodes = num_uids + num_iids + num_genres + num_years + num_directors + num_actors + num_writers + \
+                num_tids
     num_node_types = 8
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
     types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tag']
-    num_nodes_dict = {'user': num_users, 'movie': num_items, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers, 'tag': num_tags}
+    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
+                      'actor': num_actors, 'writer': num_writers, 'tag': num_tids}
 
     #########################  Define entities to node id map  #########################
     type_accs = {}
     nid2e_dict = {}
     acc = 0
-    type_accs['user'] = acc
+    type_accs['uid'] = acc
     uid2nid = {uid: i + acc for i, uid in enumerate(unique_uids)}
     for i, uid in enumerate(unique_uids):
         nid2e_dict[i + acc] = ('uid', uid)
-    acc += num_users
-    type_accs['movie'] = acc
+    acc += num_uids
+    type_accs['iid'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(unique_iids)}
     for i, iid in enumerate(unique_iids):
         nid2e_dict[i + acc] = ('iid', iid)
-    acc += num_items
+    acc += num_iids
     type_accs['genre'] = acc
     genre2nid = {genre: i + acc for i, genre in enumerate(unique_genres)}
     for i, genre in enumerate(unique_genres):
@@ -260,10 +260,10 @@ def generate_mlsmall_hete_graph(
     for i, writer in enumerate(unique_writers):
         nid2e_dict[i + acc] = ('writer', writer)
     acc += num_writers
-    type_accs['tag'] = acc
-    tag2nid = {tag: i + acc for i, tag in enumerate(unique_tags)}
-    for i, tag in enumerate(unique_tags):
-        nid2e_dict[i + acc] = ('tag', tag)
+    type_accs['tid'] = acc
+    tag2nid = {tid: i + acc for i, tid in enumerate(unique_tids)}
+    for i, tid in enumerate(unique_tids):
+        nid2e_dict[i + acc] = ('tid', tid)
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
@@ -385,7 +385,7 @@ def generate_ml1m_hete_graph(
 ):
     """
     Entitiy node include (gender, occupation, genres)
-    num_nodes = num_users + num_items + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
+    num_nodes = num_uids + num_iids + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
     """
 
     def get_concept_num_from_str(df, concept_name):
@@ -413,10 +413,10 @@ def generate_ml1m_hete_graph(
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
-    num_users = len(unique_uids)
+    num_uids = len(unique_uids)
 
     unique_iids = list(np.sort(ratings.iid.unique()))
-    num_items = len(unique_iids)
+    num_iids = len(unique_iids)
 
     unique_genders = list(users.gender.unique())
     num_genders = len(unique_genders)
@@ -439,9 +439,9 @@ def generate_ml1m_hete_graph(
 
     dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
-    dataset_property_dict['num_users'] = len(unique_uids)
+    dataset_property_dict['num_uids'] = len(unique_uids)
     dataset_property_dict['unique_iids'] = unique_iids
-    dataset_property_dict['num_items'] = len(unique_iids)
+    dataset_property_dict['num_iids'] = len(unique_iids)
     dataset_property_dict['unique_genders'] = unique_genders
     dataset_property_dict['num_genders'] = num_genders
     dataset_property_dict['unique_occupations'] = unique_occupations
@@ -460,13 +460,13 @@ def generate_ml1m_hete_graph(
     dataset_property_dict['num_writers'] = num_writers
 
     #########################  Define number of entities  #########################
-    num_nodes = num_users + num_items + num_genders + num_occupations + num_ages + num_genres + num_years + \
+    num_nodes = num_uids + num_iids + num_genders + num_occupations + num_ages + num_genres + num_years + \
                 num_directors + num_actors + num_writers
     num_node_types = 10
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
     types = ['user', 'movie', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
-    num_nodes_dict = {'user': num_users, 'movie': num_items, 'gender': num_genders, 'occupation': num_occupations,
+    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'gender': num_genders, 'occupation': num_occupations,
                       'age': num_ages, 'genre': num_genres, 'year': num_years, 'director': num_directors,
                       'actor': num_actors, 'writer': num_writers}
 
@@ -478,12 +478,12 @@ def generate_ml1m_hete_graph(
     uid2nid = {uid: i + acc for i, uid in enumerate(users['uid'])}
     for i, uid in enumerate(users['uid']):
         nid2e_dict[i + acc] = ('uid', uid)
-    acc += num_users
+    acc += num_uids
     type_accs['movie'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(movies['iid'])}
     for i, iid in enumerate(movies['iid']):
         nid2e_dict[i + acc] = ('iid', iid)
-    acc += num_items
+    acc += num_iids
     type_accs['gender'] = acc
     gender2nid = {gender: i + acc for i, gender in enumerate(unique_genders)}
     for i, gender in enumerate(unique_genders):
@@ -527,6 +527,7 @@ def generate_ml1m_hete_graph(
                   'genre': genre2nid,
                   'year': year2nid, 'director': director2nid, 'actor': actor2nid, 'writer': writer2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
+    dataset_property_dict['nid2e_dict'] = nid2e_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
@@ -672,10 +673,10 @@ def generate_ml25m_hete_graph(
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
-    num_users = len(unique_uids)
+    num_uids = len(unique_uids)
 
     unique_iids = list(np.sort(ratings.iid.unique()))
-    num_items = len(unique_iids)
+    num_iids = len(unique_iids)
 
     unique_genres = list(movies.keys()[3:23])
     num_genres = len(unique_genres)
@@ -688,16 +689,16 @@ def generate_ml25m_hete_graph(
     unique_writers, num_writers = get_concept_num_from_str(movies, 'writers')
 
     unique_tids = list(np.sort(tagging.tid.unique()))
-    num_tags = len(unique_tids)
+    num_tids = len(unique_tids)
 
     unique_genome_tids = list(np.sort(genome_tagging.genome_tid.unique()))
-    num_genome_tags = len(unique_genome_tids)
+    num_genome_tids = len(unique_genome_tids)
 
     dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
-    dataset_property_dict['num_users'] = num_users
+    dataset_property_dict['num_uids'] = num_uids
     dataset_property_dict['unique_iids'] = unique_iids
-    dataset_property_dict['num_items'] = num_items
+    dataset_property_dict['num_iids'] = num_iids
     dataset_property_dict['unique_genres'] = unique_genres
     dataset_property_dict['num_genres'] = num_genres
     dataset_property_dict['unique_years'] = unique_years
@@ -708,20 +709,20 @@ def generate_ml25m_hete_graph(
     dataset_property_dict['num_actors'] = num_actors
     dataset_property_dict['unique_writers'] = unique_writers
     dataset_property_dict['num_writers'] = num_writers
-    dataset_property_dict['unique_tags'] = unique_tids
-    dataset_property_dict['num_tags'] = num_tags
-    dataset_property_dict['unique_genome_tags'] = unique_genome_tids
-    dataset_property_dict['num_genome_tags'] = num_genome_tags
+    dataset_property_dict['unique_tids'] = unique_tids
+    dataset_property_dict['num_tids'] = num_tids
+    dataset_property_dict['unique_genome_tids'] = unique_genome_tids
+    dataset_property_dict['num_genome_tids'] = num_genome_tids
 
     #########################  Define number of entities  #########################
-    num_nodes = num_users + num_items + num_genres + num_years + num_directors + num_actors + num_writers + \
-                num_tags + num_genome_tags
+    num_nodes = num_uids + num_iids + num_genres + num_years + num_directors + num_actors + num_writers + \
+                num_tids + num_genome_tids
     num_node_types = 9
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
     types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tags', 'genome_tags']
-    num_nodes_dict = {'user': num_users, 'movie': num_items, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers, 'tag': num_tags, 'genome_tag': num_genome_tags}
+    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
+                      'actor': num_actors, 'writer': num_writers, 'tag': num_tids, 'genome_tag': num_genome_tids}
 
     #########################  Define entities to node id map  #########################
     type_accs = {}
@@ -731,12 +732,12 @@ def generate_ml25m_hete_graph(
     uid2nid = {uid: i + acc for i, uid in enumerate(unique_uids)}
     for i, uid in enumerate(unique_uids):
         nid2e_dict[i + acc] = ('uid', uid)
-    acc += num_users
+    acc += num_uids
     type_accs['movie'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(unique_iids)}
     for i, iid in enumerate(unique_iids):
         nid2e_dict[i + acc] = ('iid', iid)
-    acc += num_items
+    acc += num_iids
     type_accs['genre'] = acc
     genre2nid = {genre: i + acc for i, genre in enumerate(unique_genres)}
     for i, genre in enumerate(unique_genres):
@@ -765,12 +766,12 @@ def generate_ml25m_hete_graph(
     type_accs['tag'] = acc
     tag2nid = {tid: i + acc for i, tid in enumerate(unique_tids)}
     for i, tag in enumerate(unique_tids):
-        nid2e_dict[i + acc] = ('tag', tag)
-    acc += num_tags
+        nid2e_dict[i + acc] = ('tid', tag)
+    acc += num_tids
     type_accs['genome_tag'] = acc
     genome_tag2nid = {genome_tid: i + acc for i, genome_tid in enumerate(unique_genome_tids)}
     for i, genome_tag in enumerate(unique_genome_tids):
-        nid2e_dict[i + acc] = ('genome_tag', genome_tag)
+        nid2e_dict[i + acc] = ('genome_tid', genome_tag)
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid, 'genome_tid': genome_tag2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
@@ -1132,7 +1133,6 @@ class MovieLens(Dataset):
             try:
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
                 ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
-                tags = pd.read_csv(join(self.processed_dir, 'tags.csv'), sep=';')
                 tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
                 print('Read data frame from {}!'.format(self.processed_dir))
             except:
@@ -1278,8 +1278,8 @@ class MovieLens(Dataset):
             train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             if self.sampling_strategy == 'random':
                 neg_inid_np = np.random.randint(
-                            low=self.type_accs['movie'],
-                            high=self.type_accs['movie'] + self.num_items,
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
                             size=(num_interactions * self.num_negative_samples, 1)
                         )
             elif self.sampling_strategy == 'unseen':
@@ -1295,43 +1295,66 @@ class MovieLens(Dataset):
                 raise NotImplementedError
             train_data_np = np.hstack([train_data_np, neg_inid_np])
 
-            if self.entity_aware:
+            if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
                 # add entity aware data to batches
-                if not hasattr(self, 'iid_feat_nids'):
-                    movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
-                    if self.name != '1m':
-                        tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
-                    if self.name == '25m':
-                        genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
-                    iid_feat_nids = []
-                    pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
-                    for iid in pbar:
-                        pbar.set_description('Sampling item entities...')
-                        feat_nids = []
-                        iid_genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
-                        #iid_actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
-                        # iid_director_nids = [self.e2nid_dict['director'][director] for director in movies[movies['iid'] == iid]['directors'].item().split(',') if director != '']
-                        #iid_writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
-                        feat_nids = iid_genre_nids # + iid_director_nids + iid_actor_nids + iid_writer_nids
-                        # if self.name != '1m':
-                        #     iid_tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging['iid'] == iid].tid]
-                        #     feat_nids += iid_tag_nids
-                        # if self.name == '25m':
-                        #     iid_genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging['iid'] == iid].genome_tid]
-                        #     feat_nids += iid_genome_tag_nids
-                        iid_feat_nids.append(feat_nids)
-                    self.iid_feat_nids = iid_feat_nids
+                movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
+                if self.name == '1m':
+                    users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
+                else:
+                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
+                if self.name == '25m':
+                    genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
 
-                pos_entity_nids = []
-                for inid in train_data_np[:, 1]:
-                    pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['movie'])]))
-                pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
-                neg_entity_nids = np.random.randint(
-                    low=self.type_accs['genre'],
-                    high=self.type_accs['genre'] + self.num_genres,
-                    size=(train_data_np.shape[0], 1)
-                )
-                train_data_np = np.hstack([train_data_np, pos_entity_nids, neg_entity_nids])
+                # Build item entity
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    pbar.set_description('Sampling item entities...')
+
+                    feat_nids = []
+
+                    genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
+                    feat_nids += genre_nids
+
+                    actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
+                    feat_nids += actor_nids
+
+                    director_nids = [self.e2nid_dict['director'][director] for director in movies[movies['iid'] == iid]['directors'].item().split(',') if director != '']
+                    feat_nids += director_nids
+
+                    writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
+                    feat_nids += writer_nids
+
+                    if self.name != '1m':
+                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging['iid'] == iid].tid]
+                        feat_nids += tag_nids
+                    if self.name == '25m':
+                        genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging['iid'] == iid].genome_tid]
+                        feat_nids += genome_tag_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+                # Build user entity
+                uid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_uids, total=len(self.unique_uids))
+                for uid in pbar:
+                    pbar.set_description('Sampling user entities...')
+                    feat_nids = []
+
+                    if self.name == '1m':
+                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in self.unique_occs if users[users.uid == uid][occ].item()]
+                        feat_nids += occ_nids
+
+                        age_nids = [self.e2nid_dict['age'][age] for age in self.unique_ages if users[users.uid == uid][age].item()]
+                        feat_nids += age_nids
+
+                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in self.unique_genders if users[users.uid == uid][gender].item()]
+                        feat_nids += gender_nids
+                    else:
+                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
+                        feat_nids += tag_nids
+                    uid_feat_nids.append(feat_nids)
+                self.uid_feat_nids = uid_feat_nids
         else:
             raise NotImplementedError
         train_data_t = torch.from_numpy(train_data_np).long()
@@ -1351,8 +1374,45 @@ class MovieLens(Dataset):
         if isinstance(idx, str):
             return getattr(self, idx, None)
         else:
+            # dataset[0] == datset.__getitem__(0)
             idx = idx.to_list() if torch.is_tensor(idx) else idx
-            return self.train_data[idx]
+
+            train_data_t = self.train_data[idx]
+
+            if self.entity_aware:
+                inid = train_data_t[1].cpu().detach().item()
+                feat_nids = self.iid_feat_nids[int(inid - self.type_accs['iid'])]
+
+                if len(feat_nids) == 0:
+                    pos_item_entity_nid = 0
+                    neg_item_entity_nid = 0
+                    item_entity_mask = 0
+                else:
+                    pos_item_entity_nid = rd.choice(feat_nids)
+                    entity_type = self.nid2e_dict[pos_item_entity_nid][0]
+                    lower_bound = self.type_accs.get(entity_type)
+                    upper_bound = lower_bound + getattr(self, 'num_' + entity_type + 's')
+                    neg_item_entity_nid = rd.choice(range(lower_bound, upper_bound))
+                    item_entity_mask = 1
+
+                uid = train_data_t[0].cpu().detach().item()
+                feat_nids = self.uid_feat_nids[int(uid - self.type_accs['uid'])]
+                if len(feat_nids) == 0:
+                    pos_user_entity_nid = 0
+                    neg_user_entity_nid = 0
+                    user_entity_mask = 0
+                else:
+                    pos_user_entity_nid = rd.choice(feat_nids)
+                    entity_type = self.nid2e_dict[pos_user_entity_nid][0]
+                    lower_bound = self.type_accs.get(entity_type)
+                    upper_bound = lower_bound + getattr(self, 'num_' + entity_type + 's')
+                    neg_user_entity_nid = rd.choice(range(lower_bound, upper_bound))
+                    user_entity_mask = 1
+
+                pos_neg_entities = torch.tensor([pos_item_entity_nid, neg_item_entity_nid, item_entity_mask, pos_user_entity_nid, neg_user_entity_nid, user_entity_mask], dtype=torch.long)
+
+                train_data_t = torch.cat([train_data_t, pos_neg_entities], dim=-1)
+            return train_data_t
 
     def __setitem__(self, key, value):
         """Sets the attribute :obj:`key` to :obj:`value`."""
