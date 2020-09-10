@@ -217,9 +217,9 @@ def generate_mlsmall_hete_graph(
     num_node_types = 8
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tag']
-    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers, 'tag': num_tids}
+    types = ['uid', 'iid', 'genre', 'year', 'director', 'actor', 'writer', 'tid']
+    num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
+                      'actor': num_actors, 'writer': num_writers, 'tid': num_tids}
 
     #########################  Define entities to node id map  #########################
     type_accs = {}
@@ -465,8 +465,8 @@ def generate_ml1m_hete_graph(
     num_node_types = 10
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['user', 'movie', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
-    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'gender': num_genders, 'occupation': num_occs,
+    types = ['uid', 'iid', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
+    num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'gender': num_genders, 'occupation': num_occs,
                       'age': num_ages, 'genre': num_genres, 'year': num_years, 'director': num_directors,
                       'actor': num_actors, 'writer': num_writers}
 
@@ -720,9 +720,9 @@ def generate_ml25m_hete_graph(
     num_node_types = 9
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['user', 'movie', 'genre', 'year', 'director', 'actor', 'writer', 'tags', 'genome_tags']
-    num_nodes_dict = {'user': num_uids, 'movie': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers, 'tag': num_tids, 'genome_tag': num_genome_tids}
+    types = ['uid', 'iid', 'genre', 'year', 'director', 'actor', 'writer', 'tags', 'genome_tags']
+    num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
+                      'actor': num_actors, 'writer': num_writers, 'tid': num_tids, 'genome_tid': num_genome_tids}
 
     #########################  Define entities to node id map  #########################
     type_accs = {}

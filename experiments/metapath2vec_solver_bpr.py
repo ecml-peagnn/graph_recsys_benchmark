@@ -26,12 +26,13 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset_name', type=str, default='1m', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
-parser.add_argument('--entity_aware', type=str, default='true', help='')
+parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--entity_aware', type=str, default='false', help='')
+
 # Model params
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--walks_per_node', type=int, default=1000, help='')
@@ -39,7 +40,6 @@ parser.add_argument('--walk_length', type=int, default=100, help='')
 parser.add_argument('--context_size', type=int, default=7, help='')
 parser.add_argument('--random_walk_num_negative_samples', type=int, default=5, help='')
 parser.add_argument('--sparse', type=str, default='true', help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -47,7 +47,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='0', help='')
+parser.add_argument('--gpu_idx', type=str, default='1', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
@@ -87,8 +87,7 @@ model_args = {
     'embedding_dim': args.emb_dim, 'model_type': MODEL_TYPE,
     'walk_length': args.walk_length, 'context_size': args.context_size,
     'walks_per_node': args.walks_per_node, 'num_negative_samples': args.random_walk_num_negative_samples,
-    'sparse': args.sparse.lower() == 'true', 'entity_aware': args.entity_aware.lower() == 'true',
-    'entity_aware_coff': args.entity_aware_coff
+    'sparse': args.sparse.lower() == 'true'
 }
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
@@ -109,27 +108,11 @@ print('train params: {}'.format(train_args))
 
 class MetaPath2VecRecsysModel(WalkBasedRecsysModel):
     def loss(self, batch):
-        if self.training:
-            self.cached_repr = self.forward()
         pos_pred = self.predict(batch[:, 0], batch[:, 1])
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
         cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
 
-        if self.entity_aware and self.training:
-            pos_entity, neg_entity = batch[:, 3], batch[:, 4]
-            pos_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity]) * (
-                        self.cached_repr[batch[:, 1]] - self.cached_repr[pos_entity])
-            pos_reg = pos_reg.sum(dim=-1)
-            neg_reg = (self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity]) * (
-                        self.cached_repr[batch[:, 1]] - self.cached_repr[neg_entity])
-            neg_reg = neg_reg.sum(dim=-1)
-            reg_los = -(pos_reg - neg_reg).sigmoid().log().sum()
-
-            loss = cf_loss + self.entity_aware_coff * reg_los
-        else:
-            loss = cf_loss
-
-        return loss
+        return cf_loss
 
 
 class MetaPath2VecSolver(BaseSolver):
@@ -172,33 +155,33 @@ class MetaPath2VecSolver(BaseSolver):
                     if self.dataset_args['dataset'] == "Movielens":
                         if self.dataset_args['name'] == "1m":
                             edge_index_dict = {
-                                ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                                ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('user', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
-                                ('gender', 'as the gender of', 'user'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
-                                ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('uid', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
+                                ('gender', 'as the gender of', 'uid'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
+                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                             }
                             metapath = [
-                                ('user', 'has watched', 'movie'),
-                                ('movie', 'has the genre', 'genre'),
-                                ('genre', 'as the genre of', 'movie'),
-                                ('movie', 'has been watched by', 'user'),
+                                ('uid', 'has watched', 'iid'),
+                                ('iid', 'has the genre', 'genre'),
+                                ('genre', 'as the genre of', 'iid'),
+                                ('iid', 'has been watched by', 'uid'),
                             ]
                         if self.dataset_args['name'] == "latest-small":
                             edge_index_dict = {
-                                ('genre', 'as the genre of', 'movie'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                                ('movie', 'has been watched by', 'user'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('user', 'has the tag', 'tag'): torch.from_numpy(np.flip(dataset.edge_index_nps['tag2user'], 0).copy()).long().to(self.train_args['device']),
-                                ('tag', 'as the tag of', 'user'): torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(self.train_args['device']),
-                                ('user', 'has watched', 'movie'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('movie', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('uid', 'has the tag', 'tid'): torch.from_numpy(np.flip(dataset.edge_index_nps['tag2user'], 0).copy()).long().to(self.train_args['device']),
+                                ('tid', 'as the tag of', 'uid'): torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(self.train_args['device']),
+                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                             }
                             metapath = [
-                                ('user', 'has watched', 'movie'),
-                                ('movie', 'has the genre', 'genre'),
-                                ('genre', 'as the genre of', 'movie'),
-                                ('movie', 'has been watched by', 'user'),
+                                ('uid', 'has watched', 'iid'),
+                                ('iid', 'has the genre', 'genre'),
+                                ('genre', 'as the genre of', 'iid'),
+                                ('iid', 'has been watched by', 'uid'),
                             ]
                     else:
                         edge_index_dict = {
