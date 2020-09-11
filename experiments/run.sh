@@ -8,4 +8,12 @@ screen -dmS mpagat_solver_bpr python3.7 mpagat_solver_bpr.py --emb_dim=32 --hidd
 screen -dmS mpagat_solver_bpr python3.7 mpagat_solver_bpr.py --emb_dim=32 --hidden_size=64 --repr_dim=16  --aggr='mean' --epochs=50 --gpu_idx='6'
 screen -dmS mpagat_solver_bpr python3.7 mpagat_solver_bpr.py --emb_dim=32 --hidden_size=64 --repr_dim=16  --aggr='concat' --epochs=50 --gpu_idx='7'
 
-screen -dmS kgat_solver python3.7 kgat_solver.py --emb_dim=64 --epochs=50 --gpu_idx='0'
+screen -dmS peagcn_1_unseen_1m python3.7 peagcn_solver_bpr.py --entity_aware_coff=1.0 --gpu_idx=4
+screen -dmS peagcn_0.1_unseen_1m python3.7 peagcn_solver_bpr.py --entity_aware_coff=0.1 --gpu_idx=5
+screen -dmS peagcn_0.01_unseen_1m python3.7 peagcn_solver_bpr.py --entity_aware_coff=0.01 --gpu_idx=6
+screen -dmS peagcn_unseen_1m python3.7 peagcn_solver_bpr.py --entity_aware=false --gpu_idx=7
+
+screen -dmS gcn_25m_unaware python3.7 gcn_solver_bpr.py --gpu_idx=0  --entity_aware=false
+screen -dmS gcn_25m_ python3.7 peagcn_solver_bpr.py --entity_aware_coff=0.1 --gpu_idx=5
+screen -dmS gcn_25m_unaware python3.7 peagcn_solver_bpr.py --entity_aware_coff=0.01 --gpu_idx=6
+screen -dmS gcn_25m_unaware python3.7 peagcn_solver_bpr.py --entity_aware=false --gpu_idx=7

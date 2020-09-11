@@ -5,9 +5,9 @@ from torch_geometric.nn.inits import glorot
 from .base import MFRecsysModel
 
 
-class MCFKGRecsysModel(MFRecsysModel):
+class ECFKGRecsysModel(MFRecsysModel):
     def __init__(self, **kwargs):
-        super(MCFKGRecsysModel, self).__init__(**kwargs)
+        super(ECFKGRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.x = Parameter(torch.Tensor(kwargs['dataset']['num_nodes'], kwargs['emb_dim']))

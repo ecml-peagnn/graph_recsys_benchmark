@@ -8,7 +8,7 @@ from .peasage import PEASAGERecsysModel
 from .kgat import KGATRecsysModel
 from .walk import WalkBasedRecsysModel
 from .metapath2vec import MetaPath2Vec
-from .mcfkg import MCFKGRecsysModel
+from .ecfkg import ECFKGRecsysModel
 
 
 __all__ = [
@@ -22,5 +22,5 @@ __all__ = [
     'KGATRecsysModel',
     'WalkBasedRecsysModel',
     'MetaPath2Vec',
-    'MCFKGRecsysModel'
+    'ECFKGRecsysModel'
 ]

@@ -7,9 +7,9 @@ from torch_geometric.nn.inits import glorot
 from .base import GraphRecsysModel
 
 
-class MPAGATChannel(torch.nn.Module):
+class PEAGATChannel(torch.nn.Module):
     def __init__(self, **kwargs):
-        super(MPAGATChannel, self).__init__()
+        super(PEAGATChannel, self).__init__()
         self.num_steps = kwargs['num_steps']
         self.num_nodes = kwargs['num_nodes']
         self.dropout = kwargs['dropout']
@@ -44,6 +44,8 @@ class PEAGATRecsysModel(GraphRecsysModel):
         super(PEAGATRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
+        self.entity_aware = kwargs['entity_aware']
+        self.entity_aware_coff = kwargs['entity_aware_coff']
         self.meta_path_steps = kwargs['meta_path_steps']
         self.if_use_features = kwargs['if_use_features']
         self.channel_aggr = kwargs['channel_aggr']
@@ -58,7 +60,7 @@ class PEAGATRecsysModel(GraphRecsysModel):
         for num_steps in kwargs['meta_path_steps']:
             kwargs_cpy = kwargs.copy()
             kwargs_cpy['num_steps'] = num_steps
-            self.mpagat_channels.append(MPAGATChannel(**kwargs_cpy))
+            self.mpagat_channels.append(PEAGATChannel(**kwargs_cpy))
 
         if self.channel_aggr == 'concat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])

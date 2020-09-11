@@ -7,9 +7,11 @@ from torch_geometric.nn.inits import glorot, zeros
 from .base import GraphRecsysModel
 
 
-class MPASAGEChannel(torch.nn.Module):
+class PEASAGEChannel(torch.nn.Module):
     def __init__(self, **kwargs):
-        super(MPASAGEChannel, self).__init__()
+        super(PEASAGEChannel, self).__init__()
+        self.entity_aware = kwargs['entity_aware']
+        self.entity_aware_coff = kwargs['entity_aware_coff']
         self.num_steps = kwargs['num_steps']
         self.num_nodes = kwargs['num_nodes']
         self.dropout = kwargs['dropout']
@@ -59,7 +61,7 @@ class PEASAGERecsysModel(GraphRecsysModel):
         for num_steps in kwargs['meta_path_steps']:
             kwargs_cpy = kwargs.copy()
             kwargs_cpy['num_steps'] = num_steps
-            self.mpasage_channels.append(MPASAGEChannel(**kwargs_cpy))
+            self.mpasage_channels.append(PEASAGEChannel(**kwargs_cpy))
 
         if self.channel_aggr == 'concat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])

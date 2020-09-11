@@ -6,7 +6,9 @@ import time
 import pandas as pd
 import tqdm
 from torch.utils.data import DataLoader
-from GPUtil import showUtilization as gpu_usage
+
+if torch.cuda.is_available():
+    from GPUtil import showUtilization as gpu_usage
 
 from graph_recsys_benchmark.utils import *
 

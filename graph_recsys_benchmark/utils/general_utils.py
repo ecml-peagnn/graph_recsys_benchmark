@@ -4,7 +4,9 @@ import os
 import pickle
 import numpy as np
 import gc
-from GPUtil import showUtilization as gpu_usage
+
+if torch.cuda.is_available():
+    from GPUtil import showUtilization as gpu_usage
 
 from ..datasets import MovieLens, Yelp
 
@@ -372,8 +374,8 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
             meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
             meta_path_edge_indicis_8 = [genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_9 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_10 = [tag2user_edge_index, user2item_edge_index]
+            meta_path_edge_indicis_9 = [torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index]
+            meta_path_edge_indicis_10 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
 
             meta_path_edge_index_list = [
                 meta_path_edge_indicis_1, meta_path_edge_indicis_2,meta_path_edge_indicis_3,

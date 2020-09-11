@@ -5,8 +5,6 @@ from torch.nn import functional as F
 class GraphRecsysModel(torch.nn.Module):
     def __init__(self, **kwargs):
         super(GraphRecsysModel, self).__init__()
-        self.entity_aware = kwargs['entity_aware']
-        self.entity_aware_coff = kwargs['entity_aware_coff']
 
         self._init(**kwargs)
 

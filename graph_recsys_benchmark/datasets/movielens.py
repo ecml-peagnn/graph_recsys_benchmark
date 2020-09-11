@@ -728,12 +728,12 @@ def generate_ml25m_hete_graph(
     type_accs = {}
     nid2e_dict = {}
     acc = 0
-    type_accs['user'] = acc
+    type_accs['uid'] = acc
     uid2nid = {uid: i + acc for i, uid in enumerate(unique_uids)}
     for i, uid in enumerate(unique_uids):
         nid2e_dict[i + acc] = ('uid', uid)
     acc += num_uids
-    type_accs['movie'] = acc
+    type_accs['iid'] = acc
     iid2nid = {iid: i + acc for i, iid in enumerate(unique_iids)}
     for i, iid in enumerate(unique_iids):
         nid2e_dict[i + acc] = ('iid', iid)
@@ -763,18 +763,19 @@ def generate_ml25m_hete_graph(
     for i, writer in enumerate(unique_writers):
         nid2e_dict[i + acc] = ('writer', writer)
     acc += num_writers
-    type_accs['tag'] = acc
+    type_accs['tid'] = acc
     tag2nid = {tid: i + acc for i, tid in enumerate(unique_tids)}
     for i, tag in enumerate(unique_tids):
         nid2e_dict[i + acc] = ('tid', tag)
     acc += num_tids
-    type_accs['genome_tag'] = acc
+    type_accs['genome_tid'] = acc
     genome_tag2nid = {genome_tid: i + acc for i, genome_tid in enumerate(unique_genome_tids)}
     for i, genome_tag in enumerate(unique_genome_tids):
         nid2e_dict[i + acc] = ('genome_tid', genome_tag)
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid, 'genome_tid': genome_tag2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
+    dataset_property_dict['nid2e_dict'] = nid2e_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
@@ -1017,9 +1018,7 @@ class MovieLens(Dataset):
             try:
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
                 ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
-                tags = pd.read_csv(join(self.processed_dir, 'tags.csv'), sep=';')
                 tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
-                genome_tags = pd.read_csv(join(self.processed_dir, 'genome_tags.csv'), sep=';')
                 genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
                 print('Read data frame from {}!'.format(self.processed_dir))
             except:

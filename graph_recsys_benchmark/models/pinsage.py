@@ -14,6 +14,8 @@ class SAGERecsysModel(GraphRecsysModel):
         super(SAGERecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
+        self.entity_aware = kwargs['entity_aware']
+        self.entity_aware_coff = kwargs['entity_aware_coff']
         self.if_use_features = kwargs['if_use_features']
         self.dropout = kwargs['dropout']
         self.margin = kwargs['margin']
