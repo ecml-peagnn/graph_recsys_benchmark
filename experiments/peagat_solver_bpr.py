@@ -16,22 +16,22 @@ GRAPH_TYPE = 'hete'
 parser = argparse.ArgumentParser()
 
 # Dataset params
-parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset', type=str, default='Yelp', help='')		#Movielens, Yelp
+parser.add_argument('--dataset_name', type=str, default='25m', help='')	#1m, 25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--sampling_strategy', type=str, default='random', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
-parser.add_argument('--dropout', type=float, default=0.5, help='')
+parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2,2(for 1m,25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.01, help='')
 
 
 # Train params
@@ -41,7 +41,7 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=5, help='')
+parser.add_argument('--runs', type=int, default=1, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -82,6 +82,8 @@ model_args = {
     'channel_aggr': args.channel_aggr, 'entity_aware': args.entity_aware.lower() == 'true',
     'entity_aware_coff': args.entity_aware_coff
 }
+log_args = model_args.copy()
+log_args['meta_path_steps'] = len(log_args['meta_path_steps'])
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
@@ -89,8 +91,8 @@ train_args = {
     'runs': args.runs, 'epochs': args.epochs, 'batch_size': args.batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device,
-    'weights_folder': os.path.join(weights_folder, str(model_args)),
-    'logger_folder': os.path.join(logger_folder, str(model_args)),
+    'weights_folder': os.path.join(weights_folder, str(log_args)),
+    'logger_folder': os.path.join(logger_folder, str(log_args)),
     'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch
 }
 print('dataset params: {}'.format(dataset_args))

@@ -775,6 +775,7 @@ def generate_ml25m_hete_graph(
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'genre': genre2nid, 'year': year2nid, 'director': director2nid,
                   'actor': actor2nid, 'writer': writer2nid, 'tid': tag2nid, 'genome_tid': genome_tag2nid}
     dataset_property_dict['e2nid_dict'] = e2nid_dict
+    dataset_property_dict['nid2e_dict'] = nid2e_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
