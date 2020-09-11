@@ -157,19 +157,6 @@ def generate_mlsmall_hete_graph(
         num_concepts = len(concepts)
         return list(concepts), num_concepts
 
-    #########################  Discretized year  #########################
-    years = movies.year.to_numpy().astype(np.int)
-    min_year = min(years)
-    max_year = max(years)
-    num_years = (max_year - min_year) // 10
-    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
-    for i, discretized_year in enumerate(discretized_years):
-        if i != len(discretized_years) - 1:
-            years[(discretized_year <= years) & (years < discretized_years[i + 1])] = str(discretized_year)
-        else:
-            years[discretized_year <= years] = str(discretized_year)
-    movies['year'] = years
-
     # #########################  Create dataset property dict  #########################
     # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging}
 
@@ -279,7 +266,7 @@ def generate_mlsmall_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies.iid[movies[genre]]
+        iids = movies[movies[genre] == 'True'].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
@@ -394,19 +381,6 @@ def generate_ml1m_hete_graph(
         concepts.remove('')
         num_concepts = len(concepts)
         return list(concepts), num_concepts
-
-    #########################  Discretized year  #########################
-    years = movies.year.to_numpy().astype(np.int)
-    min_year = min(years)
-    max_year = max(years)
-    num_years = (max_year - min_year) // 10
-    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
-    for i, discretized_year in enumerate(discretized_years):
-        if i != len(discretized_years) - 1:
-            years[(discretized_year <= years) & (years < discretized_years[i + 1])] = str(discretized_year)
-        else:
-            years[discretized_year <= years] = str(discretized_year)
-    movies['year'] = years
 
     # #########################  Create dataset property dict  #########################
     # dataset_property_dict = {'users': users, 'items': movies, 'ratings': ratings}
@@ -551,7 +525,7 @@ def generate_ml1m_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies.iid[movies[genre]]
+        iids = movies[movies[genre] == 'True'].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
@@ -653,19 +627,6 @@ def generate_ml25m_hete_graph(
         concepts.remove('')
         num_concepts = len(concepts)
         return list(concepts), num_concepts
-
-    #########################  Discretized year  #########################
-    years = movies.year.to_numpy().astype(np.int)
-    min_year = min(years)
-    max_year = max(years)
-    num_years = (max_year - min_year) // 10
-    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
-    for i, discretized_year in enumerate(discretized_years):
-        if i != len(discretized_years) - 1:
-            years[(discretized_year <= years) & (years < discretized_years[i + 1])] = str(discretized_year)
-        else:
-            years[discretized_year <= years] = str(discretized_year)
-    movies['year'] = years
 
     #########################  Create dataset property dict  #########################
     # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging,
@@ -787,7 +748,7 @@ def generate_ml25m_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies.iid[movies[genre]]
+        iids = movies[movies[genre] == 'True'].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
@@ -998,6 +959,24 @@ class MovieLens(Dataset):
                 movies = drop_infrequent_concept_from_str(movies, 'directors', self.num_feat_core)
                 movies = drop_infrequent_concept_from_str(movies, 'actors', self.num_feat_core)
 
+                # filter the years
+                years = movies.year.to_numpy()
+                years[years < 1950] = 1950
+                movies['year'] = years
+                if self.type == 'hete':
+                    years = movies.year.to_numpy().astype(np.int)
+                    min_year = min(years)
+                    max_year = max(years)
+                    num_years = (max_year - min_year) // 10
+                    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
+                    for i in range(len(discretized_years) - 1):
+                        years[(discretized_years[i] <= years) & (years < discretized_years[i + 1])] = str(
+                                discretized_years[i])
+                    years[years < discretized_years[0]] = discretized_years[0]
+                    years[years >= discretized_years[-1]] = discretized_years[-1]
+
+                    movies['year'] = years
+
                 # Save csv files
                 print('Saving processed csv...')
                 save_df(users, join(self.processed_dir, 'users.csv'))
@@ -1108,6 +1087,24 @@ class MovieLens(Dataset):
                 movies = drop_infrequent_concept_from_str(movies, 'directors', self.num_feat_core)
                 movies = drop_infrequent_concept_from_str(movies, 'actors', self.num_feat_core)
 
+                # filter the years
+                years = movies.year.to_numpy()
+                years[years < 1950] = 1950
+                movies['year'] = years
+                if self.type == 'hete':
+                    years = movies.year.to_numpy().astype(np.int)
+                    min_year = min(years)
+                    max_year = max(years)
+                    num_years = (max_year - min_year) // 10
+                    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
+                    for i in range(len(discretized_years) - 1):
+                        years[(discretized_years[i] <= years) & (years < discretized_years[i + 1])] = str(
+                                discretized_years[i])
+                    years[years < discretized_years[0]] = discretized_years[0]
+                    years[years >= discretized_years[-1]] = discretized_years[-1]
+
+                    movies['year'] = years
+
                 # save dfs
                 print('Saving processed csv...')
                 save_df(tags, join(self.processed_dir, 'tags.csv'))
@@ -1184,6 +1181,24 @@ class MovieLens(Dataset):
                 tag_count = tagging['tag'].value_counts()
                 tag_count.name = 'tag_count'
                 tagging = tagging[tagging.join(tag_count, on='tag').tag_count > self.num_feat_core]
+
+                # filter the years
+                years = movies.year.to_numpy()
+                years[years < 1950] = 1950
+                movies['year'] = years
+                if self.type == 'hete':
+                    years = movies.year.to_numpy().astype(np.int)
+                    min_year = min(years)
+                    max_year = max(years)
+                    num_years = (max_year - min_year) // 10
+                    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
+                    for i in range(len(discretized_years) - 1):
+                        years[(discretized_years[i] <= years) & (years < discretized_years[i + 1])] = str(
+                                discretized_years[i])
+                    years[years < discretized_years[0]] = discretized_years[0]
+                    years[years >= discretized_years[-1]] = discretized_years[-1]
+
+                    movies['year'] = years
 
                 # Reindex the uid and iid in case of missing values
                 movies, ratings, tagging, tags = reindex_df_mlsmall(
@@ -1313,23 +1328,26 @@ class MovieLens(Dataset):
 
                     feat_nids = []
 
+                    year_nid = self.e2nid_dict['year'][movies[movies.iid == iid]['year'].item()]
+                    feat_nids.append(year_nid)
+
                     genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
                     feat_nids += genre_nids
 
-                    actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies['iid'] == iid]['actors'].item().split(',') if actor != '']
+                    actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies.iid == iid]['actors'].item().split(',') if actor != '']
                     feat_nids += actor_nids
 
-                    director_nids = [self.e2nid_dict['director'][director] for director in movies[movies['iid'] == iid]['directors'].item().split(',') if director != '']
+                    director_nids = [self.e2nid_dict['director'][director] for director in movies[movies.iid == iid]['directors'].item().split(',') if director != '']
                     feat_nids += director_nids
 
-                    writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies['iid'] == iid]['writers'].item().split(',') if writer != '']
+                    writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies.iid == iid]['writers'].item().split(',') if writer != '']
                     feat_nids += writer_nids
 
                     if self.name != '1m':
-                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging['iid'] == iid].tid]
+                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
                         feat_nids += tag_nids
                     if self.name == '25m':
-                        genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging['iid'] == iid].genome_tid]
+                        genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging.iid == iid].genome_tid]
                         feat_nids += genome_tag_nids
                     iid_feat_nids.append(feat_nids)
                 self.iid_feat_nids = iid_feat_nids

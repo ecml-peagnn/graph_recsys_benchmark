@@ -10,7 +10,6 @@ from .walk import WalkBasedRecsysModel
 from .metapath2vec import MetaPath2Vec
 from .ecfkg import ECFKGRecsysModel
 
-
 __all__ = [
     'GCNRecsysModel',
     'SAGERecsysModel',
