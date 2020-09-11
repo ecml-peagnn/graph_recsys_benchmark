@@ -31,7 +31,7 @@ parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')			#10, 20(only for 25m)
 parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
-parser.add_argument('--entity_aware', type=str, default='true', help='')
+parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0.1, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')
@@ -107,36 +107,7 @@ class KGATRecsysModel(KGATRecsysModel):
         neg_pred = self.predict(batch[:, 0], batch[:, 2])
         cf_loss = -(pos_pred - neg_pred).sigmoid().log().sum()
 
-        if self.entity_aware and self.training:
-            pos_item_entity, neg_item_entity = batch[:, 3], batch[:, 4]
-            pos_user_entity, neg_user_entity = batch[:, 6], batch[:, 7]
-            item_entity_mask, user_entity_mask = batch[:, 5], batch[:, 8]
-
-            # l2 norm
-            x = self.x
-            item_pos_reg = (x[batch[:, 1]] - x[pos_item_entity]) * (
-                    x[batch[:, 1]] - x[pos_item_entity])
-            item_neg_reg = (x[batch[:, 1]] - x[neg_item_entity]) * (
-                    x[batch[:, 1]] - x[neg_item_entity])
-            item_pos_reg = item_pos_reg.sum(dim=-1)
-            item_neg_reg = item_neg_reg.sum(dim=-1)
-
-            user_pos_reg = (x[batch[:, 0]] - x[pos_user_entity]) * (
-                    x[batch[:, 0]] - x[pos_user_entity])
-            user_neg_reg = (x[batch[:, 0]] - x[neg_user_entity]) * (
-                    x[batch[:, 0]] - x[neg_user_entity])
-            user_pos_reg = user_pos_reg.sum(dim=-1)
-            user_neg_reg = user_neg_reg.sum(dim=-1)
-
-            item_reg_los = -((item_pos_reg - item_neg_reg) * item_entity_mask).sigmoid().log().sum()
-            user_reg_los = -((user_pos_reg - user_neg_reg) * user_entity_mask).sigmoid().log().sum()
-            reg_los = item_reg_los + user_reg_los
-
-            loss = cf_loss + self.entity_aware_coff * reg_los
-        else:
-            loss = cf_loss
-
-        return loss
+        return cf_loss
 
     def kg_loss(self, batch):
         x = F.normalize(self.x)
