@@ -12,6 +12,7 @@ import tqdm
 import pickle
 import re
 from shutil import copy
+import random as rd
 
 from .dataset import Dataset
 from torch_geometric.data import extract_tar
@@ -74,26 +75,7 @@ def drop_infrequent_concept_from_str(df, concept_name):
     return df
 
 
-def generate_graph_data(
-        users, items, reviewtip
-):
-    """
-    Entitiy node include (business, user, reviewtip)
-    """
-
-    def get_concept_num_from_str(df, concept_name):
-        if (concept_name == 'friends'):
-            concept_strs = [concept_str.split(', ') for concept_str in df[concept_name]]
-            concepts = set(itertools.chain.from_iterable(concept_strs))
-            unique_uids = list(df.user_id.unique())
-            concepts = list(set(concepts).difference(unique_uids))
-        else:
-            concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
-            concepts = set(itertools.chain.from_iterable(concept_strs))
-            concepts.remove('')
-        num_concepts = len(concepts)
-        return list(concepts), num_concepts
-
+def discretize_entity(users, items):
     #########################  Discretized user reviewcount  #########################
     userreviewcount = users.review_count.to_numpy().astype(np.int)
     min_userreviewcount = min(userreviewcount)
@@ -103,7 +85,7 @@ def generate_graph_data(
     for i, discretized_userreviewcount in enumerate(discretized_userreviewcounts):
         if i != len(discretized_userreviewcounts) - 1:
             userreviewcount[(discretized_userreviewcount <= userreviewcount) & (
-                        userreviewcount < discretized_userreviewcounts[i + 1])] = str(discretized_userreviewcount)
+                    userreviewcount < discretized_userreviewcounts[i + 1])] = str(discretized_userreviewcount)
         else:
             userreviewcount[discretized_userreviewcount <= userreviewcount] = str(discretized_userreviewcount)
     users['review_count'] = userreviewcount
@@ -118,7 +100,7 @@ def generate_graph_data(
         if i != len(discretized_userfriends_counts) - 1:
             userfriends_count[
                 (discretized_friend_count <= userfriends_count) & (
-                            userfriends_count < discretized_userfriends_counts[i + 1])] = str(
+                        userfriends_count < discretized_userfriends_counts[i + 1])] = str(
                 discretized_friend_count)
         else:
             userfriends_count[discretized_friend_count <= userfriends_count] = str(discretized_friend_count)
@@ -183,18 +165,42 @@ def generate_graph_data(
             itemcheckincount[discretized_itemcheckincount <= itemcheckincount] = str(discretized_itemcheckincount)
     items['checkin_count'] = itemcheckincount
 
+    return users, items
+
+
+def generate_graph_data(
+        users, items, reviewtip
+):
+    """
+    Entitiy node include (business, user, reviewtip)
+    """
+
+    def get_concept_num_from_str(df, concept_name):
+        if (concept_name == 'friends'):
+            concept_strs = [concept_str.split(', ') for concept_str in df[concept_name]]
+            concepts = set(itertools.chain.from_iterable(concept_strs))
+            unique_uids = list(df.user_id.unique())
+            concepts = list(set(concepts).difference(unique_uids))
+        else:
+            concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
+            concepts = set(itertools.chain.from_iterable(concept_strs))
+            concepts.remove('')
+        num_concepts = len(concepts)
+        return list(concepts), num_concepts
+
+
     #########################  Define entities  #########################
     unique_uids = list(np.sort(reviewtip.user_id.unique()))
-    num_users = len(unique_uids)
+    num_uids = len(unique_uids)
 
     unique_iids = list(np.sort(reviewtip.business_id.unique()))
-    num_items = len(unique_iids)
+    num_iids = len(unique_iids)
 
-    unique_user_reviewcount = list(users.review_count.unique())
-    num_user_reviewcount = len(unique_user_reviewcount)
+    unique_user_reviewcounts = list(users.review_count.unique())
+    num_user_reviewcounts = len(unique_user_reviewcounts)
 
-    unique_user_friendcount = list(users.friends_count.unique())
-    num_user_friendcount = len(unique_user_friendcount)
+    unique_user_friendcounts = list(users.friends_count.unique())
+    num_user_friendcounts = len(unique_user_friendcounts)
 
     unique_user_fans = list(users.fans.unique())
     num_user_fans = len(unique_user_fans)
@@ -205,135 +211,136 @@ def generate_graph_data(
     unique_item_stars = list(items.stars.unique())
     num_item_stars = len(unique_item_stars)
 
-    unique_item_reviewcount = list(items.review_count.unique())
-    num_item_reviewcount = len(unique_item_reviewcount)
+    unique_item_reviewcounts = list(items.review_count.unique())
+    num_item_reviewcounts = len(unique_item_reviewcounts)
 
     unique_item_attributes, num_item_attributes = get_concept_num_from_str(items, 'attributes')
     unique_item_categories, num_item_categories = get_concept_num_from_str(items, 'categories')
 
-    unique_item_checkincount = list(items.checkin_count.unique())
-    num_item_checkincount = len(unique_item_checkincount)
+    unique_item_checkincounts = list(items.checkin_count.unique())
+    num_item_checkincounts = len(unique_item_checkincounts)
 
     #########################  Create dataset property dict  #########################
     dataset_property_dict = {}
     dataset_property_dict['unique_uids'] = unique_uids
-    dataset_property_dict['num_users'] = num_users
+    dataset_property_dict['num_uids'] = num_uids
     dataset_property_dict['unique_iids'] = unique_iids
-    dataset_property_dict['num_items'] = num_items
-    dataset_property_dict['unique_user_reviewcount'] = unique_user_reviewcount
-    dataset_property_dict['num_user_reviewcount'] = num_user_reviewcount
-    dataset_property_dict['unique_user_friendcount'] = unique_user_friendcount
-    dataset_property_dict['num_user_friendcount'] = num_user_friendcount
+    dataset_property_dict['num_iids'] = num_iids
+    dataset_property_dict['unique_user_reviewcounts'] = unique_user_reviewcounts
+    dataset_property_dict['num_user_reviewcounts'] = num_user_reviewcounts
+    dataset_property_dict['unique_user_friendcounts'] = unique_user_friendcounts
+    dataset_property_dict['num_user_friendcounts'] = num_user_friendcounts
     dataset_property_dict['unique_user_fans'] = unique_user_fans
     dataset_property_dict['num_user_fans'] = num_user_fans
     dataset_property_dict['unique_user_stars'] = unique_user_stars
     dataset_property_dict['num_user_stars'] = num_user_stars
     dataset_property_dict['unique_item_stars'] = unique_item_stars
     dataset_property_dict['num_item_stars'] = num_item_stars
-    dataset_property_dict['unique_item_reviewcount'] = unique_item_reviewcount
-    dataset_property_dict['num_item_reviewcount'] = num_item_reviewcount
+    dataset_property_dict['unique_item_reviewcounts'] = unique_item_reviewcounts
+    dataset_property_dict['num_item_reviewcounts'] = num_item_reviewcounts
     dataset_property_dict['unique_item_attributes'] = unique_item_attributes
     dataset_property_dict['num_item_attributes'] = num_item_attributes
     dataset_property_dict['unique_item_categories'] = unique_item_categories
     dataset_property_dict['num_item_categories'] = num_item_categories
-    dataset_property_dict['unique_item_checkincount'] = unique_item_checkincount
-    dataset_property_dict['num_item_checkincount'] = num_item_checkincount
+    dataset_property_dict['unique_item_checkincounts'] = unique_item_checkincounts
+    dataset_property_dict['num_item_checkincounts'] = num_item_checkincounts
 
     #########################  Define number of entities  #########################
-    num_nodes = num_users + num_items + num_user_reviewcount + num_user_friendcount + \
-                num_user_fans + num_user_stars + num_item_stars + num_item_reviewcount + \
-                num_item_attributes + num_item_categories + num_item_checkincount
+    num_nodes = num_uids + num_iids + num_user_reviewcounts + num_user_friendcounts + \
+                num_user_fans + num_user_stars + num_item_stars + num_item_reviewcounts + \
+                num_item_attributes + num_item_categories + num_item_checkincounts
 
     num_node_types = 11
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['users', 'items', 'userreviewcount', 'userfriendcount', 'userfans', 'userstars',
-             'itemstars', 'itemreviewcount', 'itemattributes', 'itemcategories', 'itemcheckincount']
-    num_nodes_dict = {'users': num_users, 'items': num_items, 'userreviewcount': num_user_reviewcount,
-                      'userfriendcount': num_user_friendcount, 'userfans': num_user_fans, 'userstars': num_user_stars,
-                      'itemstars': num_item_stars, 'itemreviewcount': num_item_reviewcount,
-                      'itemattributes': num_item_attributes,
-                      'itemcategories': num_item_categories, 'itemcheckincount': num_item_checkincount,
+    types = ['uid', 'iid', 'user_reviewcount', 'user_friendcount', 'user_fan', 'user_star',
+             'item_star', 'item_reviewcount', 'item_attribute', 'item_categorie', 'item_checkincount']
+    num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'user_reviewcount': num_user_reviewcounts,
+                      'user_friendcount': num_user_friendcounts, 'user_fan': num_user_fans, 'user_star': num_user_stars,
+                      'item_star': num_item_stars, 'item_reviewcount': num_item_reviewcounts,
+                      'item_attribute': num_item_attributes,
+                      'item_categorie': num_item_categories, 'item_checkincount': num_item_checkincounts,
                       }
     #########################  Define entities to node id map  #########################
     type_accs = {}
     nid2e_dict = {}
     acc = 0
-    type_accs['users'] = acc
-    uid2nid = {uid: i + acc for i, uid in enumerate(users['user_id'])}
-    for i, uid in enumerate(users['user_id']):
+    type_accs['uid'] = acc
+    uid2nid = {uid: i + acc for i, uid in enumerate(unique_uids)}
+    for i, uid in enumerate(unique_uids):
         nid2e_dict[i + acc] = ('uid', uid)
-    acc += num_users
-    type_accs['items'] = acc
-    iid2nid = {iid: i + acc for i, iid in enumerate(items['business_id'])}
-    for i, iid in enumerate(items['business_id']):
+    acc += num_uids
+    type_accs['iid'] = acc
+    iid2nid = {iid: i + acc for i, iid in enumerate(unique_iids)}
+    for i, iid in enumerate(unique_iids):
         nid2e_dict[i + acc] = ('iid', iid)
-    acc += num_items
-    type_accs['userreviewcount'] = acc
-    userreviewcount2nid = {userreviewcount: i + acc for i, userreviewcount in enumerate(unique_user_reviewcount)}
-    for i, userreviewcount in enumerate(unique_user_reviewcount):
-        nid2e_dict[i + acc] = ('userreviewcount', userreviewcount)
-    acc += num_user_reviewcount
-    type_accs['userfriendcount'] = acc
-    userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcount)}
-    for i, userfriendcount in enumerate(unique_user_friendcount):
-        nid2e_dict[i + acc] = ('userfriendcount', userfriendcount)
-    acc += num_user_friendcount
-    type_accs['userfans'] = acc
+    acc += num_iids
+    type_accs['user_reviewcount'] = acc
+    userreviewcount2nid = {userreviewcount: i + acc for i, userreviewcount in enumerate(unique_user_reviewcounts)}
+    for i, userreviewcount in enumerate(unique_user_reviewcounts):
+        nid2e_dict[i + acc] = ('user_reviewcount', userreviewcount)
+    acc += num_user_reviewcounts
+    type_accs['user_friendcount'] = acc
+    userfriendcount2nid = {userfriendcount: i + acc for i, userfriendcount in enumerate(unique_user_friendcounts)}
+    for i, userfriendcount in enumerate(unique_user_friendcounts):
+        nid2e_dict[i + acc] = ('user_friendcount', userfriendcount)
+    acc += num_user_friendcounts
+    type_accs['user_fan'] = acc
     userfans2nid = {userfans: i + acc for i, userfans in enumerate(unique_user_fans)}
     for i, userfans in enumerate(unique_user_fans):
-        nid2e_dict[i + acc] = ('userfans', userfans)
+        nid2e_dict[i + acc] = ('user_fan', userfans)
     acc += num_user_fans
-    type_accs['userstars'] = acc
+    type_accs['user_star'] = acc
     userstars2nid = {userstars: i + acc for i, userstars in enumerate(unique_user_stars)}
     for i, userstars in enumerate(unique_user_stars):
-        nid2e_dict[i + acc] = ('userstars', userstars)
+        nid2e_dict[i + acc] = ('user_star', userstars)
     acc += num_user_stars
-    type_accs['itemstars'] = acc
+    type_accs['item_star'] = acc
     itemstars2nid = {itemstars: i + acc for i, itemstars in enumerate(unique_item_stars)}
     for i, itemstars in enumerate(unique_item_stars):
-        nid2e_dict[i + acc] = ('itemstars', itemstars)
+        nid2e_dict[i + acc] = ('item_star', itemstars)
     acc += num_item_stars
-    type_accs['itemreviewcount'] = acc
-    itemreviewcount2nid = {itemreviewcount: i + acc for i, itemreviewcount in enumerate(unique_item_reviewcount)}
-    for i, itemreviewcount in enumerate(unique_item_reviewcount):
-        nid2e_dict[i + acc] = ('itemreviewcount', itemreviewcount)
-    acc += num_item_reviewcount
-    type_accs['itemattributes'] = acc
+    type_accs['item_reviewcount'] = acc
+    itemreviewcount2nid = {itemreviewcount: i + acc for i, itemreviewcount in enumerate(unique_item_reviewcounts)}
+    for i, itemreviewcount in enumerate(unique_item_reviewcounts):
+        nid2e_dict[i + acc] = ('item_reviewcount', itemreviewcount)
+    acc += num_item_reviewcounts
+    type_accs['item_attribute'] = acc
     itemattributes2nid = {itemattributes: i + acc for i, itemattributes in enumerate(unique_item_attributes)}
     for i, itemattributes in enumerate(unique_item_attributes):
-        nid2e_dict[i + acc] = ('itemattributes', itemattributes)
+        nid2e_dict[i + acc] = ('item_attribute', itemattributes)
     acc += num_item_attributes
-    type_accs['itemcategories'] = acc
+    type_accs['item_categorie'] = acc
     itemcategories2nid = {itemcategories: i + acc for i, itemcategories in enumerate(unique_item_categories)}
     for i, itemcategories in enumerate(unique_item_categories):
-        nid2e_dict[i + acc] = ('itemcategories', itemcategories)
+        nid2e_dict[i + acc] = ('item_categorie', itemcategories)
     acc += num_item_categories
-    type_accs['itemcheckincount'] = acc
-    itemcheckincount2nid = {itemcheckincount: i + acc for i, itemcheckincount in enumerate(unique_item_checkincount)}
-    for i, itemcheckincount in enumerate(unique_item_checkincount):
-        nid2e_dict[i + acc] = ('itemcheckincount', itemcheckincount)
+    type_accs['item_checkincount'] = acc
+    itemcheckincount2nid = {itemcheckincount: i + acc for i, itemcheckincount in enumerate(unique_item_checkincounts)}
+    for i, itemcheckincount in enumerate(unique_item_checkincounts):
+        nid2e_dict[i + acc] = ('item_checkincount', itemcheckincount)
 
     e2nid_dict = {'uid': uid2nid, 'iid': iid2nid,
-                  'userreviewcount': userreviewcount2nid, 'userfriendcount': userfriendcount2nid,
-                  'userfans': userfans2nid, 'userstars': userstars2nid,
-                  'itemstars': itemstars2nid, 'itemreviewcount': itemreviewcount2nid,
-                  'itemattributes': itemattributes2nid,
-                  'itemcategories': itemcategories2nid, 'itemcheckincount': itemcheckincount2nid
+                  'user_reviewcount': userreviewcount2nid, 'user_friendcount': userfriendcount2nid,
+                  'user_fan': userfans2nid, 'user_star': userstars2nid,
+                  'item_star': itemstars2nid, 'item_reviewcount': itemreviewcount2nid,
+                  'item_attribute': itemattributes2nid,
+                  'item_categorie': itemcategories2nid, 'item_checkincount': itemcheckincount2nid
                   }
     dataset_property_dict['e2nid_dict'] = e2nid_dict
+    dataset_property_dict['nid2e_dict'] = nid2e_dict
 
     #########################  create graphs  #########################
     edge_index_nps = {}
     print('Creating user property edges...')
     u_nids = [e2nid_dict['uid'][uid] for uid in users.user_id]
-    userreviewcount_nids = [e2nid_dict['userreviewcount'][userreviewcount] for userreviewcount in users.review_count]
+    userreviewcount_nids = [e2nid_dict['user_reviewcount'][userreviewcount] for userreviewcount in users.review_count]
     reviewcount2user_edge_index_np = np.vstack((np.array(userreviewcount_nids), np.array(u_nids)))
-    userfriendcount_nids = [e2nid_dict['userfriendcount'][userfriendcount] for userfriendcount in users.friends_count]
+    userfriendcount_nids = [e2nid_dict['user_friendcount'][userfriendcount] for userfriendcount in users.friends_count]
     friendcount2user_edge_index_np = np.vstack((np.array(userfriendcount_nids), np.array(u_nids)))
-    userfans_nids = [e2nid_dict['userfans'][userfans] for userfans in users.fans]
+    userfans_nids = [e2nid_dict['user_fan'][userfans] for userfans in users.fans]
     fans2user_edge_index_np = np.vstack((np.array(userfans_nids), np.array(u_nids)))
-    userstars_nids = [e2nid_dict['userstars'][userstars] for userstars in users.average_stars]
+    userstars_nids = [e2nid_dict['user_star'][userstars] for userstars in users.average_stars]
     stars2user_edge_index_np = np.vstack((np.array(userstars_nids), np.array(u_nids)))
 
     edge_index_nps['reviewcount2user'] = reviewcount2user_edge_index_np
@@ -343,16 +350,16 @@ def generate_graph_data(
 
     print('Creating item property edges...')
     i_nids = [e2nid_dict['iid'][iid] for iid in items.business_id]
-    itemstars_nids = [e2nid_dict['itemstars'][itemstars] for itemstars in items.stars]
+    itemstars_nids = [e2nid_dict['item_star'][itemstars] for itemstars in items.stars]
     stars2item_edge_index_np = np.vstack((np.array(itemstars_nids), np.array(i_nids)))
-    itemreviewcount_nids = [e2nid_dict['itemreviewcount'][itemreviewcount] for itemreviewcount in items.review_count]
+    itemreviewcount_nids = [e2nid_dict['item_reviewcount'][itemreviewcount] for itemreviewcount in items.review_count]
     reviewcount2item_edge_index_np = np.vstack((np.array(itemreviewcount_nids), np.array(i_nids)))
 
     attributes_list = [
         [attribute for attribute in attributes.split(',') if attribute != '']
         for attributes in items.attributes
     ]
-    itemattributes_nids = [[e2nid_dict['itemattributes'][attribute] for attribute in attributes] for attributes in
+    itemattributes_nids = [[e2nid_dict['item_attribute'][attribute] for attribute in attributes] for attributes in
                            attributes_list]
     itemattributes_nids = list(itertools.chain.from_iterable(itemattributes_nids))
     a_i_nids = [[i_nid for _ in range(len(attributes_list[idx]))] for idx, i_nid in enumerate(i_nids)]
@@ -363,14 +370,14 @@ def generate_graph_data(
         [category for category in categories.split(',') if category != '']
         for categories in items.categories
     ]
-    itemcategories_nids = [[e2nid_dict['itemcategories'][category] for category in categories] for categories in
+    itemcategories_nids = [[e2nid_dict['item_categorie'][category] for category in categories] for categories in
                            categories_list]
     itemcategories_nids = list(itertools.chain.from_iterable(itemcategories_nids))
     c_i_nids = [[i_nid for _ in range(len(categories_list[idx]))] for idx, i_nid in enumerate(i_nids)]
     c_i_nids = list(itertools.chain.from_iterable(c_i_nids))
     categories2item_edge_index_np = np.vstack((np.array(itemcategories_nids), np.array(c_i_nids)))
 
-    itemcheckincount_nids = [e2nid_dict['itemcheckincount'][itemcheckincount] for itemcheckincount in
+    itemcheckincount_nids = [e2nid_dict['item_checkincount'][itemcheckincount] for itemcheckincount in
                              items.checkin_count]
     checkincount2item_edge_index_np = np.vstack((np.array(itemcheckincount_nids), np.array(i_nids)))
 
@@ -401,6 +408,7 @@ def generate_graph_data(
 
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
+        # neg_unid_inid_map[unid] = list(np.random.choice(neg_uid_inids, size=min(len(neg_uid_inids), 1000)))
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -410,7 +418,7 @@ def generate_graph_data(
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     print('missing iids:',
-          np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_users)))
+          np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_uids)))
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
     dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
@@ -621,6 +629,9 @@ class Yelp(Dataset):
                     user.user_id.unique().shape[0]:
                 raise ValueError('Duplicates in dfs.')
 
+            #Filter only open business
+            business = business[business.is_open == 1]
+
             # Compute the business counts for reviewtip
             bus_count = reviewtip['business_id'].value_counts()
             bus_count.name = 'bus_count'
@@ -654,7 +665,12 @@ class Yelp(Dataset):
             # Reindex the bid and uid in case of missing values
             business, user, reviewtip = reindex_df(business, user, reviewtip)
 
+            #Discretize user, busienss entities
+            user, business = discretize_entity(user, business)
+
             print('Preprocessing done.')
+
+            print('len', len(user), len(business), len(reviewtip))
 
             business.to_pickle(join(self.processed_dir, 'business.pkl'))
             user.to_pickle(join(self.processed_dir, 'user.pkl'))
@@ -700,8 +716,8 @@ class Yelp(Dataset):
                     [
                         np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
                         np.random.randint(
-                            low=self.type_accs['items'],
-                            high=self.type_accs['items'] + self.num_items,
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
                             size=(num_interactions * self.num_negative_samples, 1)
                         ),
                         torch.zeros((num_interactions * self.num_negative_samples, 1))
@@ -729,8 +745,8 @@ class Yelp(Dataset):
             train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             if self.sampling_strategy == 'random':
                 neg_inid_np = np.random.randint(
-                            low=self.type_accs['items'],
-                            high=self.type_accs['items'] + self.num_items,
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
                             size=(num_interactions * self.num_negative_samples, 1)
                         )
             elif self.sampling_strategy == 'unseen':
@@ -739,47 +755,68 @@ class Yelp(Dataset):
                 p_bar = tqdm.tqdm(u_nids)
                 for u_nid in p_bar:
                     negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
-                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    negative_inids = rd.choices(negative_inids, k=self.num_negative_samples)
+                    negative_inids = np.array(negative_inids, dtype=np.long).reshape(-1, 1)
                     neg_inids.append(negative_inids)
                 neg_inid_np = np.vstack(neg_inids)
             else:
                 raise NotImplementedError
             train_data_np = np.hstack([train_data_np, neg_inid_np])
 
-            if self.entity_aware:
+            if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
                 # add entity aware data to batches
-                if not hasattr(self, 'iid_feat_nids'):
-                    business = pd.read_pickle(join(self.processed_dir, 'business.pkl')).fillna('')
-                    iid_feat_nids = []
-                    pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
-                    for iid in pbar:
-                            pbar.set_description('Sampling item entities...')
-                            iid_attribute_nids = [self.e2nid_dict['itemattributes'][attribute] for attribute in
-                                                  business[business['business_id'] == iid]['attributes'].item().split(',')
-                                                  if attribute != '']
-                            iid_category_nids = [self.e2nid_dict['itemcategories'][category] for category in
-                                                 business[business['business_id'] == iid]['categories'].item().split(',') if
-                                                 category != '']
-                            feat_nids = iid_attribute_nids + iid_category_nids
-                            iid_feat_nids.append(feat_nids)
-                    self.iid_feat_nids = iid_feat_nids
+                business = pd.read_pickle(join(self.processed_dir, 'business.pkl')).fillna('')
+                user = pd.read_pickle(join(self.processed_dir, 'user.pkl')).fillna('')
 
-                pos_entity_nids = []
-                for inid in train_data_np[:, 1]:
-                    # pos_entity_nids.append(np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['items'])]))
-                    try:
-                        pos_entity_nids.append(
-                            np.random.choice(self.iid_feat_nids[int(inid - self.type_accs['items'])]))
-                    except:
-                        import pdb
-                        pdb.set_trace()
-                pos_entity_nids = np.array(pos_entity_nids).reshape(-1, 1)
-                neg_entity_nids = np.random.randint(
-                    low=self.type_accs['itemattributes'],
-                    high=self.type_accs['itemcheckincount'],
-                    size=(train_data_np.shape[0], 1)
-                )
-                train_data_np = np.hstack([train_data_np, pos_entity_nids, neg_entity_nids])
+                # Build item entity
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    pbar.set_description('Sampling item entities...')
+
+                    feat_nids = []
+
+                    iid_star_nids = self.e2nid_dict['item_star'][business[business.business_id == iid]['stars'].item()]
+                    feat_nids.append(iid_star_nids)
+
+                    iid_reviewcount_nids = [self.e2nid_dict['item_reviewcount'][business[business.business_id == iid]['review_count'].item()]]
+                    feat_nids += iid_reviewcount_nids
+
+                    iid_attribute_nids = [self.e2nid_dict['item_attribute'][attribute] for attribute in
+                                          business[business.business_id == iid]['attributes'].item().split(',')
+                                          if attribute != '']
+                    feat_nids += iid_attribute_nids
+
+                    iid_categorie_nids = [self.e2nid_dict['item_categorie'][category] for category in
+                                         business[business.business_id == iid]['categories'].item().split(',') if
+                                         category != '']
+                    feat_nids += iid_categorie_nids
+
+                    iid_checkincount_nids = [self.e2nid_dict['item_checkincount'][business[business.business_id == iid]['checkin_count'].item()]]
+                    feat_nids += iid_checkincount_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+                # Build user entity
+                uid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_uids, total=len(self.unique_uids))
+                for uid in pbar:
+                    pbar.set_description('Sampling user entities...')
+                    feat_nids = []
+
+                    uid_reviewcount_nids = self.e2nid_dict['user_reviewcount'][user[user.user_id == uid]['review_count'].item()]
+                    feat_nids.append(uid_reviewcount_nids)
+
+                    uid_friendcount_nids = [self.e2nid_dict['user_friendcount'][user[user.user_id == uid]['friends_count'].item()]]
+                    feat_nids += uid_friendcount_nids
+
+                    uid_fan_nids = [self.e2nid_dict['user_fan'][user[user.user_id == uid]['fans'].item()]]
+                    feat_nids += uid_fan_nids
+
+                    uid_star_nids = [self.e2nid_dict['user_star'][user[user.user_id == uid]['average_stars'].item()]]
+                    feat_nids += uid_star_nids
+                    uid_feat_nids.append(feat_nids)
+                self.uid_feat_nids = uid_feat_nids
         else:
             raise NotImplementedError
         train_data_t = torch.from_numpy(train_data_np).long()
@@ -799,8 +836,45 @@ class Yelp(Dataset):
         if isinstance(idx, str):
             return getattr(self, idx, None)
         else:
+            # dataset[0] == datset.__getitem__(0)
             idx = idx.to_list() if torch.is_tensor(idx) else idx
-            return self.train_data[idx]
+
+            train_data_t = self.train_data[idx]
+
+            if self.entity_aware:
+                inid = train_data_t[1].cpu().detach().item()
+                feat_nids = self.iid_feat_nids[int(inid - self.type_accs['iid'])]
+
+                if len(feat_nids) == 0:
+                    pos_item_entity_nid = 0
+                    neg_item_entity_nid = 0
+                    item_entity_mask = 0
+                else:
+                    pos_item_entity_nid = rd.choice(feat_nids)
+                    entity_type = self.nid2e_dict[pos_item_entity_nid][0]
+                    lower_bound = self.type_accs.get(entity_type)
+                    upper_bound = lower_bound + getattr(self, 'num_' + entity_type + 's')
+                    neg_item_entity_nid = rd.choice(range(lower_bound, upper_bound))
+                    item_entity_mask = 1
+
+                uid = train_data_t[0].cpu().detach().item()
+                feat_nids = self.uid_feat_nids[int(uid - self.type_accs['uid'])]
+                if len(feat_nids) == 0:
+                    pos_user_entity_nid = 0
+                    neg_user_entity_nid = 0
+                    user_entity_mask = 0
+                else:
+                    pos_user_entity_nid = rd.choice(feat_nids)
+                    entity_type = self.nid2e_dict[pos_user_entity_nid][0]
+                    lower_bound = self.type_accs.get(entity_type)
+                    upper_bound = lower_bound + getattr(self, 'num_' + entity_type + 's')
+                    neg_user_entity_nid = rd.choice(range(lower_bound, upper_bound))
+                    user_entity_mask = 1
+
+                pos_neg_entities = torch.tensor([pos_item_entity_nid, neg_item_entity_nid, item_entity_mask, pos_user_entity_nid, neg_user_entity_nid, user_entity_mask], dtype=torch.long)
+
+                train_data_t = torch.cat([train_data_t, pos_neg_entities], dim=-1)
+            return train_data_t
 
     def __setitem__(self, key, value):
         """Sets the attribute :obj:`key` to :obj:`value`."""

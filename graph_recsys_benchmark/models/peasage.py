@@ -10,8 +10,6 @@ from .base import GraphRecsysModel
 class PEASAGEChannel(torch.nn.Module):
     def __init__(self, **kwargs):
         super(PEASAGEChannel, self).__init__()
-        self.entity_aware = kwargs['entity_aware']
-        self.entity_aware_coff = kwargs['entity_aware_coff']
         self.num_steps = kwargs['num_steps']
         self.num_nodes = kwargs['num_nodes']
         self.dropout = kwargs['dropout']
@@ -47,6 +45,8 @@ class PEASAGERecsysModel(GraphRecsysModel):
         super(PEASAGERecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
+        self.entity_aware = kwargs['entity_aware']
+        self.entity_aware_coff = kwargs['entity_aware_coff']
         self.meta_path_steps = kwargs['meta_path_steps']
         self.if_use_features = kwargs['if_use_features']
         self.channel_aggr = kwargs['channel_aggr']
