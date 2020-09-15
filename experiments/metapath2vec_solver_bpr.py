@@ -157,8 +157,6 @@ class MetaPath2VecSolver(BaseSolver):
                             edge_index_dict = {
                                 ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
                                 ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('uid', 'has the gender', 'gender'): torch.from_numpy(np.flip(dataset.edge_index_nps['gender2user'], 0).copy()).long().to(self.train_args['device']),
-                                ('gender', 'as the gender of', 'uid'): torch.from_numpy(dataset.edge_index_nps['gender2user']).long().to(self.train_args['device']),
                                 ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
                                 ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                             }
@@ -172,8 +170,6 @@ class MetaPath2VecSolver(BaseSolver):
                             edge_index_dict = {
                                 ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
                                 ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('uid', 'has the tag', 'tid'): torch.from_numpy(np.flip(dataset.edge_index_nps['tag2user'], 0).copy()).long().to(self.train_args['device']),
-                                ('tid', 'as the tag of', 'uid'): torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(self.train_args['device']),
                                 ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
                                 ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
                             }

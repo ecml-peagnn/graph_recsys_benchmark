@@ -266,7 +266,7 @@ def generate_mlsmall_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies[movies[genre] == 'True'].iid
+        iids = movies[movies[genre]].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
@@ -525,7 +525,7 @@ def generate_ml1m_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies[movies[genre] == 'True'].iid
+        iids = movies[movies[genre]].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
@@ -748,7 +748,7 @@ def generate_ml25m_hete_graph(
     genre_nids = []
     inids = []
     for genre in unique_genres:
-        iids = movies[movies[genre] == 'True'].iid
+        iids = movies[movies[genre]].iid
         inids += [e2nid_dict['iid'][iid] for iid in iids]
         genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
     genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
