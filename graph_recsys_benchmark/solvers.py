@@ -144,8 +144,8 @@ class BaseSolver(object):
                         self.model_args['num_nodes'] = dataset.num_nodes
                         self.model_args['dataset'] = dataset
                     elif self.model_args['model_type'] == 'MF':
-                        self.model_args['num_users'] = dataset.num_users
-                        self.model_args['num_items'] = dataset.num_items
+                        self.model_args['num_users'] = dataset.num_uids
+                        self.model_args['num_items'] = dataset.num_iids
 
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
 

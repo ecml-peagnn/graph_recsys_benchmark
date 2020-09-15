@@ -1263,8 +1263,8 @@ class MovieLens(Dataset):
                     [
                         np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
                         np.random.randint(
-                            low=self.type_accs['movie'],
-                            high=self.type_accs['movie'] + self.num_items,
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
                             size=(num_interactions * self.num_negative_samples, 1)
                         ),
                         torch.zeros((num_interactions * self.num_negative_samples, 1))
