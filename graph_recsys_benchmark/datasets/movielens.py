@@ -681,7 +681,7 @@ def generate_ml25m_hete_graph(
     num_node_types = 9
     dataset_property_dict['num_nodes'] = num_nodes
     dataset_property_dict['num_node_types'] = num_node_types
-    types = ['uid', 'iid', 'genre', 'year', 'director', 'actor', 'writer', 'tags', 'genome_tags']
+    types = ['uid', 'iid', 'genre', 'year', 'director', 'actor', 'writer', 'tid', 'genome_tid']
     num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'genre': num_genres, 'year': num_years, 'director': num_directors,
                       'actor': num_actors, 'writer': num_writers, 'tid': num_tids, 'genome_tid': num_genome_tids}
 

@@ -179,23 +179,36 @@ class MetaPath2VecSolver(BaseSolver):
                                 ('genre', 'as the genre of', 'iid'),
                                 ('iid', 'has been watched by', 'uid'),
                             ]
+                        if self.dataset_args['name'] == "25m":
+                            edge_index_dict = {
+                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                            }
+                            metapath = [
+                                ('uid', 'has watched', 'iid'),
+                                ('iid', 'has the genre', 'genre'),
+                                ('genre', 'as the genre of', 'iid'),
+                                ('iid', 'has been watched by', 'uid'),
+                            ]
                     elif self.dataset_args['dataset'] == "Yelp":
                         edge_index_dict = {
-                            ('item_attribute', 'as the attribute of', 'iid'): torch.from_numpy(dataset.edge_index_nps['attributes2item']).long().to(self.train_args['device']),
+                            ('item_reviewcount', 'as the number of reviews of', 'iid'): torch.from_numpy(dataset.edge_index_nps['reviewcount2item']).long().to(self.train_args['device']),
                             ('iid', 'has been visited by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
                             ('uid', 'has the number of friends', 'user_friendcount'): torch.from_numpy(np.flip(dataset.edge_index_nps['friendcount2user'], 0).copy()).long().to(self.train_args['device']),
                             ('user_friendcount', 'as the number of friends of', 'uid'): torch.from_numpy(dataset.edge_index_nps['friendcount2user']).long().to(self.train_args['device']),
                             ('uid', 'has visited', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                            ('iid', 'has the attribute', 'item_attribute'): torch.from_numpy(np.flip(dataset.edge_index_nps['attributes2item'], 0).copy()).long().to(self.train_args['device']),
+                            ('iid', 'has the number of reviews', 'item_reviewcount'): torch.from_numpy(np.flip(dataset.edge_index_nps['reviewcount2item'], 0).copy()).long().to(self.train_args['device']),
 
                         }
                         metapath = [
-                            ('item_attribute', 'as the attribute of', 'iid'),
+                            ('item_reviewcount', 'as the number of reviews of', 'iid'),
                             ('iid', 'has been visited by', 'uid'),
                             ('uid', 'has the number of friends', 'user_friendcount'),
                             ('user_friendcount', 'as the number of friends of', 'uid'),
                             ('uid', 'has visited', 'iid'),
-                            ('iid', 'has the attribute', 'item_attribute')
+                            ('iid', 'has the number of reviews', 'item_reviewcount')
                         ]
                     self.model_args['metapath'] = metapath
                     self.model_args['edge_index_dict'] = edge_index_dict
