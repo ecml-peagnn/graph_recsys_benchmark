@@ -63,7 +63,7 @@ python3 kgat_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num
 
 # NCF
 # --entity_aware=false
-python3 ncf_solver_bce.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
+python3 ncf_solver_bce.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0.3 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
 
 
 # PinSAGE
