@@ -116,6 +116,15 @@ class BaseSolver(object):
         HRs_per_run_np, NDCGs_per_run_np, AUC_per_run_np, train_loss_per_run_np, eval_loss_per_run_np, last_run = \
             load_global_logger(global_logger_file_path)
 
+        print("GPU Usage before data load")
+        gpu_usage()
+
+        # Create the dataset
+        dataset = load_dataset(self.dataset_args)
+
+        print("GPU Usage after data load")
+        gpu_usage()
+
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
         with open(logger_file_path, 'a') as logger_file:
             start_run = last_run + 1
@@ -127,15 +136,6 @@ class BaseSolver(object):
                     np.random.seed(seed)
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
-
-                    print("GPU Usage before data load")
-                    gpu_usage()
-
-                    # Create the dataset
-                    dataset = load_dataset(self.dataset_args)
-
-                    print("GPU Usage after data load")
-                    gpu_usage()
 
                     # Create model and optimizer
                     if self.model_args['model_type'] == 'Graph':
@@ -297,7 +297,7 @@ class BaseSolver(object):
                             run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
                             np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                             np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5], np.max(NDCGs_per_epoch_np, axis=0)[10],
-                            np.max(NDCGs_per_epoch_np, axis=0)[15], AUC_per_epoch_np[-1][0],
+                            np.max(NDCGs_per_epoch_np, axis=0)[15],  np.max(AUC_per_epoch_np, axis=0)[0],
                             train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     logger_file.write(
@@ -308,7 +308,7 @@ class BaseSolver(object):
                                 np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                                 np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
                                 np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
-                                AUC_per_epoch_np[-1][0],
+                                np.max(AUC_per_epoch_np, axis=0)[0],
                                 train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                     )
                     instantwrite(logger_file)
@@ -316,7 +316,7 @@ class BaseSolver(object):
                     print("GPU Usage after each run")
                     gpu_usage()
 
-                    del model, optimizer, loss, loss_per_batch, rec_metrics
+                    del model, optimizer, loss, loss_per_batch, rec_metrics, train_dataloader
                     clearcache()
 
             print(

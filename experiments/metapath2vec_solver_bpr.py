@@ -129,6 +129,15 @@ class MetaPath2VecSolver(BaseSolver):
         eval_loss_per_run_np, last_run = \
             load_random_walk_global_logger(global_logger_file_path)
 
+        print("GPU Usage before data load")
+        gpu_usage()
+
+        # Create the dataset
+        dataset = load_dataset(self.dataset_args)
+
+        print("GPU Usage after data load")
+        gpu_usage()
+
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
         with open(logger_file_path, 'a') as logger_file:
             start_run = last_run + 1
@@ -140,16 +149,6 @@ class MetaPath2VecSolver(BaseSolver):
                     np.random.seed(seed)
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
-
-                    print("GPU Usage before data load")
-                    gpu_usage()
-
-                    # Create the dataset
-                    self.dataset_args['seed'] = seed
-                    dataset = load_dataset(self.dataset_args)
-
-                    print("GPU Usage after data load")
-                    gpu_usage()
 
                     # Create random walk model
                     if self.dataset_args['dataset'] == "Movielens":
@@ -263,7 +262,7 @@ class MetaPath2VecSolver(BaseSolver):
                     del self.model_args['metapath']
                     del self.model_args['edge_index_dict']
                     del random_walk_model
-                    torch.cuda.empty_cache()
+                    # torch.cuda.empty_cache()
                     model = self.model_class(**self.model_args).to(self.train_args['device'])
 
                     opt_class = get_opt_class(self.train_args['opt'])
@@ -310,7 +309,7 @@ class MetaPath2VecSolver(BaseSolver):
                             )
                         )
                         instantwrite(logger_file)
-                        clearcache()
+                        # clearcache()
 
                     t_start = time.perf_counter()
                     if start_epoch <= self.train_args['epochs']:
@@ -391,7 +390,7 @@ class MetaPath2VecSolver(BaseSolver):
                                 )
                             )
                             instantwrite(logger_file)
-                            clearcache()
+                            # clearcache()
 
                         if torch.cuda.is_available():
                             torch.cuda.synchronize()
@@ -418,7 +417,7 @@ class MetaPath2VecSolver(BaseSolver):
                             run, t_end - t_start, np.max(HRs_per_epoch_np, axis=0)[0], np.max(HRs_per_epoch_np, axis=0)[5],
                             np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                             np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5], np.max(NDCGs_per_epoch_np, axis=0)[10],
-                            np.max(NDCGs_per_epoch_np, axis=0)[15], AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0],
+                            np.max(NDCGs_per_epoch_np, axis=0)[15], np.max(AUC_per_epoch_np, axis=0)[0], random_walk_train_loss_per_run_np[-1][0],
                             train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         logger_file.write(
@@ -429,7 +428,7 @@ class MetaPath2VecSolver(BaseSolver):
                                 np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                                 np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
                                 np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
-                                AUC_per_epoch_np[-1][0], random_walk_train_loss_per_run_np[-1][0],
+                                np.max(AUC_per_epoch_np, axis=0)[0], random_walk_train_loss_per_run_np[-1][0],
                                 train_loss_per_epoch_np[-1][0], eval_loss_per_epoch_np[-1][0])
                         )
                         instantwrite(logger_file)
@@ -437,8 +436,8 @@ class MetaPath2VecSolver(BaseSolver):
                         print("GPU Usage after each run")
                         gpu_usage()
 
-                        del model, optimizer, loss, loss_per_batch, rec_metrics
-                        clearcache()
+                        del model, optimizer, loss, loss_per_batch, rec_metrics, train_dataloader
+                        # clearcache()
 
                 print(
                     'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '

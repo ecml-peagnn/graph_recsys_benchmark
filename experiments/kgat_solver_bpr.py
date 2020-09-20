@@ -240,6 +240,15 @@ class KGATSolver(BaseSolver):
         cf_eval_loss_per_run_np, last_run = \
             load_kgat_global_logger(global_logger_file_path)
 
+        print("GPU Usage before data load")
+        gpu_usage()
+
+        # Create the dataset
+        dataset = load_dataset(self.dataset_args)
+
+        print("GPU Usage after data load")
+        gpu_usage()
+
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
         with open(logger_file_path, 'a') as logger_file:
             start_run = last_run + 1
@@ -251,15 +260,6 @@ class KGATSolver(BaseSolver):
                     np.random.seed(seed)
                     torch.manual_seed(seed)
                     torch.cuda.manual_seed(seed)
-
-                    print("GPU Usage before data load")
-                    gpu_usage()
-
-                    # Create the dataset
-                    dataset = load_dataset(self.dataset_args)
-
-                    print("GPU Usage after data load")
-                    gpu_usage()
 
                     # Create model and optimizer
                     self.model_args['num_nodes'] = dataset.num_nodes
@@ -436,7 +436,7 @@ class KGATSolver(BaseSolver):
                             np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                             np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
                             np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
-                            AUC_per_epoch_np[-1][0],
+                            np.max(AUC_per_epoch_np, axis=0)[0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
                             cf_eval_loss_per_epoch_np[-1][0]
                         )
@@ -450,7 +450,7 @@ class KGATSolver(BaseSolver):
                             np.max(HRs_per_epoch_np, axis=0)[10], np.max(HRs_per_epoch_np, axis=0)[15],
                             np.max(NDCGs_per_epoch_np, axis=0)[0], np.max(NDCGs_per_epoch_np, axis=0)[5],
                             np.max(NDCGs_per_epoch_np, axis=0)[10], np.max(NDCGs_per_epoch_np, axis=0)[15],
-                            AUC_per_epoch_np[-1][0],
+                            np.max(AUC_per_epoch_np, axis=0)[0],
                             kg_train_loss_per_epoch_np[-1][0], cf_train_loss_per_epoch_np[-1][0],
                             cf_eval_loss_per_epoch_np[-1][0]
                         )
@@ -460,7 +460,7 @@ class KGATSolver(BaseSolver):
                     print("GPU Usage after each run")
                     gpu_usage()
 
-                    del model, optimizer, loss, kg_loss_per_batch, cf_loss_per_batch, rec_metrics
+                    del model, optimizer, loss, kg_loss_per_batch, cf_loss_per_batch, rec_metrics, dataloader
                     clearcache()
             print(
                 'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, \
