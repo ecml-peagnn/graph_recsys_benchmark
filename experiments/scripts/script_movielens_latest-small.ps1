@@ -103,3 +103,15 @@ python3 node2vec_solver_bpr.py --dataset=Movielens --dataset_name=latest-small -
 # --entity_aware=false
 python3 metapath2vec_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
 
+# PEAGCN_Jumping
+# --entity_aware=false --dropout=0
+python3 peagcn_jumping_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
+
+# --entity_aware=false --dropout=0.5
+python3 peagcn_jumping_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
+
+# --entity_aware=true --dropout=0
+python3 peagcn_jumping_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26
+
+# --entity_aware=true --dropout=0.5
+python3 peagcn_jumping_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --sampling_strategy=unseen --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --epochs=30 --batch_size=1024 --save_every_epoch=26

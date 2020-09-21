@@ -103,3 +103,18 @@ python3 node2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=
 # --entity_aware=false
 python3 metapath2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
+
+# PEAGCN_Jumping
+# --entity_aware=false --dropout=0
+python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,1,1,1,1 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+
+# --entity_aware=false --dropout=0.5
+python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,1,1,1,1 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+
+# --entity_aware=true --dropout=0
+python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,1,1,1,1 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+
+# --entity_aware=true --dropout=0.5
+python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,1,1,1,1 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+
+

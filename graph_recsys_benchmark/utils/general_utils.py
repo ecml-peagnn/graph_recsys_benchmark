@@ -470,23 +470,43 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
         stars2user_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2user']).long().to(
             train_args['device'])
 
-        meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-        meta_path_edge_indicis_3 = [stars2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_4 = [reviewcount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_5 = [attributes2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_6 = [categories2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_7 = [checkincount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-        meta_path_edge_indicis_8 = [reviewcount2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_9 = [friendcount2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_10 = [fans2user_edge_index, user2item_edge_index]
-        meta_path_edge_indicis_11 = [stars2user_edge_index, user2item_edge_index]
+        if 'jump_mode' in dataset_args:
+            meta_path_edge_indicis_1 = torch.cat([user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+            meta_path_edge_indicis_2 = torch.cat([stars2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+            meta_path_edge_indicis_3 = torch.cat([reviewcount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+            meta_path_edge_indicis_4 = torch.cat([attributes2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+            meta_path_edge_indicis_5 = torch.cat([categories2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+            meta_path_edge_indicis_6 = torch.cat([checkincount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
 
-        meta_path_edge_index_list = [
-            meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3, meta_path_edge_indicis_4,
-            meta_path_edge_indicis_5, meta_path_edge_indicis_6, meta_path_edge_indicis_7, meta_path_edge_indicis_8,
-            meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11
-        ]
+            meta_path_edge_indicis_7 = reviewcount2user_edge_index
+            meta_path_edge_indicis_8 = friendcount2user_edge_index
+            meta_path_edge_indicis_9 = fans2user_edge_index
+            meta_path_edge_indicis_10 = stars2user_edge_index
+
+            meta_path_edge_index_list = [
+                meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
+                meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                meta_path_edge_indicis_10,
+            ]
+
+        else:
+            meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+            meta_path_edge_indicis_3 = [stars2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_4 = [reviewcount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_5 = [attributes2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_6 = [categories2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_7 = [checkincount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+            meta_path_edge_indicis_8 = [reviewcount2user_edge_index, user2item_edge_index]
+            meta_path_edge_indicis_9 = [friendcount2user_edge_index, user2item_edge_index]
+            meta_path_edge_indicis_10 = [fans2user_edge_index, user2item_edge_index]
+            meta_path_edge_indicis_11 = [stars2user_edge_index, user2item_edge_index]
+            meta_path_edge_index_list = [
+                meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3, meta_path_edge_indicis_4,
+                meta_path_edge_indicis_5, meta_path_edge_indicis_6, meta_path_edge_indicis_7, meta_path_edge_indicis_8,
+                meta_path_edge_indicis_9, meta_path_edge_indicis_10, meta_path_edge_indicis_11
+            ]
     else:
         raise NotImplementedError
     return meta_path_edge_index_list
