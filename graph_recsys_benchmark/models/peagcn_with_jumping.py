@@ -8,9 +8,9 @@ from torch_geometric.nn import JumpingKnowledge
 from .base import GraphRecsysModel
 
 
-class PEAGCNChannel(torch.nn.Module):
+class PEAGCNJumpingChannel(torch.nn.Module):
     def __init__(self, **kwargs):
-        super(PEAGCNChannel, self).__init__()
+        super(PEAGCNJumpingChannel, self).__init__()
         self.num_steps = kwargs['num_steps']
         self.num_nodes = kwargs['num_nodes']
         self.dropout = kwargs['dropout']
@@ -49,9 +49,9 @@ class PEAGCNChannel(torch.nn.Module):
         return self.lin(self.jump(xs))
 
 
-class PEAGCNRecsysModel(GraphRecsysModel):
+class PEAGCNJumpingRecsysModel(GraphRecsysModel):
     def __init__(self, **kwargs):
-        super(PEAGCNRecsysModel, self).__init__(**kwargs)
+        super(PEAGCNJumpingRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.entity_aware = kwargs['entity_aware']
@@ -70,7 +70,7 @@ class PEAGCNRecsysModel(GraphRecsysModel):
         for num_steps in kwargs['meta_path_steps']:
             kwargs_cpy = kwargs.copy()
             kwargs_cpy['num_steps'] = num_steps
-            self.peagcn_channels.append(PEAGCNChannel(**kwargs_cpy))
+            self.peagcn_channels.append(PEAGCNJumpingChannel(**kwargs_cpy))
 
         if self.channel_aggr == 'att':
             self.att = torch.nn.Linear(kwargs['repr_dim'], 1)

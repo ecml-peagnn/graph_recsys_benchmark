@@ -3,6 +3,7 @@ from .pinsage import SAGERecsysModel
 from .gat import GATRecsysModel
 from .ncf import NCFRecsysModel
 from .peagcn import PEAGCNRecsysModel
+from .peagcn_with_jumping import PEAGCNJumpingRecsysModel
 from .peagat import PEAGATRecsysModel
 from .peasage import PEASAGERecsysModel
 from .kgat import KGATRecsysModel
@@ -16,6 +17,7 @@ __all__ = [
     'GATRecsysModel',
     'NCFRecsysModel',
     'PEAGCNRecsysModel',
+    'PEAGCNJumpingRecsysModel',
     'PEAGATRecsysModel',
     'PEASAGERecsysModel',
     'KGATRecsysModel',
