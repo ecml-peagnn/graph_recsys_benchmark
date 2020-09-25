@@ -4,13 +4,13 @@ import os
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import PEASAGERecsysModel
+from graph_recsys_benchmark.models import PEASageRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path, update_pea_graph_input
 from graph_recsys_benchmark.solvers import BaseSolver
 
 MODEL_TYPE = 'Graph'
 LOSS_TYPE = 'BPR'
-MODEL = 'PEASAGE'
+MODEL = 'PEASage'
 GRAPH_TYPE = 'hete'
 
 parser = argparse.ArgumentParser()
@@ -23,6 +23,7 @@ parser.add_argument('--num_core', type=int, default=10, help='')			#10(for other
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
 parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
+
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')		#64(for others), 32(only for 25m)
@@ -30,6 +31,7 @@ parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for 
 parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2(for small) #2,2,2,2,2,2,2,2,2,2(for 1m,25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
+parser.add_argument('--entity_aware_type', type=str, default='cos', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
@@ -77,7 +79,7 @@ model_args = {
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
     'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')], 'channel_aggr': args.channel_aggr,
-    'entity_aware': args.entity_aware.lower() == 'true',
+    'entity_aware': args.entity_aware.lower() == 'true', 'entity_aware_type': args.entity_aware_type,
     'entity_aware_coff': args.entity_aware_coff
 }
 log_args = model_args.copy()
@@ -98,7 +100,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class MPASAGERecsysModel(PEASAGERecsysModel):
+class MPASAGERecsysModel(PEASageRecsysModel):
     def update_graph_input(self, dataset):
         return update_pea_graph_input(dataset_args, train_args, dataset)
 

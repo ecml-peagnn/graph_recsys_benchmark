@@ -369,9 +369,9 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 meta_path_edge_indicis_5 = torch.cat([director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
                 meta_path_edge_indicis_6 = torch.cat([genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
 
-                meta_path_edge_indicis_7 = gender2user_edge_index
-                meta_path_edge_indicis_8 = age2user_edge_index
-                meta_path_edge_indicis_9 = occ2user_edge_index
+                meta_path_edge_indicis_7 = torch.cat([torch.flip(gender2user_edge_index, dims=[0]), gender2user_edge_index], dim=1)
+                meta_path_edge_indicis_8 = torch.cat([torch.flip(age2user_edge_index, dims=[0]), age2user_edge_index], dim=1)
+                meta_path_edge_indicis_9 = torch.cat([torch.flip(occ2user_edge_index, dims=[0]), occ2user_edge_index], dim=1)
 
                 meta_path_edge_index_list = [
                     meta_path_edge_indicis_1, meta_path_edge_indicis_2,meta_path_edge_indicis_3,
@@ -396,7 +396,6 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                     meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
                     meta_path_edge_indicis_10
                 ]
-
         if dataset_args['name'] == "25m":
             user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
                 train_args['device'])
@@ -416,40 +415,59 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 train_args['device'])
             tag2user_edge_index = torch.from_numpy(dataset.edge_index_nps['tag2user']).long().to(
                 train_args['device'])
+            if 'jump_mode' in dataset_args:
+                meta_path_edge_indicis_1 = torch.cat([year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_2 = torch.cat([actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_3 = torch.cat([writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_4 = torch.cat([director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_5 = torch.cat([genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_6 = torch.cat([genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_7 = torch.cat([tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
+                meta_path_edge_indicis_8 = torch.cat([user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
 
-            meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_2 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_3 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_4 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_5 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_6 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_7 = [genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-            meta_path_edge_indicis_8 = [torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index]
-            meta_path_edge_indicis_9 = [torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index]
+                meta_path_edge_indicis_9 = torch.cat([torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index], dim=1)
+                meta_path_edge_indicis_10 = torch.cat([torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index], dim=1)
 
-            meta_path_edge_indicis_10 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-            meta_path_edge_indicis_11 = [torch.flip(tag2item_edge_index, dims=[0]), tag2item_edge_index]
-            meta_path_edge_indicis_12 = [torch.flip(tag2user_edge_index, dims=[0]), tag2item_edge_index]
+                meta_path_edge_index_list = [
+                    meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
+                    meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                    meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                    meta_path_edge_indicis_10
+                ]
+            else:
+                meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_2 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_3 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_4 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_5 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_6 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_7 = [genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_8 = [torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index]
+                meta_path_edge_indicis_9 = [torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index]
 
-            # meta_path_edge_indicis_13 = [torch.flip(user2item_edge_index, dims=[0]),       # New 3 step metapath
-            #                              torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index]
-            # meta_path_edge_indicis_14 = [genome_tag2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
-            #                              tag2user_edge_index]
-            # meta_path_edge_indicis_15 = [genre2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
-            #                              tag2user_edge_index]
-            # meta_path_edge_indicis_16 = [genome_tag2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
-            #                              tag2item_edge_index]
-            # meta_path_edge_indicis_17 = [genre2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
-            #                              tag2item_edge_index]
+                meta_path_edge_indicis_10 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+                meta_path_edge_indicis_11 = [torch.flip(tag2item_edge_index, dims=[0]), tag2item_edge_index]
+                meta_path_edge_indicis_12 = [torch.flip(tag2user_edge_index, dims=[0]), tag2item_edge_index]
 
-            meta_path_edge_index_list = [
-                meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
-                meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-                meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-                meta_path_edge_indicis_10, meta_path_edge_indicis_11, meta_path_edge_indicis_12,
-                # meta_path_edge_indicis_13, meta_path_edge_indicis_14, meta_path_edge_indicis_15,
-                # meta_path_edge_indicis_16, meta_path_edge_indicis_17
-            ]
+                # meta_path_edge_indicis_13 = [torch.flip(user2item_edge_index, dims=[0]),       # New 3 step metapath
+                #                              torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index]
+                # meta_path_edge_indicis_14 = [genome_tag2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
+                #                              tag2user_edge_index]
+                # meta_path_edge_indicis_15 = [genre2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
+                #                              tag2user_edge_index]
+                # meta_path_edge_indicis_16 = [genome_tag2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
+                #                              tag2item_edge_index]
+                # meta_path_edge_indicis_17 = [genre2item_edge_index, torch.flip(tag2item_edge_index, dims=[0]),
+                #                              tag2item_edge_index]
+
+                meta_path_edge_index_list = [
+                    meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
+                    meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
+                    meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                    meta_path_edge_indicis_10, meta_path_edge_indicis_11, meta_path_edge_indicis_12,
+                    # meta_path_edge_indicis_13, meta_path_edge_indicis_14, meta_path_edge_indicis_15,
+                    # meta_path_edge_indicis_16, meta_path_edge_indicis_17
+                ]
     elif dataset_args['dataset'] == "Yelp":
         user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(train_args['device'])
         stars2item_edge_index = torch.from_numpy(dataset.edge_index_nps['stars2item']).long().to(

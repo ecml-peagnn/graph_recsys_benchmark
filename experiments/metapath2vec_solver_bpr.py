@@ -167,10 +167,10 @@ class MetaPath2VecSolver(BaseSolver):
                             ]
                         if self.dataset_args['name'] == "latest-small":
                             edge_index_dict = {
-                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                                ('genome_tag', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genome_tag2item']).long().to(self.train_args['device']),
                                 ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
                                 ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('iid', 'has the genre', 'genome_tag'): torch.from_numpy(np.flip(dataset.edge_index_nps['genome_tag2item'], 0).copy()).long().to(self.train_args['device']),
                             }
                             metapath = [
                                 ('uid', 'has watched', 'iid'),
@@ -180,10 +180,10 @@ class MetaPath2VecSolver(BaseSolver):
                             ]
                         if self.dataset_args['name'] == "25m":
                             edge_index_dict = {
-                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                                ('genome_tag', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genome_tag2item']).long().to(self.train_args['device']),
                                 ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
                                 ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                                ('iid', 'has the genre', 'genome_tag'): torch.from_numpy(np.flip(dataset.edge_index_nps['genome_tag2item'], 0).copy()).long().to(self.train_args['device']),
                             }
                             metapath = [
                                 ('uid', 'has watched', 'iid'),

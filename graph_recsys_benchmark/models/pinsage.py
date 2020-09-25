@@ -9,9 +9,9 @@ from torch_scatter import scatter_add
 from .base import GraphRecsysModel
 
 
-class SAGERecsysModel(GraphRecsysModel):
+class PinSageRecsysModel(GraphRecsysModel):
     def __init__(self, **kwargs):
-        super(SAGERecsysModel, self).__init__(**kwargs)
+        super(PinSageRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.entity_aware = kwargs['entity_aware']

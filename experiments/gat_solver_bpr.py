@@ -30,6 +30,7 @@ parser.add_argument('--emb_dim', type=int, default=64, help='')         #64(for 
 parser.add_argument('--num_heads', type=int, default=1, help='')
 parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for others), 8(only for 25m)
 parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
+parser.add_argument('--entity_aware_type', type=str, default='cos', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
@@ -76,7 +77,8 @@ model_args = {
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'num_heads': args.num_heads, 'entity_aware': args.entity_aware.lower() == 'true',
+    'num_heads': args.num_heads,
+    'entity_aware': args.entity_aware.lower() == 'true', 'entity_aware_type': args.entity_aware_type,
     'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {

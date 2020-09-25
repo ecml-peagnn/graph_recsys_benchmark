@@ -5,7 +5,7 @@ import numpy as np
 import sys
 
 sys.path.append('..')
-from graph_recsys_benchmark.models import SAGERecsysModel
+from graph_recsys_benchmark.models import PinSageRecsysModel
 from graph_recsys_benchmark.utils import get_folder_path
 from graph_recsys_benchmark.solvers import BaseSolver
 
@@ -27,9 +27,9 @@ parser.add_argument('--entity_aware', type=str, default='false', help='')
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')		#64(for others), 32(only for 25m)
 parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for others), 8(only for 25m)
-parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
+parser.add_argument('--hidden_size', type=int, default=128, help='')     #64(for others), 16(only for 25m)
 parser.add_argument('--margin', type=float, default=1, help='')
-parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
+parser.add_argument('--entity_aware_coff', type=float, default=0.01, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
@@ -94,7 +94,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class SAGERecsysModel(SAGERecsysModel):
+class SAGERecsysModel(PinSageRecsysModel):
     def update_graph_input(self, dataset):
         edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
         edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
