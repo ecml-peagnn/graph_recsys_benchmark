@@ -70,13 +70,14 @@ def save_kgat_model(file_path, model, optim, epoch, rec_metrics, silent=False):
         print("Saved checkpoint_backup '{}'".format(file_path))
 
 
-def save_random_walk_model(file_path, model, optim, train_loss, silent=False):
+def save_random_walk_model(file_path, model, optim, train_loss, rk_epoch, silent=False):
     model_states = {'model': model.state_dict()}
     optim_states = {'optim': optim.state_dict()}
     states = {
         'model_states': model_states,
         'optim_states': optim_states,
         'random_walk_train_loss_per_run': train_loss,
+        'rk_epoch': rk_epoch
     }
 
     with open(file_path, mode='wb+') as f:
@@ -193,15 +194,22 @@ def load_global_logger(global_logger_filepath):
 
 
 def load_random_walk_model(file_path, model, optim, device):
-    checkpoint = torch.load(file_path, map_location=device)
-    model.load_state_dict(checkpoint['model_states']['model'])
-    optim.load_state_dict(checkpoint['optim_states']['optim'])
-    train_loss = checkpoint['random_walk_train_loss_per_run']
-    for state in optim.state.values():
-        for k, v in state.items():
-            if isinstance(v, torch.Tensor):
-                state[k] = v.to(device)
-    return model, optim, train_loss
+    if os.path.isfile(file_path):
+        print('Random walk model loaded!')
+        checkpoint = torch.load(file_path, map_location=device)
+        model.load_state_dict(checkpoint['model_states']['model'])
+        optim.load_state_dict(checkpoint['optim_states']['optim'])
+        train_loss = checkpoint['random_walk_train_loss_per_run']
+        rk_epoch = checkpoint['rk_epoch']
+        for state in optim.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
+    else:
+        print('No random walk model found! Create new!')
+        train_loss = 0
+        rk_epoch = 0
+    return model, optim, train_loss, rk_epoch
 
 
 def load_kg_global_logger(global_logger_filepath):
@@ -327,19 +335,17 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 #     meta_path_edge_indicis_7, meta_path_edge_indicis_8,
                 # ]
             else:
-                meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_2 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-                meta_path_edge_indicis_3 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_4 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_5 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_6 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_7 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_8 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_9 = [tag2user_edge_index, user2item_edge_index]
+                meta_path_edge_indicis_1 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+                meta_path_edge_indicis_2 = [year2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_3 = [actor2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_4 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_5 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_6 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+                meta_path_edge_indicis_7 = [tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
                 meta_path_edge_index_list = [
                     meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
                     meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-                    meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                    meta_path_edge_indicis_7
                 ]
         if dataset_args['name'] == "1m":
             user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(

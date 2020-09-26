@@ -23,6 +23,7 @@ parser.add_argument('--num_core', type=int, default=10, help='')                
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
 parser.add_argument('--sampling_strategy', type=str, default='random', help='')  # unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
+
 # Model params
 parser.add_argument('--factor_num', type=int, default=16, help='')
 parser.add_argument('--dropout', type=float, default=0, help='')
@@ -74,10 +75,14 @@ model_args = {
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
+    'pretrain': False,
     'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs, 'batch_size': args.batch_size,
+    'runs': args.runs,
+    'epochs': args.epochs,
+    'batch_size': args.batch_size,
+    'weight_decay': args.weight_decay,  'device': device,
+    'lr': args.lr,
     'num_workers': args.num_workers,
-    'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device,
     'weights_folder': os.path.join(weights_folder, str(model_args)),
     'logger_folder': os.path.join(logger_folder, str(model_args)),
     'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch

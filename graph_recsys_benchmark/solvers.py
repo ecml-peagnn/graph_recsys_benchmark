@@ -6,6 +6,8 @@ import time
 import pandas as pd
 import tqdm
 from torch.utils.data import DataLoader
+import inspect
+from torch_geometric.nn.models import Node2Vec
 
 if torch.cuda.is_available():
     from GPUtil import showUtilization as gpu_usage
@@ -165,6 +167,51 @@ class BaseSolver(object):
                                                                            self.train_args['device'])
                     HRs_per_epoch_np, NDCGs_per_epoch_np, AUC_per_epoch_np, train_loss_per_epoch_np, eval_loss_per_epoch_np = \
                         rec_metrics
+
+                    # Add pretrain
+                    if last_epoch == 0 and self.train_args['pretrain']:
+                        random_walk_model_args = {k: v for k, v in self.model_args.items() if
+                                                  k in inspect.signature(Node2Vec.__init__).parameters}
+                        edge_index_np = np.hstack(list(dataset.edge_index_nps.values()))
+                        edge_index_np = np.hstack([edge_index_np, np.flip(edge_index_np, 0)])
+                        edge_index = torch.from_numpy(edge_index_np).long().to(self.train_args['device'])
+                        random_walk_model_args['edge_index'] = edge_index
+                        random_walk_model_args['embedding_dim'] = self.model_args['emb_dim']
+                        rk_model = Node2Vec(**random_walk_model_args).to(self.train_args['device'])
+                        opt_class = get_opt_class(self.train_args['rk_opt'])
+                        rk_optimizer = opt_class(
+                            params=rk_model.parameters(),
+                            lr=self.train_args['rk_lr'],
+                        )
+
+                        rk_weights_file = os.path.join(self.train_args['weights_folder'], 'rk_model.pkl')
+                        rk_model, rk_optimizer, rk_train_loss_per_run, rk_epoch = load_random_walk_model(
+                            rk_weights_file, rk_model, rk_optimizer, self.train_args['device'])
+                        if rk_epoch < self.train_args['rk_epochs']:
+                            loader = rk_model.loader(batch_size=self.train_args['rk_batch_size'],
+                                                              shuffle=True, num_workers=0)
+
+                            rk_model.train()
+                            pbar = tqdm.tqdm(range(rk_epoch + 1, self.train_args['rk_epochs'] + 1), total=self.train_args['rk_epochs'])
+                            for rk_epoch in pbar:
+                                random_walk_loss = 0
+                                for random_walk_batch_idx, (pos_rw, neg_rw) in enumerate(loader):
+                                    rk_optimizer.zero_grad()
+                                    loss = rk_model.loss(pos_rw.to(self.train_args['device']),
+                                                                  neg_rw.to(self.train_args['device']))
+                                    random_walk_loss += loss.detach().cpu().item()
+                                    loss.backward()
+                                    rk_optimizer.step()
+                                rk_train_loss_per_run = random_walk_loss / len(loader)
+                                pbar.set_description(
+                                    'Epoch {}: Random walk loss {:.4f}'.format(rk_epoch, random_walk_loss / (random_walk_batch_idx + 1)))
+
+                            save_random_walk_model(rk_weights_file, rk_model, rk_optimizer,
+                                                   rk_train_loss_per_run, rk_epoch)
+
+                        # Assign the pretrain model
+                        rk_model.eval()
+                        model.x = rk_model()
 
                     if torch.cuda.is_available():
                         torch.cuda.synchronize()

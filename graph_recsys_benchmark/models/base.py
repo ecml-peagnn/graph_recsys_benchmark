@@ -33,7 +33,7 @@ class GraphRecsysModel(torch.nn.Module):
 
             # cos
             if hasattr(self, 'entiy_aware_type') and self.entiy_aware_type == 'cos':
-                x = F.normalize(self.cached_repr)
+                x = F.normalize(self.x)
                 item_pos_reg = x[pos_neg_pair_t[:, 1]] * x[pos_item_entity]
                 item_neg_reg = x[pos_neg_pair_t[:, 1]] * x[neg_item_entity]
                 item_pos_reg = item_pos_reg.sum(dim=-1)
@@ -49,7 +49,7 @@ class GraphRecsysModel(torch.nn.Module):
                 reg_los = item_reg_los + user_reg_los
             else:
                 # l2 norm
-                x = self.cached_repr
+                x = self.x
                 item_pos_reg = (x[pos_neg_pair_t[:, 1]] - x[pos_item_entity]) * (
                             x[pos_neg_pair_t[:, 1]] - x[pos_item_entity])
                 item_neg_reg = (x[pos_neg_pair_t[:, 1]] - x[neg_item_entity]) * (

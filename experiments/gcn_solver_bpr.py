@@ -22,8 +22,14 @@ parser.add_argument('--dataset_name', type=str, default='latest-small', help='')
 parser.add_argument('--if_use_features', type=str, default='false', help='')
 parser.add_argument('--num_core', type=int, default=10, help='')                # 10(for others), 20(only for 25m)
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='') # unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--sampling_strategy', type=str, default='random', help='') # unseen(for 1m,latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
+
+# Pretrain model
+parser.add_argument('--pretrain', type=str, default='true', help='')
+parser.add_argument('--walk_length', type=int, default=100, help='')
+parser.add_argument('--context_size', type=int, default=7, help='')
+
 # Model params
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')		#64(for others), 32(only for 25m)
@@ -41,10 +47,14 @@ parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')          #30(for others), 20(only for Yelp)
+parser.add_argument('--rk_epochs', type=int, default=300, help='')          #30(for others), 20(only for Yelp)
 parser.add_argument('--batch_size', type=int, default=1024, help='')    #1024(for others), 4096(only for 25m)
+parser.add_argument('--rk_batch_size', type=int, default=128, help='')    #1024(for others), 4096(only for 25m)
 parser.add_argument('--num_workers', type=int, default=12, help='')
 parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
+parser.add_argument('--rk_opt', type=str, default='adam', help='')
+parser.add_argument('--rk_lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
@@ -73,6 +83,7 @@ dataset_args = {
 }
 model_args = {
     'model_type': MODEL_TYPE,
+    'pretrain': args.pretrain.lower() == 'true', 'walk_length': args.walk_length, 'context_size': args.context_size,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
@@ -82,12 +93,16 @@ model_args = {
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
-    'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs, 'batch_size': args.batch_size,
+    'pretrain': args.pretrain.lower() == 'true',
+    'opt': args.opt, 'rk_opt': args.rk_opt,
+    'runs': args.runs,
+    'epochs': args.epochs, 'rk_epochs': args.rk_epochs,
+    'batch_size': args.batch_size, 'rk_batch_size': args.rk_batch_size,
+    'weight_decay': args.weight_decay,  'device': device,
+    'lr': args.lr, 'rk_lr': args.rk_lr,
     'num_workers': args.num_workers,
-    'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device,
-    'weights_folder': os.path.join(weights_folder, str(model_args)),
-    'logger_folder': os.path.join(logger_folder, str(model_args)),
+    'weights_folder': os.path.join(weights_folder, str(model_args.copy())[:255]),
+    'logger_folder': os.path.join(logger_folder, str(model_args.copy())[:255]),
     'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch
 }
 print('dataset params: {}'.format(dataset_args))
