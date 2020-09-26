@@ -1034,8 +1034,8 @@ class MovieLens(Dataset):
                 genome_scores = genome_scores.drop_duplicates()
                 genome_tags = genome_tags.drop_duplicates()
 
-                # ratings = ratings[ratings.timestamp > 1514764799]     #2M interactions
-                ratings = ratings[ratings.timestamp > 1420070399]     #5M interactions
+                ratings = ratings[ratings.timestamp > 1514764799]     #2M interactions
+                # ratings = ratings[ratings.timestamp > 1420070399]     #5M interactions
 
                 # Sync
                 movies = movies[movies.iid.isin(ratings.iid.unique())]

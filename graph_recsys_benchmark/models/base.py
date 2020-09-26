@@ -264,17 +264,18 @@ class PEAJKBaseRecsysModel(GraphRecsysModel):
             module.reset_parameters()
         if self.channel_aggr == 'att':
             glorot(self.att)
+        glorot(self.fc.weight)
         zeros(self.bias)
 
     def forward(self):
         x = self.x
-        x = [F.relu(module(x, self.meta_path_edge_indices[idx]).unsqueeze(1)) for idx, module in enumerate(self.gnn_channels)]
+        x = [F.relu(channel(x, self.meta_path_edge_indices[idx]).unsqueeze(1)) for idx, channel in enumerate(self.gnn_channels)]
         x = torch.cat(x, dim=1)
         if self.channel_aggr == 'mean':
             x = x.mean(dim=1)
         elif self.channel_aggr == 'att':
             atts = F.softmax(torch.sum(x * self.att, dim=-1), dim=1).unsqueeze(-1)
-            x = torch.sum(x * atts, dim=-2)
+            x = torch.sum(x * atts, dim=1)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
         x = self.fc(x)

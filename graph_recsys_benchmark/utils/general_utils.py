@@ -423,16 +423,12 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 meta_path_edge_indicis_5 = torch.cat([genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
                 meta_path_edge_indicis_6 = torch.cat([genome_tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
                 meta_path_edge_indicis_7 = torch.cat([tag2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
-                meta_path_edge_indicis_8 = torch.cat([user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
-
-                meta_path_edge_indicis_9 = torch.cat([torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index], dim=1)
-                meta_path_edge_indicis_10 = torch.cat([torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index], dim=1)
+                meta_path_edge_indicis_8 = torch.cat([torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index], dim=1)
 
                 meta_path_edge_index_list = [
                     meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
                     meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-                    meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
-                    meta_path_edge_indicis_10
+                    meta_path_edge_indicis_7, meta_path_edge_indicis_8
                 ]
             else:
                 meta_path_edge_indicis_1 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
