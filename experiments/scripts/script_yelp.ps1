@@ -30,13 +30,13 @@ python3 gat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=rando
 
 # PEAGCN
 # --entity_aware=false --dropout=0
-python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=false --dropout=0.5
 python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0
-python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0.5
 python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
@@ -44,13 +44,13 @@ python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=ra
 
 # PEAGAT
 # --entity_aware=false --dropout=0
-python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=false --dropout=0.5
 python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0
-python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0.5
 python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
@@ -58,12 +58,12 @@ python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=ra
 
 # KGAT
 # --entity_aware=false --dropout=0.1
-python3 kgat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 kgat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # NCF
 # --entity_aware=false
-python3 ncf_solver_bce.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 ncf_solver_bce.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # PinSAGE
@@ -71,24 +71,24 @@ python3 ncf_solver_bce.py --dataset=Yelp --num_core=10 --sampling_strategy=rando
 python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=false --dropout=0.5
-python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0
 python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0.5
-python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 pinsage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # PEASAGE
 # --entity_aware=false --dropout=0
-python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=false --dropout=0.5
 python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0
-python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 # --entity_aware=true --dropout=0.5
 python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
@@ -96,12 +96,12 @@ python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=r
 
 # Node2Vec
 # --entity_aware=false
-python3 node2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 node2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # Metapath2Vec
 # --entity_aware=false
-python3 metapath2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=1 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 metapath2vec_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --init_eval=false --gpu_idx=1 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # PEAGCN_Jumping
@@ -118,3 +118,6 @@ python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_str
 python3 peagcn_jumping_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,1,1,1,1 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
+python3 gcn_inner_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.5 --emb_dim=64 --repr_dim=16 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16
+
+python3 peagcn_jk_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=2 --epochs=20 --batch_size=1024 --save_every_epoch=16

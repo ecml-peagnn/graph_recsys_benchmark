@@ -492,10 +492,14 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_5 = torch.cat([categories2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
             meta_path_edge_indicis_6 = torch.cat([checkincount2item_edge_index, torch.flip(user2item_edge_index, dims=[0])], dim=1)
 
-            meta_path_edge_indicis_7 = reviewcount2user_edge_index
-            meta_path_edge_indicis_8 = friendcount2user_edge_index
-            meta_path_edge_indicis_9 = fans2user_edge_index
-            meta_path_edge_indicis_10 = stars2user_edge_index
+            meta_path_edge_indicis_7 = torch.cat([torch.flip(reviewcount2user_edge_index, dims=[0]), reviewcount2user_edge_index],dim=1)
+            meta_path_edge_indicis_8 = torch.cat([torch.flip(friendcount2user_edge_index, dims=[0]), friendcount2user_edge_index],dim=1)
+            meta_path_edge_indicis_9 = torch.cat([torch.flip(fans2user_edge_index, dims=[0]), fans2user_edge_index],dim=1)
+            meta_path_edge_indicis_10 = torch.cat([torch.flip(stars2user_edge_index, dims=[0]), stars2user_edge_index],dim=1)
+            # meta_path_edge_indicis_7 = reviewcount2user_edge_index
+            # meta_path_edge_indicis_8 = friendcount2user_edge_index
+            # meta_path_edge_indicis_9 = fans2user_edge_index
+            # meta_path_edge_indicis_10 = stars2user_edge_index
 
             meta_path_edge_index_list = [
                 meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
