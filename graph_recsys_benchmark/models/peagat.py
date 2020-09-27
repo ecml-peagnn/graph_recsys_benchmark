@@ -3,10 +3,10 @@ from torch.nn import Linear
 from torch_geometric.nn import GATConv
 from torch_geometric.nn.models import JumpingKnowledge
 
-from .base import PEABaseTChannel, PEABaseRecsysModel, PEAJKBaseChannel, PEAJKBaseRecsysModel
+from .base import PEABaseChannel, PEABaseRecsysModel, PEAJKBaseChannel, PEAJKBaseRecsysModel
 
 
-class PEAGATChannel(PEABaseTChannel):
+class PEAGATChannel(PEABaseChannel):
     def __init__(self, **kwargs):
         super(PEAGATChannel, self).__init__()
         self.num_steps = kwargs['num_steps']

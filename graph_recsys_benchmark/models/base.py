@@ -118,7 +118,7 @@ class MFRecsysModel(torch.nn.Module):
         return self.forward(unids, inids)
 
 
-class PEABaseTChannel(torch.nn.Module):
+class PEABaseChannel(torch.nn.Module):
     def reset_parameters(self):
         for module in self.gnn_layers:
             module.reset_parameters()
@@ -162,15 +162,13 @@ class PEABaseRecsysModel(GraphRecsysModel):
             kwargs_cpy['num_steps'] = num_steps
             self.pea_channels.append(kwargs_cpy['channel_class'](**kwargs_cpy))
 
+        if self.channel_aggr == 'att':
+            self.att = Parameter(torch.Tensor(1, len(kwargs['meta_path_steps']), kwargs['repr_dim']))
+
         if self.channel_aggr == 'cat':
             self.fc1 = torch.nn.Linear(2 * len(kwargs['meta_path_steps']) * kwargs['repr_dim'], kwargs['repr_dim'])
-        if self.channel_aggr == 'mean':
-            self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
-        elif self.channel_aggr == 'att':
-            self.att = Parameter(torch.Tensor(1, len(kwargs['meta_path_steps']), kwargs['repr_dim']))
-            self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         else:
-            raise NotImplemented('Other aggr methods not implemeted!')
+            self.fc1 = torch.nn.Linear(2 * kwargs['repr_dim'], kwargs['repr_dim'])
         self.fc2 = torch.nn.Linear(kwargs['repr_dim'], 1)
 
     def reset_parameters(self):
@@ -196,7 +194,6 @@ class PEABaseRecsysModel(GraphRecsysModel):
             x = torch.sum(x * atts, dim=1)
         else:
             raise NotImplemented('Other aggr methods not implemeted!')
-        x = F.normalize(x, dim=-1)
         return x
 
     def predict(self, unids, inids):

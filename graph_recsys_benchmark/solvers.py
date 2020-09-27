@@ -211,7 +211,9 @@ class BaseSolver(object):
 
                         # Assign the pretrain model
                         rk_model.eval()
-                        model.x = rk_model()
+                        with torch.no_grad():
+                            model.x.copy_(rk_model())
+                            print('Model loaded!')
 
                     if torch.cuda.is_available():
                         torch.cuda.synchronize()
