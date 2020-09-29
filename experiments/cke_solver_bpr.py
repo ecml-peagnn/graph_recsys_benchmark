@@ -2,12 +2,10 @@ import argparse
 import torch
 import os
 import numpy as np
-import pandas as pd
 import random as rd
 import time
 import tqdm
 import sys
-from torch.nn import functional as F
 from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
@@ -114,82 +112,6 @@ class CKESolver(BaseSolver):
 
         return pos_i_nids, neg_i_nids
 
-
-    def metrics(
-            self,
-            run,
-            epoch,
-            model,
-            dataset,
-    ):
-        """
-        Generate the positive and negative candidates for the recsys evaluation
-        :param run:
-        :param epoch:
-        :param model:
-        :param dataset:
-        :return: a tuple (pos_i_nids, neg_i_nids), two entries should be both list
-        """
-        HRs, NDCGs, AUC, eval_losses = np.zeros((0, 16)), np.zeros((0, 16)), np.zeros((0, 1)), np.zeros((0, 1))
-
-
-        test_pos_unid_inid_map, neg_unid_inid_map = \
-            dataset.test_pos_unid_inid_map, dataset.neg_unid_inid_map
-
-        u_nids = list(test_pos_unid_inid_map.keys())
-        test_bar = tqdm.tqdm(u_nids, total=len(u_nids))
-        for u_idx, u_nid in enumerate(test_bar):
-            pos_i_nids, neg_i_nids = self.generate_candidates(
-                dataset, u_nid
-            )
-            if len(pos_i_nids) == 0 or len(neg_i_nids) == 0:
-                raise ValueError("No pos or neg samples found in evaluation!")
-
-            pos_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(pos_i_nids))], 'pos_i_nid': pos_i_nids})
-            neg_i_nid_df = pd.DataFrame({'u_nid': [u_nid for _ in range(len(neg_i_nids))], 'neg_i_nid': neg_i_nids})
-            pos_neg_pair_t = torch.from_numpy(
-                pd.merge(pos_i_nid_df, neg_i_nid_df, how='inner', on='u_nid').to_numpy()
-            ).to(self.train_args['device'])
-
-            if self.model_args['model_type'] == 'MF':
-                pos_neg_pair_t[:, 0] -= dataset.e2nid_dict['uid'][0]
-                pos_neg_pair_t[:, 1:] -= dataset.e2nid_dict['iid'][0]
-            loss = model.loss(pos_neg_pair_t).detach().cpu().item()
-
-            pos_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(pos_i_nids))])).to(
-                self.train_args['device'])
-            pos_i_nids_t = torch.from_numpy(np.array(pos_i_nids)).to(self.train_args['device'])
-            neg_u_nids_t = torch.from_numpy(np.array([u_nid for _ in range(len(neg_i_nids))])).to(
-                self.train_args['device'])
-            neg_i_nids_t = torch.from_numpy(np.array(neg_i_nids)).to(self.train_args['device'])
-            if self.model_args['model_type'] == 'MF':
-                pos_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                neg_u_nids_t -= dataset.e2nid_dict['uid'][0]
-                pos_i_nids_t -= dataset.e2nid_dict['iid'][0]
-                neg_i_nids_t -= dataset.e2nid_dict['iid'][0]
-            pos_pred = model.predict(pos_u_nids_t, pos_i_nids_t).reshape(-1)
-            neg_pred = model.predict(neg_u_nids_t, neg_i_nids_t).reshape(-1)
-
-            _, indices = torch.sort(torch.cat([pos_pred, neg_pred]), descending=True)
-            hit_vec = (indices < len(pos_i_nids)).cpu().detach().numpy()
-            pos_pred = pos_pred.cpu().detach().numpy()
-            neg_pred = neg_pred.cpu().detach().numpy()
-
-            HRs = np.vstack([HRs, hit(hit_vec)])
-            NDCGs = np.vstack([NDCGs, ndcg(hit_vec)])
-            AUC = np.vstack([AUC, auc(pos_pred, neg_pred)])
-            eval_losses = np.vstack([eval_losses, loss])
-            test_bar.set_description(
-                'Run {}, epoch: {}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
-                'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, eval loss: {:.4f}, '.format(
-                    run, epoch, HRs.mean(axis=0)[0], HRs.mean(axis=0)[5], HRs.mean(axis=0)[10], HRs.mean(axis=0)[15],
-                    NDCGs.mean(axis=0)[0], NDCGs.mean(axis=0)[5], NDCGs.mean(axis=0)[10], NDCGs.mean(axis=0)[15],
-                    AUC.mean(axis=0)[0], eval_losses.mean(axis=0)[0])
-            )
-        print("GPU Usage after each epoch")
-        gpu_usage()
-        return np.mean(HRs, axis=0), np.mean(NDCGs, axis=0), np.mean(AUC, axis=0), np.mean(eval_losses, axis=0)
-
     def run(self):
         global_logger_path = self.train_args['logger_folder']
         if not os.path.exists(global_logger_path):
@@ -236,6 +158,7 @@ class CKESolver(BaseSolver):
                     weights_path = os.path.join(self.train_args['weights_folder'], 'run_{}'.format(str(run)))
                     if not os.path.exists(weights_path):
                         os.makedirs(weights_path, exist_ok=True)
+
                     weights_file = os.path.join(weights_path, 'latest.pkl')
                     model, optimizer, last_epoch, rec_metrics = load_model(weights_file, model, optimizer,
                                                                            self.train_args['device'])
@@ -278,7 +201,6 @@ class CKESolver(BaseSolver):
                         for epoch in range(start_epoch, self.train_args['epochs'] + 1):
                             loss_per_batch = []
                             model.train()
-                            loss_per_batch = []
                             dataset.negative_sampling()
                             dataloader = DataLoader(
                                 dataset,

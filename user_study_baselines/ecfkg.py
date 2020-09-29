@@ -10,7 +10,7 @@ from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
 from torch.utils.data import DataLoader
-from graph_recsys_benchmark.models import ECFKGRecsysModel
+from graph_recsys_benchmark.models import CFKGRecsysModel
 from graph_recsys_benchmark.solvers import BaseSolver
 from graph_recsys_benchmark.utils import *
 
@@ -85,7 +85,7 @@ print('task params: {}'.format(model_args))
 print('train params: {}'.format(train_args))
 
 
-class MCFKGRecsysModel(ECFKGRecsysModel):
+class MCFKGRecsysModel(CFKGRecsysModel):
     def kg_loss(self, batch):
         h = self.x[batch[:, 0]]
         pos_t = self.x[batch[:, 1]]
