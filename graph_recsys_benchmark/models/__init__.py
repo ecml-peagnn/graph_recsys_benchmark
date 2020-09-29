@@ -9,6 +9,7 @@ from .kgat import KGATRecsysModel
 from .walk import WalkBasedRecsysModel
 from .metapath2vec import MetaPath2Vec
 from .ecfkg import ECFKGRecsysModel
+from .cke import CKERecsysModel
 
 __all__ = [
     'GCNRecsysModel', 'GCNInnerRecsysModel',
@@ -21,5 +22,6 @@ __all__ = [
     'KGATRecsysModel',
     'WalkBasedRecsysModel',
     'MetaPath2Vec',
-    'ECFKGRecsysModel'
+    'ECFKGRecsysModel',
+    'CKERecsysModel'
 ]

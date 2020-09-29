@@ -1380,6 +1380,153 @@ class MovieLens(Dataset):
         self.train_data = train_data_t[shuffle_idx]
         self.train_data_length = train_data_t.shape[0]
 
+    def negative_sampling(self):
+        """
+        Replace positive items with random/unseen items
+        """
+        print('KG negative sampling...')
+        pos_edge_index_r_nps = [
+            (edge_index, np.ones((edge_index.shape[1], 1)) * self.edge_type_dict[edge_type])
+            for edge_type, edge_index in self.edge_index_nps.items()
+        ]
+        pos_edge_index_trans_np = np.hstack([_[0] for _ in pos_edge_index_r_nps]).T
+        pos_r_np = np.vstack([_[1] for _ in pos_edge_index_r_nps])
+        neg_t_np = np.random.randint(low=0, high=self.num_nodes, size=(pos_edge_index_trans_np.shape[0], 1))
+        kg_train_data_np = np.hstack([pos_edge_index_trans_np, neg_t_np, pos_r_np])
+        kg_train_data_t = torch.from_numpy(kg_train_data_np).long()
+        shuffle_idx = torch.randperm(kg_train_data_t.shape[0])
+        kg_train_data = kg_train_data_t[shuffle_idx]
+        kg_train_data_length = kg_train_data.shape[0]
+
+        print('CF negative sampling...')
+        pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
+        num_interactions = pos_edge_index_trans_np.shape[0]
+        if self.cf_loss_type == 'BCE':
+            pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+            if self.sampling_strategy == 'random':
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.random.randint(
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        ),
+                        torch.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_samples_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    neg_inids.append(negative_inids)
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.vstack(neg_inids),
+                        np.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            else:
+                raise NotImplementedError
+            cf_train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'BPR':
+            train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            if self.sampling_strategy == 'random':
+                neg_inid_np = np.random.randint(
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_edge_index_trans_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = rd.choices(negative_inids, k=self.num_negative_samples)
+                    negative_inids = np.array(negative_inids, dtype=np.long).reshape(-1, 1)
+                    neg_inids.append(negative_inids)
+                neg_inid_np = np.vstack(neg_inids)
+            else:
+                raise NotImplementedError
+            cf_train_data_np = np.hstack([train_data_np, neg_inid_np])
+            if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
+                # add entity aware data to batches
+                movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
+                if self.name == '1m':
+                    users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
+                else:
+                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
+                if self.name == '25m':
+                    genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
+
+                # Build item entity
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    pbar.set_description('Sampling item entities...')
+
+                    feat_nids = []
+
+                    year_nid = self.e2nid_dict['year'][movies[movies.iid == iid]['year'].item()]
+                    feat_nids.append(year_nid)
+
+                    genre_nids = [self.e2nid_dict['genre'][genre] for genre in self.unique_genres if movies[movies.iid == iid][genre].item()]
+                    feat_nids += genre_nids
+
+                    actor_nids = [self.e2nid_dict['actor'][actor] for actor in movies[movies.iid == iid]['actors'].item().split(',') if actor != '']
+                    feat_nids += actor_nids
+
+                    director_nids = [self.e2nid_dict['director'][director] for director in movies[movies.iid == iid]['directors'].item().split(',') if director != '']
+                    feat_nids += director_nids
+
+                    writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies.iid == iid]['writers'].item().split(',') if writer != '']
+                    feat_nids += writer_nids
+
+                    if self.name != '1m':
+                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
+                        feat_nids += tag_nids
+                    if self.name == '25m':
+                        genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging.iid == iid].genome_tid]
+                        feat_nids += genome_tag_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+                # Build user entity
+                uid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_uids, total=len(self.unique_uids))
+                for uid in pbar:
+                    pbar.set_description('Sampling user entities...')
+                    feat_nids = []
+
+                    if self.name == '1m':
+                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in users[users.uid == uid].occupation]
+                        feat_nids += occ_nids
+
+                        age_nids = [self.e2nid_dict['age'][age] for age in users[users.uid == uid].age]
+                        feat_nids += age_nids
+
+                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in users[users.uid == uid].gender]
+                        feat_nids += gender_nids
+                    else:
+                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
+                        feat_nids += tag_nids
+                    uid_feat_nids.append(feat_nids)
+                self.uid_feat_nids = uid_feat_nids
+        else:
+            raise NotImplementedError
+        cf_train_data_t = torch.from_numpy(cf_train_data_np).long()
+        shuffle_idx = torch.randperm(cf_train_data_t.shape[0])
+        cf_train_data = cf_train_data_t[shuffle_idx]
+        cf_train_data_length = cf_train_data.shape[0]
+
+        self.train_data_length = min(kg_train_data_length, cf_train_data_length)
+        self.train_data = torch.cat([cf_train_data[:self.train_data_length], kg_train_data[:self.train_data_length]], dim=1)
+
     def __len__(self):
         return self.train_data_length
 
