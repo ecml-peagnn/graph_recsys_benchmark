@@ -104,8 +104,9 @@ class GraphRecsysModel(torch.nn.Module):
 
     def eval(self):
         super(GraphRecsysModel, self).eval()
-        with torch.no_grad():
-            self.cached_repr = self.forward()
+        if self.__class__.__name__ not in ['KGATRecsysModel', 'KGCNRecsysModel']:
+            with torch.no_grad():
+                self.cached_repr = self.forward()
 
 
 class MFRecsysModel(torch.nn.Module):

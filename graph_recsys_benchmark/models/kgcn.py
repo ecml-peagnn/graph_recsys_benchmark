@@ -1,15 +1,15 @@
 import torch
 import torch.nn.functional as F
 from torch.nn import Parameter
-from graph_recsys_benchmark.nn import KGATConv
+from graph_recsys_benchmark.nn import KGCNConv
 from torch_geometric.nn.inits import glorot
 
 from .base import GraphRecsysModel
 
 
-class KGATRecsysModel(GraphRecsysModel):
+class KGCNRecsysModel(GraphRecsysModel):
     def __init__(self, **kwargs):
-        super(KGATRecsysModel, self).__init__(**kwargs)
+        super(KGCNRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
         self.dropout = kwargs['dropout']
@@ -20,15 +20,15 @@ class KGATRecsysModel(GraphRecsysModel):
 
         self.edge_index, self.edge_attr = self.update_graph_input(kwargs['dataset'])
 
-        self.conv1 = KGATConv(
+        self.conv1 = KGCNConv(
             kwargs['emb_dim'],
             kwargs['hidden_size'],
         )
-        self.conv2 = KGATConv(
+        self.conv2 = KGCNConv(
             kwargs['hidden_size'],
             kwargs['hidden_size'] // 2,
         )
-        self.conv3 = KGATConv(
+        self.conv3 = KGCNConv(
             kwargs['hidden_size'] // 2,
             kwargs['hidden_size'] // 4,
         )
