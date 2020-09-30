@@ -670,8 +670,6 @@ class Yelp(Dataset):
 
             print('Preprocessing done.')
 
-            print('len', len(user), len(business), len(reviewtip))
-
             business.to_pickle(join(self.processed_dir, 'business.pkl'))
             user.to_pickle(join(self.processed_dir, 'user.pkl'))
             reviewtip.to_pickle(join(self.processed_dir, 'reviewtip.pkl'))
@@ -823,6 +821,144 @@ class Yelp(Dataset):
         shuffle_idx = torch.randperm(train_data_t.shape[0])
         self.train_data = train_data_t[shuffle_idx]
         self.train_data_length = train_data_t.shape[0]
+
+    def negative_sampling(self):
+        """
+        Replace positive items with random/unseen items
+        """
+        print('KG negative sampling...')
+        pos_edge_index_r_nps = [
+            (edge_index, np.ones((edge_index.shape[1], 1)) * self.edge_type_dict[edge_type])
+            for edge_type, edge_index in self.edge_index_nps.items()
+        ]
+        pos_edge_index_trans_np = np.hstack([_[0] for _ in pos_edge_index_r_nps]).T
+        pos_r_np = np.vstack([_[1] for _ in pos_edge_index_r_nps])
+        neg_t_np = np.random.randint(low=0, high=self.num_nodes, size=(pos_edge_index_trans_np.shape[0], 1))
+        kg_train_data_np = np.hstack([pos_edge_index_trans_np, neg_t_np, pos_r_np])
+        kg_train_data_t = torch.from_numpy(kg_train_data_np).long()
+        shuffle_idx = torch.randperm(kg_train_data_t.shape[0])
+        kg_train_data = kg_train_data_t[shuffle_idx]
+        kg_train_data_length = kg_train_data.shape[0]
+
+        print('CF negative sampling...')
+        pos_edge_index_trans_np = self.edge_index_nps['user2item'].T
+        num_interactions = pos_edge_index_trans_np.shape[0]
+        if self.cf_loss_type == 'BCE':
+            pos_samples_np = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+            if self.sampling_strategy == 'random':
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.random.randint(
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        ),
+                        torch.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_samples_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = np.random.choice(negative_inids, size=(self.num_negative_samples, 1))
+                    neg_inids.append(negative_inids)
+                neg_samples_np = np.hstack(
+                    [
+                        np.repeat(pos_samples_np[:, 0].reshape(-1, 1), repeats=self.num_negative_samples, axis=0),
+                        np.vstack(neg_inids),
+                        np.zeros((num_interactions * self.num_negative_samples, 1))
+                    ]
+                )
+            else:
+                raise NotImplementedError
+            cf_train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'BPR':
+            train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
+            if self.sampling_strategy == 'random':
+                neg_inid_np = np.random.randint(
+                            low=self.type_accs['iid'],
+                            high=self.type_accs['iid'] + self.num_iids,
+                            size=(num_interactions * self.num_negative_samples, 1)
+                        )
+            elif self.sampling_strategy == 'unseen':
+                neg_inids = []
+                u_nids = pos_edge_index_trans_np[:, 0]
+                p_bar = tqdm.tqdm(u_nids)
+                for u_nid in p_bar:
+                    negative_inids = self.test_pos_unid_inid_map[u_nid] + self.neg_unid_inid_map[u_nid]
+                    negative_inids = rd.choices(negative_inids, k=self.num_negative_samples)
+                    negative_inids = np.array(negative_inids, dtype=np.long).reshape(-1, 1)
+                    neg_inids.append(negative_inids)
+                neg_inid_np = np.vstack(neg_inids)
+            else:
+                raise NotImplementedError
+            cf_train_data_np = np.hstack([train_data_np, neg_inid_np])
+            if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
+                # add entity aware data to batches
+                business = pd.read_pickle(join(self.processed_dir, 'business.pkl')).fillna('')
+                user = pd.read_pickle(join(self.processed_dir, 'user.pkl')).fillna('')
+
+                # Build item entity
+                iid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_iids, total=len(self.unique_iids))
+                for iid in pbar:
+                    pbar.set_description('Sampling item entities...')
+
+                    feat_nids = []
+
+                    iid_star_nids = self.e2nid_dict['item_star'][business[business.business_id == iid]['stars'].item()]
+                    feat_nids.append(iid_star_nids)
+
+                    iid_reviewcount_nids = [self.e2nid_dict['item_reviewcount'][business[business.business_id == iid]['review_count'].item()]]
+                    feat_nids += iid_reviewcount_nids
+
+                    iid_attribute_nids = [self.e2nid_dict['item_attribute'][attribute] for attribute in
+                                          business[business.business_id == iid]['attributes'].item().split(',')
+                                          if attribute != '']
+                    feat_nids += iid_attribute_nids
+
+                    iid_categorie_nids = [self.e2nid_dict['item_categorie'][category] for category in
+                                         business[business.business_id == iid]['categories'].item().split(',') if
+                                         category != '']
+                    feat_nids += iid_categorie_nids
+
+                    iid_checkincount_nids = [self.e2nid_dict['item_checkincount'][business[business.business_id == iid]['checkin_count'].item()]]
+                    feat_nids += iid_checkincount_nids
+                    iid_feat_nids.append(feat_nids)
+                self.iid_feat_nids = iid_feat_nids
+
+                # Build user entity
+                uid_feat_nids = []
+                pbar = tqdm.tqdm(self.unique_uids, total=len(self.unique_uids))
+                for uid in pbar:
+                    pbar.set_description('Sampling user entities...')
+                    feat_nids = []
+
+                    uid_reviewcount_nids = self.e2nid_dict['user_reviewcount'][user[user.user_id == uid]['review_count'].item()]
+                    feat_nids.append(uid_reviewcount_nids)
+
+                    uid_friendcount_nids = [self.e2nid_dict['user_friendcount'][user[user.user_id == uid]['friends_count'].item()]]
+                    feat_nids += uid_friendcount_nids
+
+                    uid_fan_nids = [self.e2nid_dict['user_fan'][user[user.user_id == uid]['fans'].item()]]
+                    feat_nids += uid_fan_nids
+
+                    uid_star_nids = [self.e2nid_dict['user_star'][user[user.user_id == uid]['average_stars'].item()]]
+                    feat_nids += uid_star_nids
+                    uid_feat_nids.append(feat_nids)
+                self.uid_feat_nids = uid_feat_nids
+        else:
+            raise NotImplementedError
+        cf_train_data_t = torch.from_numpy(cf_train_data_np).long()
+        shuffle_idx = torch.randperm(cf_train_data_t.shape[0])
+        cf_train_data = cf_train_data_t[shuffle_idx]
+        cf_train_data_length = cf_train_data.shape[0]
+
+        self.train_data_length = min(kg_train_data_length, cf_train_data_length)
+        self.train_data = torch.cat([cf_train_data[:self.train_data_length], kg_train_data[:self.train_data_length]], dim=1)
 
     def __len__(self):
         return self.train_data_length
