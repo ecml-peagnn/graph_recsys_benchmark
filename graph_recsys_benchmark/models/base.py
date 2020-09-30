@@ -53,7 +53,7 @@ class GraphRecsysModel(torch.nn.Module):
             item_entity_mask, user_entity_mask = pos_neg_pair_t[:, 5], pos_neg_pair_t[:, 8]
 
             # cos
-            if hasattr(self, 'entiy_aware_type') and self.entiy_aware_type == 'cos':
+            if hasattr(self, 'entity_aware_type') and self.entity_aware_type == 'cos':
                 x = F.normalize(self.x)
                 item_pos_reg = x[pos_neg_pair_t[:, 1]] * x[pos_item_entity]
                 item_neg_reg = x[pos_neg_pair_t[:, 1]] * x[neg_item_entity]

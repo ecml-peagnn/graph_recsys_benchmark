@@ -25,7 +25,7 @@ parser.add_argument('--sampling_strategy', type=str, default='random', help='') 
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 
 # Pretrain model
-parser.add_argument('--pretrain', type=str, default='true', help='')
+parser.add_argument('--pretrain', type=str, default='false', help='')
 parser.add_argument('--walk_length', type=int, default=100, help='')
 parser.add_argument('--context_size', type=int, default=7, help='')
 
@@ -36,11 +36,11 @@ parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for 
 parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2(for small) #2,2,2,2,2,2,1,1,1(for 1m) #2,2,2,2,2,2,1,1,1,1 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
-parser.add_argument('--entity_aware_type', type=str, default='cos', help='')
+parser.add_argument('--entity_aware_type', type=str, default='', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
-parser.add_argument('--init_eval', type=str, default='false', help='')
+parser.add_argument('--init_eval', type=str, default='true', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
