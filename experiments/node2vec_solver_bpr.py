@@ -50,6 +50,7 @@ parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
 parser.add_argument('--epochs', type=int, default=30, help='')          #30(for others), 20(only for Yelp)
+parser.add_argument('--rk_epochs', type=int, default=300, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')		#1024(for others), 4096(only for 25m)
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -93,7 +94,7 @@ train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
     'random_walk_opt': args.random_walk_opt, 'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs,
+    'runs': args.runs, 'epochs': args.epochs, 'rk_epochs': args.rk_epochs,
     'batch_size': args.batch_size, 'random_walk_batch_size': args.random_walk_batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device, 'random_walk_lr': args.random_walk_lr,
@@ -173,7 +174,7 @@ class Node2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, random_walk_epoch = load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
                         print("Train new random walk model, since no random walk model checkpoint_backup found at '{}'".format(weights_file))
@@ -192,7 +193,7 @@ class Node2VecSolver(BaseSolver):
                         random_walk_train_loss_per_run = random_walk_loss / len(loader)
 
                         weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
-                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run)
+                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, self.train_args['rk_epochs'])
 
                     # Init the RecSys model
                     with torch.no_grad():

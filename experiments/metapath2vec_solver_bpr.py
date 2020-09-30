@@ -49,7 +49,8 @@ parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--epochs', type=int, default=30, help='')          #30(for others), 20(only for Yelp)
+parser.add_argument('--epochs', type=int, default=30, help='') #30(for others), 20(only for Yelp)
+parser.add_argument('--rk_epochs', type=int, default=300, help='')
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')		#1024(for others), 4096(only for 25m)
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -93,7 +94,7 @@ train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
     'random_walk_opt': args.random_walk_opt, 'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs,
+    'runs': args.runs, 'epochs': args.epochs, 'rk_epochs': args.rk_epochs,
     'batch_size': args.batch_size, 'random_walk_batch_size': args.random_walk_batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device, 'random_walk_lr': args.random_walk_lr,
@@ -152,45 +153,19 @@ class MetaPath2VecSolver(BaseSolver):
 
                     # Create random walk model
                     if self.dataset_args['dataset'] == "Movielens":
-                        if self.dataset_args['name'] == "1m":
-                            edge_index_dict = {
-                                ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
-                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
-                            }
-                            metapath = [
-                                ('uid', 'has watched', 'iid'),
-                                ('iid', 'has the genre', 'genre'),
-                                ('genre', 'as the genre of', 'iid'),
-                                ('iid', 'has been watched by', 'uid'),
-                            ]
-                        if self.dataset_args['name'] == "latest-small":
-                            edge_index_dict = {
-                                ('genome_tag', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genome_tag2item']).long().to(self.train_args['device']),
-                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('iid', 'has the genre', 'genome_tag'): torch.from_numpy(np.flip(dataset.edge_index_nps['genome_tag2item'], 0).copy()).long().to(self.train_args['device']),
-                            }
-                            metapath = [
-                                ('uid', 'has watched', 'iid'),
-                                ('iid', 'has the genre', 'genre'),
-                                ('genre', 'as the genre of', 'iid'),
-                                ('iid', 'has been watched by', 'uid'),
-                            ]
-                        if self.dataset_args['name'] == "25m":
-                            edge_index_dict = {
-                                ('genome_tag', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genome_tag2item']).long().to(self.train_args['device']),
-                                ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
-                                ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
-                                ('iid', 'has the genre', 'genome_tag'): torch.from_numpy(np.flip(dataset.edge_index_nps['genome_tag2item'], 0).copy()).long().to(self.train_args['device']),
-                            }
-                            metapath = [
-                                ('uid', 'has watched', 'iid'),
-                                ('iid', 'has the genre', 'genre'),
-                                ('genre', 'as the genre of', 'iid'),
-                                ('iid', 'has been watched by', 'uid'),
-                            ]
+                        edge_index_dict = {
+                            ('genre', 'as the genre of', 'iid'): torch.from_numpy(dataset.edge_index_nps['genre2item']).long().to(self.train_args['device']),
+                            ('iid', 'has been watched by', 'uid'): torch.from_numpy(np.flip(dataset.edge_index_nps['user2item'], 0).copy()).long().to(self.train_args['device']),
+                            ('uid', 'has watched', 'iid'): torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(self.train_args['device']),
+                            ('iid', 'has the genre', 'genre'): torch.from_numpy(np.flip(dataset.edge_index_nps['genre2item'], 0).copy()).long().to(self.train_args['device']),
+                        }
+                        metapath = [
+                            ('uid', 'has watched', 'iid'),
+                            ('iid', 'has the genre', 'genre'),
+                            ('genre', 'as the genre of', 'iid'),
+                            ('iid', 'has been watched by', 'uid'),
+                        ]
+
                     elif self.dataset_args['dataset'] == "Yelp":
                         edge_index_dict = {
                             ('item_reviewcount', 'as the number of reviews of', 'iid'): torch.from_numpy(dataset.edge_index_nps['reviewcount2item']).long().to(self.train_args['device']),
@@ -232,7 +207,7 @@ class MetaPath2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, random_walk_epoch = \
                             load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
@@ -252,7 +227,7 @@ class MetaPath2VecSolver(BaseSolver):
                         random_walk_train_loss_per_run = random_walk_loss / len(loader)
 
                         weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
-                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run)
+                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, self.train_args['rk_epochs'])
 
                     # Init the RecSys model
                     with torch.no_grad():
