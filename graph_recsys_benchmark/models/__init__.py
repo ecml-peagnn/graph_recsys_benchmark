@@ -11,12 +11,14 @@ from .walk import WalkBasedRecsysModel
 from .metapath2vec import MetaPath2Vec
 from .cfkg import CFKGRecsysModel
 from .cke import CKERecsysModel
+from .mf import MFRecsysModel
+from .ngcf import NGCFRecsysModel
 
 __all__ = [
     'GCNRecsysModel', 'GCNInnerRecsysModel',
     'PinSageRecsysModel',
     'GATRecsysModel', 'GATInnerRecsysModel',
-    'NCFRecsysModel',
+    'NCFRecsysModel', 'MFRecsysModel',
     'PEAGCNRecsysModel', 'PEAGCNJKBaseRecsysModel',
     'PEAGATRecsysModel', 'PEAGATJKRecsysModel',
     'PEASageRecsysModel', 'PEASageJKRecsysModel',
@@ -24,5 +26,6 @@ __all__ = [
     'WalkBasedRecsysModel',
     'MetaPath2Vec',
     'CFKGRecsysModel',
-    'CKERecsysModel'
+    'CKERecsysModel',
+    'NGCFRecsysModel'
 ]
