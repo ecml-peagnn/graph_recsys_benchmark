@@ -25,7 +25,7 @@ parser.add_argument('--sampling_strategy', type=str, default='random', help='') 
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 
 # Model params
-parser.add_argument('--factor_num', type=int, default=64, help='')
+parser.add_argument('--factor_num', type=int, default=16, help='')
 parser.add_argument('--dropout', type=float, default=0, help='')
 parser.add_argument('--num_layers', type=int, default=4, help='')
 
