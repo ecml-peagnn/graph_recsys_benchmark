@@ -390,14 +390,18 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 meta_path_edge_indicis_3 = [writer2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
                 meta_path_edge_indicis_4 = [director2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
                 meta_path_edge_indicis_5 = [genre2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
-                meta_path_edge_indicis_6 = [gender2user_edge_index, user2item_edge_index]
-                meta_path_edge_indicis_7 = [age2user_edge_index, user2item_edge_index]
-                meta_path_edge_indicis_8 = [occ2user_edge_index, user2item_edge_index]
+                meta_path_edge_indicis_6 = [user2item_edge_index, torch.flip(user2item_edge_index, dims=[0])]
+
+                meta_path_edge_indicis_7 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
+                meta_path_edge_indicis_8 = [gender2user_edge_index, user2item_edge_index]
+                meta_path_edge_indicis_9 = [age2user_edge_index, user2item_edge_index]
+                meta_path_edge_indicis_10 = [occ2user_edge_index, user2item_edge_index]
 
                 meta_path_edge_index_list = [
                     meta_path_edge_indicis_1, meta_path_edge_indicis_2, meta_path_edge_indicis_3,
                     meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
-                    meta_path_edge_indicis_7, meta_path_edge_indicis_8
+                    meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
+                    meta_path_edge_indicis_10
                 ]
         if dataset_args['name'] == "25m":
             user2item_edge_index = torch.from_numpy(dataset.edge_index_nps['user2item']).long().to(
@@ -445,8 +449,9 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                 meta_path_edge_indicis_9 = [torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index]
 
                 meta_path_edge_indicis_10 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-                meta_path_edge_indicis_11 = [torch.flip(tag2item_edge_index, dims=[0]), tag2item_edge_index]
-                meta_path_edge_indicis_12 = [torch.flip(tag2user_edge_index, dims=[0]), tag2item_edge_index]
+                meta_path_edge_indicis_11 = [torch.flip(tag2user_edge_index, dims=[0]), user2item_edge_index]
+                meta_path_edge_indicis_12 = [torch.flip(tag2item_edge_index, dims=[0]), tag2item_edge_index]
+                meta_path_edge_indicis_13 = [torch.flip(tag2user_edge_index, dims=[0]), tag2item_edge_index]
 
                 # meta_path_edge_indicis_13 = [torch.flip(user2item_edge_index, dims=[0]),       # New 3 step metapath
                 #                              torch.flip(tag2user_edge_index, dims=[0]), tag2user_edge_index]
@@ -464,7 +469,8 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
                     meta_path_edge_indicis_4, meta_path_edge_indicis_5, meta_path_edge_indicis_6,
                     meta_path_edge_indicis_7, meta_path_edge_indicis_8, meta_path_edge_indicis_9,
                     meta_path_edge_indicis_10, meta_path_edge_indicis_11, meta_path_edge_indicis_12,
-                    # meta_path_edge_indicis_13, meta_path_edge_indicis_14, meta_path_edge_indicis_15,
+                    meta_path_edge_indicis_13
+                    # meta_path_edge_indicis_14, meta_path_edge_indicis_15,
                     # meta_path_edge_indicis_16, meta_path_edge_indicis_17
                 ]
     elif dataset_args['dataset'] == "Yelp":
