@@ -27,7 +27,7 @@ parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
 parser.add_argument('--factor_num', type=int, default=64, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
-parser.add_argument('--dropout', type=float, default=0, help='')
+parser.add_argument('--dropout', type=float, default=0.3, help='')
 
 # Train params
 parser.add_argument('--init_eval', type=str, default='false', help='')
