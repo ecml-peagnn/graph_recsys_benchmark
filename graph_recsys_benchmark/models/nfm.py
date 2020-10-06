@@ -8,7 +8,7 @@ class NFMRecsysModel(MFRecsysModel):
         super(NFMRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
-        self.emb = NeuralFactorizationMachineModel([kwargs['num_users'], kwargs['num_items']], kwargs['factor_num'], (kwargs['hidden_size'],), [kwargs['dropout'], kwargs['dropout']])
+        self.emb = NeuralFactorizationMachineModel([kwargs['num_users'], kwargs['num_items']], kwargs['emb_dim'], (kwargs['hidden_size'],), [kwargs['dropout'], kwargs['dropout']])
 
     def reset_parameters(self):
         pass
