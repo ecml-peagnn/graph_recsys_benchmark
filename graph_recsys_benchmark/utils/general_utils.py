@@ -4,6 +4,8 @@ import os
 import pickle
 import numpy as np
 import gc
+import pandas as pd
+import tqdm
 
 if torch.cuda.is_available():
     from GPUtil import showUtilization as gpu_usage
@@ -539,3 +541,48 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
     else:
         raise NotImplementedError
     return meta_path_edge_index_list
+
+
+def compute_item_similarity_mat(dataset, metapath):
+    print('Compute similiary for metapath {}'.format(metapath))
+    assert len(metapath) > 0
+    if metapath[0][0] == '-':
+        path = np.flip(dataset.edge_index_nps[metapath[0][1:]], axis=0).astype(np.int)
+    else:
+        path = dataset.edge_index_nps[metapath[0]].astype(np.int)
+    path_df = pd.DataFrame(path.T, columns=['0', '1'])
+    for step_idx in range(1, len(metapath)):
+        if metapath[step_idx][0] == '-':
+            path = np.flip(dataset.edge_index_nps[metapath[step_idx][1:]], axis=0).astype(np.int)
+        else:
+            path = dataset.edge_index_nps[metapath[step_idx]].astype(np.int)
+        step_df = pd.DataFrame(path.T, columns=[str(step_idx), str(step_idx + 1)])
+        path_df = path_df.merge(step_df, how='inner', on=str(step_idx))
+    path_np = path_df.to_numpy()
+
+    num_iids = dataset['num_iids']
+    iid_accs = dataset.type_accs['iid']
+    S = []
+    pbar = tqdm.tqdm(range(num_iids))
+    for i in pbar:
+        s = []
+        head = path_np[path_np[:, 0] == (i + iid_accs)]
+        for j in range(num_iids):
+            s.append(np.sum(head[:, -1] == (j + iid_accs)))
+        S.append(np.array(s) / s[i])
+    S = np.array(S)
+    import pdb
+    pdb.set_trace()
+    return S
+
+
+def compute_diffused_score_mat(dataset, S):
+    print('Compute diffused score mat')
+    diffused_score_mat = np.zeros((dataset.num_uids, dataset.num_iids))
+    edge_index = dataset.edge_index_nps['user2item'].astype(np.int)
+    for edge, rating in zip(edge_index.T, dataset.rating_np):
+        diffused_score_mat[edge[0] - dataset.type_accs['uid'], edge[1] - dataset.type_accs['iid']] = rating
+    import pdb
+    pdb.set_trace()
+    diffused_score_mat[np.where(diffused_score_mat == 0)] = np.matmul(diffused_score_mat, S)[np.where(diffused_score_mat == 0)]
+    return diffused_score_mat

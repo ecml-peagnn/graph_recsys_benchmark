@@ -25,5 +25,7 @@ __all__ = [
     'save_random_walk_logger',
     'update_pea_graph_input',
     'load_kg_global_logger',
-    'save_kg_global_logger'
+    'save_kg_global_logger',
+    'compute_diffused_score_mat',
+    'compute_item_similarity_mat'
 ]
