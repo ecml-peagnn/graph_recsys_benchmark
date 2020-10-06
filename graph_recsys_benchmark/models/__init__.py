@@ -13,6 +13,10 @@ from .cfkg import CFKGRecsysModel
 from .cke import CKERecsysModel
 from .mf import MFRecsysModel
 from .ngcf import NGCFRecsysModel
+from .nfm import NFMRecsysModel
+from .xdfm import XDFMRecsysModel
+from .hetrec import HetRecRecsysModel
+from .herec import HeRecRecsysModel
 
 __all__ = [
     'GCNRecsysModel', 'GCNInnerRecsysModel',
@@ -27,5 +31,7 @@ __all__ = [
     'MetaPath2Vec',
     'CFKGRecsysModel',
     'CKERecsysModel',
-    'NGCFRecsysModel'
+    'NGCFRecsysModel', 'XDFMRecsysModel',
+    'NFMRecsysModel', 'HetRecRecsysModel',
+    'HeRecRecsysModel'
 ]

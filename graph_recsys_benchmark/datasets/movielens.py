@@ -318,6 +318,7 @@ def generate_mlsmall_hete_graph(
     print('Creating rating property edges...')
     test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
+    rating_np = np.zeros((0,))
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -325,9 +326,11 @@ def generate_mlsmall_hete_graph(
         pbar.set_description('Creating the edges for the user {}'.format(uid))
         uid_ratings = sorted_ratings[sorted_ratings.uid == uid].sort_values('timestamp')
         uid_iids = uid_ratings.iid.to_numpy()
+        uid_ratings = uid_ratings.rating.to_numpy()
 
         unid = e2nid_dict['uid'][uid]
         train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
+        train_pos_uid_ratings = uid_ratings[:-1]
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
@@ -341,6 +344,9 @@ def generate_mlsmall_hete_graph(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
         )
         user2item_edge_index_np = np.hstack([user2item_edge_index_np, unid_user2item_edge_index_np])
+
+        rating_np = np.concatenate([rating_np, train_pos_uid_ratings])
+    dataset_property_dict['rating_np'] = rating_np
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
@@ -569,16 +575,19 @@ def generate_ml1m_hete_graph(
     print('Creating rating property edges...')
     test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
+    rating_np = np.zeros((0,))
     user2item_edge_index_np = np.zeros((2, 0))
+    sorted_ratings = ratings.sort_values('uid')
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
-    sorted_ratings = ratings.sort_values('timestamp')
     for uid in pbar:
         pbar.set_description('Creating the edges for the user {}'.format(uid))
-        uid_ratings = sorted_ratings[sorted_ratings.uid == uid]
+        uid_ratings = sorted_ratings[sorted_ratings.uid == uid].sort_values('timestamp')
         uid_iids = uid_ratings.iid.to_numpy()
+        uid_ratings = uid_ratings.rating.to_numpy()
 
         unid = e2nid_dict['uid'][uid]
         train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
+        train_pos_uid_ratings = uid_ratings[:-1]
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
@@ -592,6 +601,9 @@ def generate_ml1m_hete_graph(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
         )
         user2item_edge_index_np = np.hstack([user2item_edge_index_np, unid_user2item_edge_index_np])
+
+        rating_np = np.concatenate([rating_np, train_pos_uid_ratings])
+    dataset_property_dict['rating_np'] = rating_np
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
@@ -805,6 +817,7 @@ def generate_ml25m_hete_graph(
     print('Creating rating property edges...')
     test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
 
+    rating_np = np.zeros((0,))
     user2item_edge_index_np = np.zeros((2, 0))
     sorted_ratings = ratings.sort_values('uid')
     pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
@@ -812,9 +825,11 @@ def generate_ml25m_hete_graph(
         pbar.set_description('Creating the edges for the user {}'.format(uid))
         uid_ratings = sorted_ratings[sorted_ratings.uid == uid].sort_values('timestamp')
         uid_iids = uid_ratings.iid.to_numpy()
+        uid_ratings = uid_ratings.rating.to_numpy()
 
         unid = e2nid_dict['uid'][uid]
         train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
+        train_pos_uid_ratings = uid_ratings[:-1]
         train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
         test_pos_uid_iids = list(uid_iids[-1:])
         test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
@@ -828,6 +843,9 @@ def generate_ml25m_hete_graph(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
         )
         user2item_edge_index_np = np.hstack([user2item_edge_index_np, unid_user2item_edge_index_np])
+
+        rating_np = np.concatenate([rating_np, train_pos_uid_ratings])
+    dataset_property_dict['rating_np'] = rating_np
     edge_index_nps['user2item'] = user2item_edge_index_np
 
     dataset_property_dict['edge_index_nps'] = edge_index_nps
@@ -1288,6 +1306,8 @@ class MovieLens(Dataset):
             else:
                 raise NotImplementedError
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'MSE':
+            train_data_np = np.hstack([pos_edge_index_trans_np, self.rating_np.reshape(-1, 1)])
         elif self.cf_loss_type == 'BPR':
             train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             if self.sampling_strategy == 'random':
