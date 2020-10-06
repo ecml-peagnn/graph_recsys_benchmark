@@ -1,5 +1,4 @@
 import torch
-from torch.nn import functional as F
 from torch.nn import Parameter
 from torch import Tensor
 from .base import BaseRecsysModel
@@ -10,31 +9,30 @@ class HetRecRecsysModel(BaseRecsysModel):
         super(HetRecRecsysModel, self).__init__(**kwargs)
 
     def _init(self, **kwargs):
-        self.num_metapaths = kwargs['num_metapaths']
         self.factor_num = kwargs['factor_num']
-        self.user_emb = torch.nn.Embedding(kwargs['dataset'].num_uids, kwargs['num_metapaths'] * kwargs['factor_num'])
-        self.item_emb = torch.nn.Embedding(kwargs['dataset'].num_iids, kwargs['num_metapaths'] * kwargs['factor_num'])
+        self.num_uids, self.num_iids = kwargs['dataset'].num_uids, kwargs['dataset'].num_iids
+        self.acc_iids, self.acc_uids = kwargs['dataset'].type_accs['iid'], kwargs['dataset'].type_accs['uid']
+        self.diffused_score_mats, self.num_metapaths = self.compute_diffused_score_mat(kwargs['dataset'])
+
+        self.user_emb = Parameter(Tensor(self.num_uids, self.num_metapaths, self.factor_num))
+        self.item_emb = Parameter(Tensor(self.num_iids, self.num_metapaths, self.factor_num))
 
         self.theta = Parameter(Tensor(1, self.num_metapaths))
 
-        self.diffused_score_mat = self.compute_diffused_score_mat(kwargs['dataset'])
-
     def reset_parameters(self):
-        torch.nn.init.normal_(self.user_emb.weight, std=0.01)
-        torch.nn.init.normal_(self.item_emb.weight, std=0.01)
+        torch.nn.init.normal_(self.user_emb, std=0.01)
+        torch.nn.init.normal_(self.item_emb, std=0.01)
+        torch.nn.init.normal_(self.theta, std=0.01)
 
-    def update_graph_input(self, dataset):
-        raise NotImplementedError
-
-    def forward(self, uid, iid):
+    def forward(self, unids, inids):
         ratings = torch.sum(
-            torch.sigmoid(self.user_emb(uid)) * torch.sigmoid(self.item_emb(iid)).view(-1, self.num_metapaths, self.factor_num),
+            torch.relu(self.user_emb[unids - self.acc_uids]) * torch.relu(self.item_emb[inids - self.acc_iids]),
             dim=-1
         )
         return ratings
 
-    def predict(self, uids, iids):
-        ratings = self.forward(uids, iids)
+    def predict(self, unids, inids):
+        ratings = self.forward(unids, inids)
         ratings *= torch.sigmoid(self.theta)
         ratings = torch.sum(ratings, dim=-1)
         return ratings

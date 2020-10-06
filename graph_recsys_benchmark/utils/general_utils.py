@@ -562,17 +562,20 @@ def compute_item_similarity_mat(dataset, metapath):
 
     num_iids = dataset['num_iids']
     iid_accs = dataset.type_accs['iid']
-    S = []
+    S = np.eye(num_iids)
     pbar = tqdm.tqdm(range(num_iids))
     for i in pbar:
-        s = []
+        S[i, i] = np.sum(path_np[path_np[:, 0] == (i + iid_accs)][:, -1] == (i + iid_accs))
+    pbar = tqdm.tqdm(range(num_iids))
+    for i in pbar:
         head = path_np[path_np[:, 0] == (i + iid_accs)]
         for j in range(num_iids):
-            s.append(np.sum(head[:, -1] == (j + iid_accs)))
-        S.append(np.array(s) / s[i])
-    S = np.array(S)
-    import pdb
-    pdb.set_trace()
+            if i == j:
+                continue
+            if S[i, i] + S[j, j] == 0:
+                S[i, j] = 0
+            else:
+                S[i, j] = 2 * np.sum(head[:, -1] == (j + iid_accs)) / (S[i, i] + S[j, j])
     return S
 
 
@@ -582,7 +585,15 @@ def compute_diffused_score_mat(dataset, S):
     edge_index = dataset.edge_index_nps['user2item'].astype(np.int)
     for edge, rating in zip(edge_index.T, dataset.rating_np):
         diffused_score_mat[edge[0] - dataset.type_accs['uid'], edge[1] - dataset.type_accs['iid']] = rating
-    import pdb
-    pdb.set_trace()
-    diffused_score_mat[np.where(diffused_score_mat == 0)] = np.matmul(diffused_score_mat, S)[np.where(diffused_score_mat == 0)]
+
+    filter = np.zeros((dataset.num_uids, dataset.num_iids))
+    filter[np.where(diffused_score_mat != 0)] = 1
+    norm = np.copy(S)
+    np.fill_diagonal(norm, 0)
+    norm = np.matmul(filter, norm)
+
+    norm[np.where(norm == 0)] = 10e-6
+
+    diffused_score_mat[np.where(diffused_score_mat == 0)] = \
+        np.matmul(diffused_score_mat, S)[np.where(diffused_score_mat == 0)] / norm[np.where(diffused_score_mat == 0)]
     return diffused_score_mat

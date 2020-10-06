@@ -39,9 +39,9 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='2', help='')
+parser.add_argument('--gpu_idx', type=str, default='3', help='')
 parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--emb_epoch', type=int, default=1, help='')          #30(for others), 20(only for Yelp)
+parser.add_argument('--emb_iter', type=int, default=10000, help='')          #30(for others), 20(only for Yelp)
 parser.add_argument('--epochs', type=int, default=30, help='')          #30(for others), 20(only for Yelp)
 parser.add_argument('--batch_size', type=int, default=1024, help='')    #1024(for others), 4096(only for 25m)
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -49,8 +49,8 @@ parser.add_argument('--opt', type=str, default='adam', help='')
 parser.add_argument('--lr', type=float, default=0.001, help='')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
-parser.add_argument('--save_epochs', type=str, default='1', help='')
-parser.add_argument('--save_every_epoch', type=int, default=1, help='')        #26(for others), 16(only for Yelp)
+parser.add_argument('--save_epochs', type=str, default='15,20,25', help='')
+parser.add_argument('--save_every_epoch', type=int, default=26, help='')        #26(for others), 16(only for Yelp)
 
 args = parser.parse_args()
 
@@ -81,7 +81,7 @@ model_args = {
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
-    'opt': args.opt, 'emb_epoch': args.emb_epoch,
+    'opt': args.opt, 'emb_iter': args.emb_iter,
     'runs': args.runs, 'epochs': args.epochs, 'batch_size': args.batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device,
@@ -102,32 +102,31 @@ class HetRecRecsysModel(HetRecRecsysModel):
 
         return cf_loss
 
-    def mse_loss(self, uids, iids):
-        meta_scores_est = self.forward(uids, iids)
-        meta_scores = [self.diffused_score_mats[_][uids, iids].unsqueeze(-1) for _ in range(len(self.diffused_score_mats))]
-        meta_scores = torch.cat(meta_scores, dim=-1)
+    def mse_loss(self):
+        loss_func = torch.nn.MSELoss()
 
-        loss = torch.nn.MSELoss()(meta_scores_est, meta_scores)
+        user_emb = torch.relu(self.user_emb.view(self.num_metapaths, self.num_uids, self.factor_num))
+        item_emb = torch.relu(self.item_emb.view(self.num_metapaths, self.factor_num, self.num_iids))
+
+        mask = torch.ones_like(self.diffused_score_mats)
+        mask[torch.where(self.diffused_score_mats == 0)] = 0
+
+        loss = loss_func(torch.matmul(user_emb, item_emb) * mask, self.diffused_score_mats)
 
         return loss
 
     def compute_diffused_score_mat(self, dataset):
-        # item_similarity_mat = compute_item_similarity_mat(dataset, ['-user2item', 'user2item'])
-        # diffused_score_mat_1 = compute_diffused_score_mat(dataset, item_similarity_mat)
-        # item_similarity_mat = compute_item_similarity_mat(dataset, ['-genre2item', 'genre2item'])
-        # diffused_score_mat_2 = compute_diffused_score_mat(dataset, item_similarity_mat)
-        # item_similarity_mat = compute_item_similarity_mat(dataset, ['-director2item', 'director2item'])
-        # diffused_score_mat_3 = compute_diffused_score_mat(dataset, item_similarity_mat)
+        item_similarity_mat = compute_item_similarity_mat(dataset, ['-user2item', 'user2item'])
+        diffused_score_mat_1_t = torch.from_numpy(compute_diffused_score_mat(dataset, item_similarity_mat)).to(train_args['device']).unsqueeze(0)
+        item_similarity_mat = compute_item_similarity_mat(dataset, ['-genre2item', 'genre2item'])
+        diffused_score_mat_2_t = torch.from_numpy(compute_diffused_score_mat(dataset, item_similarity_mat)).to(train_args['device']).unsqueeze(0)
+        item_similarity_mat = compute_item_similarity_mat(dataset, ['-director2item', 'director2item'])
+        diffused_score_mat_3_t = torch.from_numpy(compute_diffused_score_mat(dataset, item_similarity_mat)).to(train_args['device']).unsqueeze(0)
 
-        diffused_score_mat_1 = np.ones((dataset.num_uids, dataset.num_iids))
-        diffused_score_mat_2 = np.ones((dataset.num_uids, dataset.num_iids))
-        diffused_score_mat_3 = np.ones((dataset.num_uids, dataset.num_iids))
+        diffused_score_mats = torch.cat([diffused_score_mat_1_t, diffused_score_mat_2_t, diffused_score_mat_3_t], dim=0).float()
+        # diffused_score_mats = torch.cat([diffused_score_mat_3_t], dim=0).float()
 
-        diffused_score_mat_1_t = torch.from_numpy(diffused_score_mat_1).to(train_args['device'])
-        diffused_score_mat_2_t = torch.from_numpy(diffused_score_mat_2).to(train_args['device'])
-        diffused_score_mat_3_t = torch.from_numpy(diffused_score_mat_3).to(train_args['device'])
-
-        return [diffused_score_mat_1_t, diffused_score_mat_2_t, diffused_score_mat_3_t]
+        return diffused_score_mats, 3
 
 
 class HetRecSolver(BaseSolver):
@@ -196,21 +195,19 @@ class HetRecSolver(BaseSolver):
                         torch.cuda.synchronize(self.train_args['device'])
 
                     # Train embedding
-                    dataloader = DataLoader(range(dataset.num_uids), batch_size=self.train_args['batch_size'], shuffle=True)
-                    pbar = tqdm.tqdm(dataloader)
-                    for epoch in range(1, self.train_args['emb_epoch'] + 1):
-                        mse_loss_per_batch = []
-                        for uid in pbar:
-                            optimizer.zero_grad()
-                            mse_loss = model.mse_loss([uid for _ in range(dataset.num_iids)], range(dataset.num_iids))
-                            mse_loss.backward()
-                            optimizer.step()
+                    mse_loss_per_iter = []
+                    pbar = tqdm.tqdm(range(self.train_args['emb_iter']))
+                    for iter in pbar:
+                        optimizer.zero_grad()
+                        mse_loss = model.mse_loss()
+                        mse_loss.backward()
+                        optimizer.step()
 
-                            mse_loss_per_batch.append(loss.detach().cpu().item())
-                            mse_train_loss = np.mean(mse_loss)
-                            train_bar.set_description(
-                                'Run: {}, epoch: {}, mse train loss: {:.4f}'.format(run, epoch, mse_train_loss)
-                            )
+                        mse_loss_per_iter.append(mse_loss.detach().cpu().item())
+                        mse_train_loss = np.mean(mse_loss_per_iter[-100:])
+                        pbar.set_description(
+                            'Run: {}, embedding iter: {}, mse train loss: {:.4f}'.format(run, iter, mse_train_loss)
+                        )
                     model.user_emb.requires_grad = False
                     model.item_emb.requires_grad = False
 
