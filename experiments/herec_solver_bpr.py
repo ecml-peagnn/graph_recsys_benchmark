@@ -192,14 +192,19 @@ class HeRecSolver(BaseSolver):
                             ('iid', 'has the number of reviews', 'item_reviewcount'): torch.from_numpy(np.flip(dataset.edge_index_nps['reviewcount2item'], 0).copy()).long().to(self.train_args['device']),
 
                         }
-                        metapath = [
+                        metapath_1 = [
                             ('item_reviewcount', 'as the number of reviews of', 'iid'),
                             ('iid', 'has been visited by', 'uid'),
                             ('uid', 'has the number of friends', 'user_friendcount'),
                             ('user_friendcount', 'as the number of friends of', 'uid'),
                             ('uid', 'has visited', 'iid'),
-                            ('iid', 'has the number of reviews', 'item_reviewcount')
+                            ('iid', 'has the number of reviews', 'item_reviewcount'),
                         ]
+                        metapath_2 = [
+                            ('uid', 'has visited', 'iid'),
+                            ('iid', 'has been visited by', 'uid'),
+                        ]
+                        metapaths = [metapath_1, metapath_2]
 
                     embeddings = []
                     for metapath_idx, metapath in enumerate(metapaths):

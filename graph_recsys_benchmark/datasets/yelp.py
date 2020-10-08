@@ -739,6 +739,17 @@ class Yelp(Dataset):
             else:
                 raise NotImplementedError
             train_data_np = np.vstack([pos_samples_np, neg_samples_np])
+        elif self.cf_loss_type == 'MSE':
+            train_data_uid = np.repeat(pos_edge_index_trans_np[:,0], repeats=self.num_negative_samples, axis=0).reshape(-1,1)
+            if self.sampling_strategy == 'random':
+                neg_inid_np = np.random.randint(
+                    low=self.type_accs['iid'],
+                    high=self.type_accs['iid'] + self.num_iids,
+                    size=(num_interactions * self.num_negative_samples, 1)
+                )
+            train_data_neg = np.hstack([train_data_uid, neg_inid_np, np.zeros((num_interactions * self.num_negative_samples,1))])
+            train_data_pos = np.hstack([pos_edge_index_trans_np, np.ones((pos_edge_index_trans_np.shape[0], 1))])
+            train_data_np = np.vstack((train_data_pos, train_data_neg))
         elif self.cf_loss_type == 'BPR':
             train_data_np = np.repeat(pos_edge_index_trans_np, repeats=self.num_negative_samples, axis=0)
             if self.sampling_strategy == 'random':
