@@ -26,10 +26,10 @@ parser.add_argument('--sampling_strategy', type=str, default='random', help='') 
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 
 # Model params
-parser.add_argument('--dropout', type=float, default=0.5, help='')
+parser.add_argument('--dropout', type=float, default=0.2, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')		#64(for others), 32(only for 25m)
 parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for others), 8(only for 25m)
-parser.add_argument('--hidden_size', type=int, default=128, help='')     #64(for others), 16(only for 25m)
+parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
 parser.add_argument('--entity_aware_type', type=str, default='', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
