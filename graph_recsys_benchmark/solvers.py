@@ -221,6 +221,27 @@ class BaseSolver(object):
                                     'Run: {}, epoch: {}, train loss: {:.4f}'.format(run, epoch, train_loss)
                                 )
 
+                            if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test'] and epoch == 30:
+                                for metapath_idx in range(len(self.model_args['meta_path_steps'])):
+                                    model.eval(metapath_idx)
+                                    HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
+                                    print(
+                                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                        'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                            AUC[0], train_loss, eval_loss[0]
+                                        )
+                                    )
+                                    logger_file.write(
+                                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                        'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                            AUC[0], train_loss, eval_loss[0]
+                                        )
+                                    )
+
                             model.eval()
                             with torch.no_grad():
                                 HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
@@ -307,6 +328,63 @@ class BaseSolver(object):
 
                     del model, optimizer, loss, loss_per_batch, rec_metrics, train_dataloader
                     clearcache()
+
+            if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test']:
+                run = 1
+                epoch = 30
+                seed = 2019 + run
+                rd.seed(seed)
+                np.random.seed(seed)
+                torch.manual_seed(seed)
+                torch.cuda.manual_seed(seed)
+
+                # Create model and optimizer
+                if self.model_args['model_type'] == 'Graph':
+                    if self.model_args['if_use_features']:
+                        self.model_args['emb_dim'] = dataset.data.x.shape[1]
+                    self.model_args['num_nodes'] = dataset.num_nodes
+                    self.model_args['dataset'] = dataset
+                elif self.model_args['model_type'] == 'MF':
+                    self.model_args['num_users'] = dataset.num_uids
+                    self.model_args['num_items'] = dataset.num_iids
+
+                model = self.model_class(**self.model_args).to(self.train_args['device'])
+
+                opt_class = get_opt_class(self.train_args['opt'])
+                optimizer = opt_class(
+                    params=model.parameters(),
+                    lr=self.train_args['lr'],
+                    weight_decay=self.train_args['weight_decay']
+                )
+
+                # Load models
+                weights_path = os.path.join(self.train_args['weights_folder'], 'run_{}'.format(str(run)))
+                if not os.path.exists(weights_path):
+                    os.makedirs(weights_path, exist_ok=True)
+                weights_file = os.path.join(weights_path, 'latest.pkl')
+                model, optimizer, last_epoch, rec_metrics = load_model(weights_file, model, optimizer,
+                                                                       self.train_args['device'])
+                for metapath_idx in range(len(self.model_args['meta_path_steps'])):
+                    model.eval(metapath_idx)
+                    HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
+                    print(
+                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                        '\n'.format(
+                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10],
+                            NDCGs[15],
+                            AUC[0]
+                        )
+                    )
+                    logger_file.write(
+                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                        '\n'.format(
+                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10],
+                            NDCGs[15],
+                            AUC[0]
+                        )
+                    )
 
             print(
                 'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '

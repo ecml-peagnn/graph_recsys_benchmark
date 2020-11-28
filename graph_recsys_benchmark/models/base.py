@@ -87,12 +87,15 @@ class GraphRecsysModel(torch.nn.Module):
     def predict(self, unids, inids):
         raise NotImplementedError
 
-    def eval(self):
+    def eval(self, metapath_idx=None):
         super(GraphRecsysModel, self).eval()
         if self.__class__.__name__ not in ['KGATRecsysModel', 'KGCNRecsysModel']:
-            with torch.no_grad():
-                self.cached_repr = self.forward()
-
+            if self.__class__.__name__[:3] == 'PEA':
+                with torch.no_grad():
+                    self.cached_repr = self.forward(metapath_idx)
+            else:
+                with torch.no_grad():
+                    self.cached_repr = self.forward()
 
 class MFRecsysModel(torch.nn.Module):
     def __init__(self, **kwargs):
@@ -188,9 +191,11 @@ class PEABaseRecsysModel(GraphRecsysModel):
         if self.channel_aggr == 'att':
             glorot(self.att)
 
-    def forward(self):
+    def forward(self, metapath_idx=None):
         x = self.x
         x = [module(x, self.meta_path_edge_index_list[idx]).unsqueeze(1) for idx, module in enumerate(self.pea_channels)]
+        if metapath_idx is not None:
+            x[metapath_idx] = torch.zeros_like(x[metapath_idx])
         x = torch.cat(x, dim=1)
         if self.channel_aggr == 'concat':
             x = x.view(x.shape[0], -1)
