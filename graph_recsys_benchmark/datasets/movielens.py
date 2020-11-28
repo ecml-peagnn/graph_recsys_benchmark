@@ -11,7 +11,7 @@ import pickle
 
 from .dataset import Dataset
 from torch_geometric.data import download_url, extract_zip
-from ..parser import parse_ml1m, parse_ml25m, parse_mlsmall
+from ..parser import parse_ml25m, parse_mlsmall
 
 
 def save_df(df, path):
@@ -55,31 +55,6 @@ def reindex_df_mlsmall(movies, ratings, tagging):
     tagging = tagging.drop(columns=['tag'])
 
     return movies, ratings, tagging, tags
-
-
-def reindex_df_ml1m(users, movies, ratings):
-    """
-    reindex users, movies, interactions in case there are some values missing or duplicates in between
-    :param users: pd.DataFrame
-    :param movies: pd.DataFrame
-    :param ratings: pd.DataFrame
-    :return: same
-    """
-    # Reindex uid
-    unique_uids = np.sort(ratings.uid.unique()).astype(np.int)
-    uids = np.arange(unique_uids.shape[0]).astype(np.int)
-    raw_uid2uid = {raw_uid: uid for raw_uid, uid in zip(unique_uids, uids)}
-    ratings['uid'] = np.array([raw_uid2uid[raw_uid] for raw_uid in ratings.uid], dtype=np.int)
-    users['uid'] = np.array([raw_uid2uid[raw_uid] for raw_uid in users.uid], dtype=np.int)
-
-    # Reindex iid
-    unique_iids = np.sort(movies.iid.unique()).astype(np.int)
-    iids = np.arange(unique_iids.shape[0]).astype(np.int)
-    raw_iid2iid = {raw_iid: iid for raw_iid, iid in zip(unique_iids, iids)}
-    movies['iid'] = np.array([raw_iid2iid[raw_iid] for raw_iid in movies.iid], dtype=np.int)
-    ratings['iid'] = np.array([raw_iid2iid[raw_iid] for raw_iid in ratings.iid], dtype=np.int)
-
-    return users, movies, ratings
 
 
 def reindex_df_ml25m(movies, ratings, tagging, genome_tagging, genome_tags):
@@ -156,9 +131,6 @@ def generate_mlsmall_hete_graph(
         concepts.remove('')
         num_concepts = len(concepts)
         return list(concepts), num_concepts
-
-    # #########################  Create dataset property dict  #########################
-    # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging}
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
@@ -373,263 +345,6 @@ def generate_mlsmall_hete_graph(
     return dataset_property_dict
 
 
-def generate_ml1m_hete_graph(
-        users, movies, ratings
-):
-    """
-    Entitiy node include (gender, occupation, genres)
-    num_nodes = num_uids + num_iids + num_genders + num_occupation + num_ages + num_genres + num_years + num_directors + num_actors + num_writers
-    """
-
-    def get_concept_num_from_str(df, concept_name):
-        concept_strs = [concept_str.split(',') for concept_str in df[concept_name]]
-        concepts = set(itertools.chain.from_iterable(concept_strs))
-        concepts.remove('')
-        num_concepts = len(concepts)
-        return list(concepts), num_concepts
-
-    # #########################  Create dataset property dict  #########################
-    # dataset_property_dict = {'users': users, 'items': movies, 'ratings': ratings}
-
-    #########################  Define entities  #########################
-    unique_uids = list(np.sort(ratings.uid.unique()))
-    num_uids = len(unique_uids)
-
-    unique_iids = list(np.sort(ratings.iid.unique()))
-    num_iids = len(unique_iids)
-
-    unique_genders = list(users.gender.unique())
-    num_genders = len(unique_genders)
-
-    unique_occs = list(users.occupation.unique())
-    num_occs = len(unique_occs)
-
-    unique_ages = list(users.age.unique())
-    num_ages = len(unique_ages)
-
-    unique_genres = list(movies.keys()[3:21])
-    num_genres = len(unique_genres)
-
-    unique_years = list(movies.year.unique())
-    num_years = len(unique_years)
-
-    unique_directors, num_directors = get_concept_num_from_str(movies, 'directors')
-    unique_actors, num_actors = get_concept_num_from_str(movies, 'actors')
-    unique_writers, num_writers = get_concept_num_from_str(movies, 'writers')
-
-    dataset_property_dict = {}
-    dataset_property_dict['unique_uids'] = unique_uids
-    dataset_property_dict['num_uids'] = len(unique_uids)
-    dataset_property_dict['unique_iids'] = unique_iids
-    dataset_property_dict['num_iids'] = len(unique_iids)
-    dataset_property_dict['unique_genders'] = unique_genders
-    dataset_property_dict['num_genders'] = num_genders
-    dataset_property_dict['unique_occs'] = unique_occs
-    dataset_property_dict['num_occs'] = num_occs
-    dataset_property_dict['unique_ages'] = unique_ages
-    dataset_property_dict['num_ages'] = num_ages
-    dataset_property_dict['unique_genres'] = unique_genres
-    dataset_property_dict['num_genres'] = num_genres
-    dataset_property_dict['unique_years'] = unique_years
-    dataset_property_dict['num_years'] = num_years
-    dataset_property_dict['unique_directors'] = unique_directors
-    dataset_property_dict['num_directors'] = num_directors
-    dataset_property_dict['unique_actors'] = unique_actors
-    dataset_property_dict['num_actors'] = num_actors
-    dataset_property_dict['unique_writers'] = unique_writers
-    dataset_property_dict['num_writers'] = num_writers
-
-    #########################  Define number of entities  #########################
-    num_nodes = num_uids + num_iids + num_genders + num_occs + num_ages + num_genres + num_years + \
-                num_directors + num_actors + num_writers
-    num_node_types = 10
-    dataset_property_dict['num_nodes'] = num_nodes
-    dataset_property_dict['num_node_types'] = num_node_types
-    types = ['uid', 'iid', 'gender', 'occupation', 'age', 'genre', 'year', 'director', 'actor', 'writer']
-    num_nodes_dict = {'uid': num_uids, 'iid': num_iids, 'gender': num_genders, 'occupation': num_occs,
-                      'age': num_ages, 'genre': num_genres, 'year': num_years, 'director': num_directors,
-                      'actor': num_actors, 'writer': num_writers}
-
-    #########################  Define entities to node id map  #########################
-    type_accs = {}
-    nid2e_dict = {}
-    acc = 0
-    type_accs['uid'] = acc
-    uid2nid = {uid: i + acc for i, uid in enumerate(users['uid'])}
-    for i, uid in enumerate(users['uid']):
-        nid2e_dict[i + acc] = ('uid', uid)
-    acc += num_uids
-    type_accs['iid'] = acc
-    iid2nid = {iid: i + acc for i, iid in enumerate(movies['iid'])}
-    for i, iid in enumerate(movies['iid']):
-        nid2e_dict[i + acc] = ('iid', iid)
-    acc += num_iids
-    type_accs['gender'] = acc
-    gender2nid = {gender: i + acc for i, gender in enumerate(unique_genders)}
-    for i, gender in enumerate(unique_genders):
-        nid2e_dict[i + acc] = ('gender', gender)
-    acc += num_genders
-    type_accs['occ'] = acc
-    occ2nid = {occ: i + acc for i, occ in enumerate(unique_occs)}
-    for i, occ in enumerate(unique_occs):
-        nid2e_dict[i + acc] = ('occ', occ)
-    acc += num_occs
-    type_accs['age'] = acc
-    age2nid = {age: i + acc for i, age in enumerate(unique_ages)}
-    for i, age in enumerate(unique_ages):
-        nid2e_dict[i + acc] = ('age', age)
-    acc += num_ages
-    type_accs['genre'] = acc
-    genre2nid = {genre: i + acc for i, genre in enumerate(unique_genres)}
-    for i, genre in enumerate(unique_genres):
-        nid2e_dict[i + acc] = ('genre', genre)
-    acc += num_genres
-    type_accs['year'] = acc
-    year2nid = {year: i + acc for i, year in enumerate(unique_years)}
-    for i, year in enumerate(unique_years):
-        nid2e_dict[i + acc] = ('year', year)
-    acc += num_years
-    type_accs['director'] = acc
-    director2nid = {director: i + acc for i, director in enumerate(unique_directors)}
-    for i, director in enumerate(unique_directors):
-        nid2e_dict[i + acc] = ('director', director)
-    acc += num_directors
-    type_accs['actor'] = acc
-    actor2nid = {actor: i + acc for i, actor in enumerate(unique_actors)}
-    for i, actor in enumerate(unique_actors):
-        nid2e_dict[i + acc] = ('actor', actor)
-    acc += num_actors
-    type_accs['writer'] = acc
-    writer2nid = {writer: i + acc for i, writer in enumerate(unique_writers)}
-    for i, writer in enumerate(unique_writers):
-        nid2e_dict[i + acc] = ('writer', writer)
-    e2nid_dict = {'uid': uid2nid, 'iid': iid2nid, 'gender': gender2nid, 'occ': occ2nid, 'age': age2nid,
-                  'genre': genre2nid,
-                  'year': year2nid, 'director': director2nid, 'actor': actor2nid, 'writer': writer2nid}
-    dataset_property_dict['e2nid_dict'] = e2nid_dict
-    dataset_property_dict['nid2e_dict'] = nid2e_dict
-
-    #########################  create graphs  #########################
-    edge_index_nps = {}
-    print('Creating user property edges...')
-    u_nids = [e2nid_dict['uid'][uid] for uid in users.uid]
-    gender_nids = [e2nid_dict['gender'][gender] for gender in users.gender]
-    gender2user_edge_index_np = np.vstack((np.array(gender_nids), np.array(u_nids)))
-    occ_nids = [e2nid_dict['occ'][occ] for occ in users.occupation]
-    occ2user_edge_index_np = np.vstack((np.array(occ_nids), np.array(u_nids)))
-    age_nids = [e2nid_dict['age'][age] for age in users.age]
-    age2user_edge_index_np = np.vstack((np.array(age_nids), np.array(u_nids)))
-    edge_index_nps['gender2user'] = gender2user_edge_index_np
-    edge_index_nps['occ2user'] = occ2user_edge_index_np
-    edge_index_nps['age2user'] = age2user_edge_index_np
-
-    print('Creating item property edges...')
-    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
-    year_nids = [e2nid_dict['year'][year] for year in movies.year]
-    year2item_edge_index_np = np.vstack((np.array(year_nids), np.array(inids)))
-
-    genre_nids = []
-    inids = []
-    for genre in unique_genres:
-        iids = movies[movies[genre]].iid
-        inids += [e2nid_dict['iid'][iid] for iid in iids]
-        genre_nids += [e2nid_dict['genre'][genre] for _ in range(iids.shape[0])]
-    genre2item_edge_index_np = np.vstack((np.array(genre_nids), np.array(inids)))
-
-    inids = [e2nid_dict['iid'][iid] for iid in movies.iid]
-    directors_list = [
-        [director for director in directors.split(',') if director != '']
-        for directors in movies.directors
-    ]
-    directors_nids = [[e2nid_dict['director'][director] for director in directors] for directors in directors_list]
-    directors_nids = list(itertools.chain.from_iterable(directors_nids))
-    d_inids = [[i_nid for _ in range(len(directors_list[idx]))] for idx, i_nid in enumerate(inids)]
-    d_inids = list(itertools.chain.from_iterable(d_inids))
-    director2item_edge_index_np = np.vstack((np.array(directors_nids), np.array(d_inids)))
-
-    actors_list = [
-        [actor for actor in actors.split(',') if actor != '']
-        for actors in movies.actors
-    ]
-    actor_nids = [[e2nid_dict['actor'][actor] for actor in actors] for actors in actors_list]
-    actor_nids = list(itertools.chain.from_iterable(actor_nids))
-    a_inids = [[i_nid for _ in range(len(actors_list[idx]))] for idx, i_nid in enumerate(inids)]
-    a_inids = list(itertools.chain.from_iterable(a_inids))
-    actor2item_edge_index_np = np.vstack((np.array(actor_nids), np.array(a_inids)))
-
-    writers_list = [
-        [writer for writer in writers.split(',') if writer != '']
-        for writers in movies.writers
-    ]
-    writer_nids = [[e2nid_dict['writer'][writer] for writer in writers] for writers in writers_list]
-    writer_nids = list(itertools.chain.from_iterable(writer_nids))
-    w_inids = [[i_nid for _ in range(len(writers_list[idx]))] for idx, i_nid in enumerate(inids)]
-    w_inids = list(itertools.chain.from_iterable(w_inids))
-    writer2item_edge_index_np = np.vstack((np.array(writer_nids), np.array(w_inids)))
-    edge_index_nps['year2item'] = year2item_edge_index_np
-    edge_index_nps['genre2item'] = genre2item_edge_index_np
-    edge_index_nps['director2item'] = director2item_edge_index_np
-    edge_index_nps['actor2item'] = actor2item_edge_index_np
-    edge_index_nps['writer2item'] = writer2item_edge_index_np
-
-    print('Creating rating property edges...')
-    test_pos_unid_inid_map, neg_unid_inid_map = {}, {}
-
-    rating_np = np.zeros((0,))
-    user2item_edge_index_np = np.zeros((2, 0))
-    sorted_ratings = ratings.sort_values('uid')
-    pbar = tqdm.tqdm(unique_uids, total=len(unique_uids))
-    for uid in pbar:
-        pbar.set_description('Creating the edges for the user {}'.format(uid))
-        uid_ratings = sorted_ratings[sorted_ratings.uid == uid].sort_values('timestamp')
-        uid_iids = uid_ratings.iid.to_numpy()
-        uid_ratings = uid_ratings.rating.to_numpy()
-
-        unid = e2nid_dict['uid'][uid]
-        train_pos_uid_iids = list(uid_iids[:-1])  # Use leave one out setup
-        train_pos_uid_ratings = uid_ratings[:-1]
-        train_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in train_pos_uid_iids]
-        test_pos_uid_iids = list(uid_iids[-1:])
-        test_pos_uid_inids = [e2nid_dict['iid'][iid] for iid in test_pos_uid_iids]
-        neg_uid_iids = list(set(unique_iids) - set(uid_iids))
-        neg_uid_inids = [e2nid_dict['iid'][iid] for iid in neg_uid_iids]
-
-        test_pos_unid_inid_map[unid] = test_pos_uid_inids
-        neg_unid_inid_map[unid] = neg_uid_inids
-
-        unid_user2item_edge_index_np = np.array(
-            [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
-        )
-        user2item_edge_index_np = np.hstack([user2item_edge_index_np, unid_user2item_edge_index_np])
-
-        rating_np = np.concatenate([rating_np, train_pos_uid_ratings])
-    dataset_property_dict['rating_np'] = rating_np
-    edge_index_nps['user2item'] = user2item_edge_index_np
-
-    dataset_property_dict['edge_index_nps'] = edge_index_nps
-    dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
-        test_pos_unid_inid_map, neg_unid_inid_map
-
-    print('Building edge type map...')
-    edge_type_dict = {edge_type: edge_type_idx for edge_type_idx, edge_type in enumerate(list(edge_index_nps.keys()))}
-    dataset_property_dict['edge_type_dict'] = edge_type_dict
-    dataset_property_dict['num_edge_types'] = len(list(edge_index_nps.keys()))
-
-    print('Building the item occurrence map...')
-    item_count = ratings['iid'].value_counts()
-    item_nid_occs = {}
-    for iid in unique_iids:
-        item_nid_occs[e2nid_dict['iid'][iid]] = item_count[iid]
-    dataset_property_dict['item_nid_occs'] = item_nid_occs
-
-    # New functionality for pytorch geometric like dataset
-    dataset_property_dict['types'] = types
-    dataset_property_dict['num_nodes_dict'] = num_nodes_dict
-    dataset_property_dict['type_accs'] = type_accs
-
-    return dataset_property_dict
-
-
 def generate_ml25m_hete_graph(
         movies, ratings, tagging, genome_tagging
 ):
@@ -639,10 +354,6 @@ def generate_ml25m_hete_graph(
         concepts.remove('')
         num_concepts = len(concepts)
         return list(concepts), num_concepts
-
-    #########################  Create dataset property dict  #########################
-    # dataset_property_dict = {'items': movies, 'ratings': ratings, 'tags': tags, 'tagging': tagging,
-    #                          'genome_tags': genome_tags, 'genome_tagging': genome_tagging}
 
     #########################  Define entities  #########################
     unique_uids = list(np.sort(ratings.uid.unique()))
@@ -885,8 +596,8 @@ class MovieLens(Dataset):
 
         self.name = name.lower()
         self.type = kwargs['type']
-        assert self.name in ['1m', '25m', 'latest-small']
-        assert self.type in ['hete', 'bipartite']
+        assert self.name in ['25m', 'latest-small']
+        assert self.type in ['hete']
         self.num_core = kwargs['num_core']
         self.num_feat_core = kwargs['num_feat_core']
 
@@ -918,100 +629,7 @@ class MovieLens(Dataset):
         extract_zip(path, self.raw_dir)
 
     def process(self):
-        if self.name == '1m':
-            try:
-                users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
-                movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
-                ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
-                print('Read data frame from {}!'.format(self.processed_dir))
-            except:
-                unzip_raw_dir = join(self.raw_dir, 'ml-{}'.format(self.name))
-                print('Data frame not found in {}! Read from raw data and preprocessing from {}!'.format(
-                    self.processed_dir, unzip_raw_dir))
-
-                raw_users_path = join(self.raw_dir, 'raw_users.csv')
-                raw_movies_path = join(self.raw_dir, 'raw_movies.csv')
-                raw_ratings_path = join(self.raw_dir, 'raw_ratings.csv')
-                if not (isfile(raw_movies_path) and isfile(raw_ratings_path) and isfile(raw_users_path)):
-                    print('Raw files not found! Reading directories and actors from api!')
-                    users, movies, ratings = parse_ml1m(unzip_raw_dir)
-                    save_df(movies, raw_movies_path)
-                    save_df(ratings, raw_ratings_path)
-                    save_df(users, raw_users_path)
-                else:
-                    print('Raw files loaded!')
-                    movies = pd.read_csv(raw_movies_path, sep=';').fillna('')
-                    ratings = pd.read_csv(raw_ratings_path, sep=';')
-                    users = pd.read_csv(raw_users_path, sep=';')
-
-                # Remove duplicates
-                movies = movies.drop_duplicates()
-                ratings = ratings.drop_duplicates()
-                users = users.drop_duplicates()
-
-                # Sync
-                users = users[users.uid.isin(ratings.uid.unique())]
-                movies = movies[movies.iid.isin(ratings.iid.unique())]
-                ratings = ratings[ratings.iid.isin(movies.iid.unique())]
-                ratings = ratings[ratings.uid.isin(users.uid.unique())]
-
-                # Remove infrequent movies
-                movie_count = ratings['iid'].value_counts()
-                movie_count.name = 'movie_count'
-                ratings = ratings[ratings.join(movie_count, on='iid').movie_count > self.num_core]
-
-                # Remove infrequent users
-                user_count = ratings['uid'].value_counts()
-                user_count.name = 'user_count'
-                ratings = ratings[ratings.join(user_count, on='uid').user_count > self.num_core]
-
-                # Sync
-                movies = movies[movies.iid.isin(ratings.iid.unique())]
-                users = users[users.uid.isin(ratings.uid.unique())]
-
-                # Reindex
-                users, movies, ratings = reindex_df_ml1m(users, movies, ratings)
-
-                # Drop the infrequent writer, actor and directors
-                movies = drop_infrequent_concept_from_str(movies, 'writers', self.num_feat_core)
-                movies = drop_infrequent_concept_from_str(movies, 'directors', self.num_feat_core)
-                movies = drop_infrequent_concept_from_str(movies, 'actors', self.num_feat_core)
-
-                # filter the years
-                years = movies.year.to_numpy()
-                years[years < 1950] = 1950
-                movies['year'] = years
-                if self.type == 'hete':
-                    years = movies.year.to_numpy().astype(np.int)
-                    min_year = min(years)
-                    max_year = max(years)
-                    num_years = (max_year - min_year) // 10
-                    discretized_years = [min_year + i * 10 for i in range(num_years + 1)]
-                    for i in range(len(discretized_years) - 1):
-                        years[(discretized_years[i] <= years) & (years < discretized_years[i + 1])] = str(
-                                discretized_years[i])
-                    years[years < discretized_years[0]] = discretized_years[0]
-                    years[years >= discretized_years[-1]] = discretized_years[-1]
-
-                    movies['year'] = years
-
-                # Save csv files
-                print('Saving processed csv...')
-                save_df(users, join(self.processed_dir, 'users.csv'))
-                save_df(movies, join(self.processed_dir, 'movies.csv'))
-                save_df(ratings, join(self.processed_dir, 'ratings.csv'))
-
-            # Generate and save graph
-            if self.type == 'hete':
-                dataset_property_dict = generate_ml1m_hete_graph(users, movies, ratings)
-            elif self.type == 'bipartite':
-                raise NotImplementedError
-                # dataset_property_dict = generate_ml1m_bi_graph(users, movies, ratings)
-            else:
-                raise NotImplementedError
-            with open(self.processed_paths[0], 'wb') as f:
-                pickle.dump(dataset_property_dict, f)
-        elif self.name == '25m':
+        if self.name == '25m':
             try:
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
                 ratings = pd.read_csv(join(self.processed_dir, 'ratings.csv'), sep=';')
@@ -1053,7 +671,6 @@ class MovieLens(Dataset):
                 genome_tags = genome_tags.drop_duplicates()
 
                 ratings = ratings[ratings.timestamp > 1514764799]     #2M interactions
-                # ratings = ratings[ratings.timestamp > 1420070399]     #5M interactions
 
                 # Sync
                 movies = movies[movies.iid.isin(ratings.iid.unique())]
@@ -1135,10 +752,6 @@ class MovieLens(Dataset):
             # Generate and save graph
             if self.type == 'hete':
                 dataset_property_dict = generate_ml25m_hete_graph(movies, ratings, tagging, genome_tagging)
-            elif self.type == 'bipartite':
-                raise NotImplementedError
-                # dataset_property_dict = generate_ml25m_bi_graph(movies, ratings, tags, tagging, genome_tags,
-                #                                               genome_tagging)
             else:
                 raise NotImplementedError
             with open(self.processed_paths[0], 'wb') as f:
@@ -1237,10 +850,6 @@ class MovieLens(Dataset):
             # Generate and save graph
             if self.type == 'hete':
                 dataset_property_dict = generate_mlsmall_hete_graph(movies, ratings, tagging)
-            elif self.type == 'bipartite':
-                raise NotImplementedError
-                # dataset_property_dict = generate_mlsmall_bi_graph(movies, ratings, tags, tagging, genome_tags,
-                #                                               genome_tagging)
             else:
                 raise NotImplementedError
             with open(self.processed_paths[0], 'wb') as f:
@@ -1333,10 +942,7 @@ class MovieLens(Dataset):
             if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
                 # add entity aware data to batches
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
-                if self.name == '1m':
-                    users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
-                else:
-                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
+                tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
                 if self.name == '25m':
                     genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
 
@@ -1363,9 +969,9 @@ class MovieLens(Dataset):
                     writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies.iid == iid]['writers'].item().split(',') if writer != '']
                     feat_nids += writer_nids
 
-                    if self.name != '1m':
-                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
-                        feat_nids += tag_nids
+
+                    tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
+                    feat_nids += tag_nids
                     if self.name == '25m':
                         genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging.iid == iid].genome_tid]
                         feat_nids += genome_tag_nids
@@ -1379,18 +985,8 @@ class MovieLens(Dataset):
                     pbar.set_description('Sampling user entities...')
                     feat_nids = []
 
-                    if self.name == '1m':
-                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in users[users.uid == uid].occupation]
-                        feat_nids += occ_nids
-
-                        age_nids = [self.e2nid_dict['age'][age] for age in users[users.uid == uid].age]
-                        feat_nids += age_nids
-
-                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in users[users.uid == uid].gender]
-                        feat_nids += gender_nids
-                    else:
-                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
-                        feat_nids += tag_nids
+                    tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
+                    feat_nids += tag_nids
                     uid_feat_nids.append(feat_nids)
                 self.uid_feat_nids = uid_feat_nids
         else:
@@ -1477,10 +1073,7 @@ class MovieLens(Dataset):
             if self.entity_aware and not hasattr(self, 'iid_feat_nids'):
                 # add entity aware data to batches
                 movies = pd.read_csv(join(self.processed_dir, 'movies.csv'), sep=';').fillna('')
-                if self.name == '1m':
-                    users = pd.read_csv(join(self.processed_dir, 'users.csv'), sep=';')
-                else:
-                    tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
+                tagging = pd.read_csv(join(self.processed_dir, 'tagging.csv'), sep=';')
                 if self.name == '25m':
                     genome_tagging = pd.read_csv(join(self.processed_dir, 'genome_tagging.csv'), sep=';')
 
@@ -1507,9 +1100,8 @@ class MovieLens(Dataset):
                     writer_nids = [self.e2nid_dict['writer'][writer] for writer in movies[movies.iid == iid]['writers'].item().split(',') if writer != '']
                     feat_nids += writer_nids
 
-                    if self.name != '1m':
-                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
-                        feat_nids += tag_nids
+                    tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.iid == iid].tid]
+                    feat_nids += tag_nids
                     if self.name == '25m':
                         genome_tag_nids = [self.e2nid_dict['genome_tid'][genome_tid] for genome_tid in genome_tagging[genome_tagging.iid == iid].genome_tid]
                         feat_nids += genome_tag_nids
@@ -1523,18 +1115,8 @@ class MovieLens(Dataset):
                     pbar.set_description('Sampling user entities...')
                     feat_nids = []
 
-                    if self.name == '1m':
-                        occ_nids = [self.e2nid_dict['occ'][occ] for occ in users[users.uid == uid].occupation]
-                        feat_nids += occ_nids
-
-                        age_nids = [self.e2nid_dict['age'][age] for age in users[users.uid == uid].age]
-                        feat_nids += age_nids
-
-                        gender_nids = [self.e2nid_dict['gender'][gender] for gender in users[users.uid == uid].gender]
-                        feat_nids += gender_nids
-                    else:
-                        tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
-                        feat_nids += tag_nids
+                    tag_nids = [self.e2nid_dict['tid'][tid] for tid in tagging[tagging.uid == uid].tid]
+                    feat_nids += tag_nids
                     uid_feat_nids.append(feat_nids)
                 self.uid_feat_nids = uid_feat_nids
         else:

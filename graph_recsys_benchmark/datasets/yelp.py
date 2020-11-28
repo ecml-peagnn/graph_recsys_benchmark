@@ -1,13 +1,10 @@
 import torch
-from dateutil.parser import parser
-from torch.utils.data import DataLoader
 from os.path import join, isfile, isdir
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import itertools
 from collections import Counter
-from iteration_utilities import unique_everseen
 import tqdm
 import pickle
 import re
@@ -408,7 +405,6 @@ def generate_graph_data(
 
         test_pos_unid_inid_map[unid] = test_pos_uid_inids
         neg_unid_inid_map[unid] = neg_uid_inids
-        # neg_unid_inid_map[unid] = list(np.random.choice(neg_uid_inids, size=min(len(neg_uid_inids), 1000)))
 
         unid_user2item_edge_index_np = np.array(
             [[unid for _ in range(len(train_pos_uid_inids))], train_pos_uid_inids]
@@ -454,7 +450,7 @@ class Yelp(Dataset):
                  **kwargs):
 
         self.type = kwargs['type']
-        assert self.type in ['hete', 'bipartite']
+        assert self.type in ['hete']
         self.num_core = kwargs['num_core']
         self.entity_aware = kwargs['entity_aware']
         self.num_negative_samples = kwargs['num_negative_samples']
