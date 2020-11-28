@@ -221,26 +221,27 @@ class BaseSolver(object):
                                     'Run: {}, epoch: {}, train loss: {:.4f}'.format(run, epoch, train_loss)
                                 )
 
-                            if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test'] and epoch == 30:
-                                for metapath_idx in range(len(self.model_args['meta_path_steps'])):
-                                    model.eval(metapath_idx)
-                                    HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
-                                    print(
-                                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
-                                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
-                                        'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
-                                            AUC[0], train_loss, eval_loss[0]
+                            if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test']:
+                                if (self.dataset_args['dataset'] == 'Movielens' and epoch == 30) or (self.dataset_args['dataset'] == 'Yelp' and epoch == 20):
+                                    for metapath_idx in range(len(self.model_args['meta_path_steps'])):
+                                        model.eval(metapath_idx)
+                                        HRs, NDCGs, AUC, eval_loss = self.metrics(run, epoch, model, dataset)
+                                        print(
+                                            'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                            'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                                run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                                AUC[0], train_loss, eval_loss[0]
+                                            )
                                         )
-                                    )
-                                    logger_file.write(
-                                        'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
-                                        'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
-                                        'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
-                                            run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
-                                            AUC[0], train_loss, eval_loss[0]
+                                        logger_file.write(
+                                            'Run: {}, epoch: {}, exclude path:{}, HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
+                                            'NDCG@5: {:.4f}, NDCG@10: {:.4f}, NDCG@15: {:.4f}, NDCG@20: {:.4f}, AUC: {:.4f}, '
+                                            'train loss: {:.4f}, eval loss: {:.4f} \n'.format(
+                                                run, epoch, metapath_idx, HRs[0], HRs[5], HRs[10], HRs[15], NDCGs[0], NDCGs[5], NDCGs[10], NDCGs[15],
+                                                AUC[0], train_loss, eval_loss[0]
+                                            )
                                         )
-                                    )
 
                             model.eval()
                             with torch.no_grad():
@@ -331,7 +332,10 @@ class BaseSolver(object):
 
             if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test']:
                 run = 1
-                epoch = 30
+                if self.dataset_args['dataset'] == 'Movielens':
+                    epoch = 30
+                if self.dataset_args['dataset'] == 'Yelp':
+                    epoch = 20
                 seed = 2019 + run
                 rd.seed(seed)
                 np.random.seed(seed)
