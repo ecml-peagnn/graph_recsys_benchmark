@@ -52,6 +52,7 @@ parser.add_argument('--weight_decay', type=float, default=0.001, help='')
 parser.add_argument('--early_stopping', type=int, default=20, help='')
 parser.add_argument('--save_epochs', type=str, default='5,10,15,20,25', help='')
 parser.add_argument('--save_every_epoch', type=int, default=26, help='')        #26(for MovieLens), 16(only for Yelp)
+parser.add_argument('--metapath_test', type=str, default='true', help='')
 
 args = parser.parse_args()
 
