@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.metrics import ndcg_score
 from itertools import product
 
 NUM_RECS_RANGE = 20
