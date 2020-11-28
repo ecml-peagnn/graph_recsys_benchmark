@@ -30,26 +30,26 @@ python3 kgat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=rand
 
 # PEAGCN
 # --entity_aware=false
-python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=false
 
 # --entity_aware=true
-python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagcn_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=true
 
 
 # PEAGAT
 # --entity_aware=false
-python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=false
 
 # --entity_aware=true
-python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peagat_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=true
 
 
 # PEASage
 # --entity_aware=false
-python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=false
 
 # --entity_aware=true
-python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 peasage_solver_bpr.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16 --metapath_test=true
 
 
 
