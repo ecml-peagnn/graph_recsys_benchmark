@@ -7,7 +7,6 @@ import tqdm
 import time
 import inspect
 import sys
-from GPUtil import showUtilization as gpu_usage
 
 sys.path.append('..')
 from graph_recsys_benchmark.models import MetaPath2Vec
@@ -26,15 +25,15 @@ parser = argparse.ArgumentParser()
 
 # Dataset params
 parser.add_argument('--dataset', type=str, default='Movielens', help='')		#Movielens, Yelp
-parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#1m, 25m, latest-small
+parser.add_argument('--dataset_name', type=str, default='latest-small', help='')	#25m, latest-small
 parser.add_argument('--if_use_features', type=str, default='false', help='')
-parser.add_argument('--num_core', type=int, default=10, help='')			#10(for others), 20(only for 25m)
+parser.add_argument('--num_core', type=int, default=10, help='')
 parser.add_argument('--num_feat_core', type=int, default=10, help='')
-parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for 1m,latest-small), random(for Yelp,25m)
+parser.add_argument('--sampling_strategy', type=str, default='unseen', help='')		#unseen(for latest-small), random(for Yelp,25m)
 parser.add_argument('--entity_aware', type=str, default='false', help='')
 
 # Model params
-parser.add_argument('--emb_dim', type=int, default=64, help='')			#64(for others), 32(only for 25m)
+parser.add_argument('--emb_dim', type=int, default=64, help='')
 parser.add_argument('--walks_per_node', type=int, default=1000, help='')
 parser.add_argument('--walk_length', type=int, default=100, help='')
 parser.add_argument('--context_size', type=int, default=7, help='')
@@ -42,15 +41,14 @@ parser.add_argument('--random_walk_num_negative_samples', type=int, default=5, h
 parser.add_argument('--sparse', type=str, default='true', help='')
 
 # Train params
-parser.add_argument('--init_eval', type=str, default='false', help='')
+parser.add_argument('--init_eval', type=str, default='true', help='')
 parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
 parser.add_argument('--gpu_idx', type=str, default='0', help='')
-parser.add_argument('--runs', type=int, default=5, help='')
-parser.add_argument('--epochs', type=int, default=30, help='') #30(for others), 20(only for Yelp)
-parser.add_argument('--rk_epochs', type=int, default=300, help='')
+parser.add_argument('--runs', type=int, default=5, help='')         #5(for MovieLens), 3(for Yelp)
+parser.add_argument('--epochs', type=int, default=30, help='')          #30(for MovieLens), 20(only for Yelp)
 parser.add_argument('--random_walk_batch_size', type=int, default=2, help='')
 parser.add_argument('--batch_size', type=int, default=1024, help='')		#1024(for others), 4096(only for 25m)
 parser.add_argument('--num_workers', type=int, default=12, help='')
@@ -94,7 +92,7 @@ train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
     'random_walk_opt': args.random_walk_opt, 'opt': args.opt,
-    'runs': args.runs, 'epochs': args.epochs, 'rk_epochs': args.rk_epochs,
+    'runs': args.runs, 'epochs': args.epochs,
     'batch_size': args.batch_size, 'random_walk_batch_size': args.random_walk_batch_size,
     'num_workers': args.num_workers,
     'weight_decay': args.weight_decay, 'lr': args.lr, 'device': device, 'random_walk_lr': args.random_walk_lr,
@@ -130,14 +128,8 @@ class MetaPath2VecSolver(BaseSolver):
         eval_loss_per_run_np, last_run = \
             load_random_walk_global_logger(global_logger_file_path)
 
-        print("GPU Usage before data load")
-        gpu_usage()
-
         # Create the dataset
         dataset = load_dataset(self.dataset_args)
-
-        print("GPU Usage after data load")
-        gpu_usage()
 
         logger_file_path = os.path.join(global_logger_path, 'logger_file.txt')
         with open(logger_file_path, 'a') as logger_file:
@@ -207,7 +199,7 @@ class MetaPath2VecSolver(BaseSolver):
                     weights_file = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
                     if os.path.isfile(weights_file):
                         # Load random walk model
-                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, random_walk_epoch = \
+                        random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run = \
                             load_random_walk_model(weights_file, random_walk_model, random_walk_optimizer, self.train_args['device'])
                         print("Loaded random walk model checkpoint_backup '{}'".format(weights_file))
                     else:
@@ -227,7 +219,7 @@ class MetaPath2VecSolver(BaseSolver):
                         random_walk_train_loss_per_run = random_walk_loss / len(loader)
 
                         weightpath = os.path.join(weights_path, 'random_walk_{}.pkl'.format(self.model_args['walks_per_node']))
-                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run, self.train_args['rk_epochs'])
+                        save_random_walk_model(weightpath, random_walk_model, random_walk_optimizer, random_walk_train_loss_per_run)
 
                     # Init the RecSys model
                     with torch.no_grad():
@@ -365,7 +357,6 @@ class MetaPath2VecSolver(BaseSolver):
                                 )
                             )
                             instantwrite(logger_file)
-                            # clearcache()
 
                         if torch.cuda.is_available():
                             torch.cuda.synchronize()
@@ -408,11 +399,7 @@ class MetaPath2VecSolver(BaseSolver):
                         )
                         instantwrite(logger_file)
 
-                        print("GPU Usage after each run")
-                        gpu_usage()
-
                         del model, optimizer, loss, loss_per_batch, rec_metrics, train_dataloader
-                        # clearcache()
 
                 print(
                     'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
