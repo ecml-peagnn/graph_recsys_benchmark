@@ -99,7 +99,8 @@ train_args = {
     'num_workers': args.num_workers,
     'weights_folder': os.path.join(weights_folder, str(path_args)[:255]),
     'logger_folder': os.path.join(logger_folder, str(path_args)[:255]),
-    'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch
+    'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch,
+    'metapath_test': args.metapath_test.lower() == 'true'
 }
 print('dataset params: {}'.format(dataset_args))
 print('task params: {}'.format(model_args))
