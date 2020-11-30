@@ -26,7 +26,11 @@ The performances of PEAGNN variants and baselines are presented below:
 * Python 3.6
 * [PyTorch](http://pytorch.org/) 1.5.0
 * [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) (1.5.0)
-* Other packages can be installed by
+* Install all dependencies run
+```
+pip3 install -r requirements.txt
+```
+* our code can be installed by
 ```
 python3 setup.py install
 ```
