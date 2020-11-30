@@ -413,9 +413,6 @@ def generate_graph_data(
 
     edge_index_nps['user2item'] = user2item_edge_index_np
 
-    print('missing iids:',
-          np.setdiff1d(np.unique(items.business_id), np.unique(user2item_edge_index_np[1].astype(int) - num_uids)))
-
     dataset_property_dict['edge_index_nps'] = edge_index_nps
     dataset_property_dict['test_pos_unid_inid_map'], dataset_property_dict['neg_unid_inid_map'] = \
         test_pos_unid_inid_map, neg_unid_inid_map
