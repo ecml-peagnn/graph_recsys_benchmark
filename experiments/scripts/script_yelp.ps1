@@ -1,7 +1,7 @@
 # Yelp
 
 # NFM
-python3 nfm_solver_bce.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --factor_num=64 --hidden_size=64 --dropout=0.3 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
+python3 nfm_solver_bce.py --dataset=Yelp --num_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --hidden_size=64 --dropout=0.3 --init_eval=true --gpu_idx=0 --runs=3 --epochs=20 --batch_size=1024 --save_every_epoch=16
 
 
 # CFKG

@@ -32,7 +32,6 @@ parser.add_argument('--repr_dim', type=int, default=16, help='')
 parser.add_argument('--hidden_size', type=int, default=64, help='')
 parser.add_argument('--meta_path_steps', type=str, default='2,2,2,2,2,2,2,2,2', help='')	#2,2,2,2,2,2,2,2,2(for small) #2,2,2,2,2,2,2,2,2,2,2,2,2(for 25m) #2,2,2,2,2,2,2,2,2,2,2 (for yelp)
 parser.add_argument('--channel_aggr', type=str, default='att', help='')
-parser.add_argument('--entity_aware_type', type=str, default='', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
@@ -73,7 +72,8 @@ dataset_args = {
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
     'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE,
-    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true'
+    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true',
+    'model': MODEL
 }
 model_args = {
     'model_type': MODEL_TYPE,
@@ -82,7 +82,7 @@ model_args = {
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
     'num_heads': args.num_heads, 'meta_path_steps': [int(i) for i in args.meta_path_steps.split(',')],
     'channel_aggr': args.channel_aggr,
-    'entity_aware': args.entity_aware.lower() == 'true', 'entity_aware_type': args.entity_aware_type,
+    'entity_aware': args.entity_aware.lower() == 'true',
     'entity_aware_coff': args.entity_aware_coff
 }
 path_args = model_args.copy()
@@ -90,7 +90,7 @@ path_args['meta_path_steps'] = len(path_args['meta_path_steps'])
 train_args = {
     'init_eval': args.init_eval.lower() == 'true',
     'num_negative_samples': args.num_negative_samples, 'num_neg_candidates': args.num_neg_candidates,
-    'opt': args.opt, 'rk_opt': args.rk_opt,
+    'opt': args.opt,
     'runs': args.runs,
     'epochs': args.epochs,
     'batch_size': args.batch_size,

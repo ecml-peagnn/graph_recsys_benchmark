@@ -30,7 +30,6 @@ parser.add_argument('--dropout', type=float, default=0.2, help='')
 parser.add_argument('--emb_dim', type=int, default=64, help='')		#64(for others), 32(only for 25m)
 parser.add_argument('--repr_dim', type=int, default=16, help='')        #16(for others), 8(only for 25m)
 parser.add_argument('--hidden_size', type=int, default=64, help='')     #64(for others), 16(only for 25m)
-parser.add_argument('--entity_aware_type', type=str, default='', help='')
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
@@ -70,14 +69,15 @@ dataset_args = {
     'if_use_features': args.if_use_features.lower() == 'true', 'num_negative_samples': args.num_negative_samples,
     'num_core': args.num_core, 'num_feat_core': args.num_feat_core,
     'cf_loss_type': LOSS_TYPE, 'type': GRAPH_TYPE,
-    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true'
+    'sampling_strategy': args.sampling_strategy, 'entity_aware': args.entity_aware.lower() == 'true',
+    'model': MODEL
 }
 model_args = {
     'model_type': MODEL_TYPE,
     'if_use_features': args.if_use_features.lower() == 'true',
     'emb_dim': args.emb_dim, 'hidden_size': args.hidden_size,
     'repr_dim': args.repr_dim, 'dropout': args.dropout,
-    'entity_aware': args.entity_aware.lower() == 'true', 'entity_aware_type': args.entity_aware_type,
+    'entity_aware': args.entity_aware.lower() == 'true',
     'entity_aware_coff': args.entity_aware_coff
 }
 train_args = {

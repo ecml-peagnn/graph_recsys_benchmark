@@ -1,7 +1,7 @@
 # Movielens25m
 
 # NFM
-python3 nfm_solver_bce.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --factor_num=64 --hidden_size=64 --dropout=0.3 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
+python3 nfm_solver_bce.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --emb_dim=64 --hidden_size=64 --dropout=0.3 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
 
 
 # CFKG

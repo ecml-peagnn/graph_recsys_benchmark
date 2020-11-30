@@ -1,6 +1,6 @@
-from .peagcn import PEAGCNRecsysModel, PEAGCNJKBaseRecsysModel
-from .peagat import PEAGATRecsysModel, PEAGATJKRecsysModel
-from .peasage import PEASageRecsysModel, PEASageJKRecsysModel
+from .peagcn import PEAGCNRecsysModel
+from .peagat import PEAGATRecsysModel
+from .peasage import PEASageRecsysModel
 from .kgat import KGATRecsysModel
 from .kgcn import KGCNRecsysModel
 from .walk import WalkBasedRecsysModel
@@ -11,9 +11,9 @@ from .nfm import NFMRecsysModel
 from .herec import HeRecRecsysModel
 
 __all__ = [
-    'PEAGCNRecsysModel', 'PEAGCNJKBaseRecsysModel',
-    'PEAGATRecsysModel', 'PEAGATJKRecsysModel',
-    'PEASageRecsysModel', 'PEASageJKRecsysModel',
+    'PEAGCNRecsysModel'
+    'PEAGATRecsysModel'
+    'PEASageRecsysModel',
     'KGATRecsysModel', 'KGCNRecsysModel',
     'WalkBasedRecsysModel',
     'MetaPath2Vec',

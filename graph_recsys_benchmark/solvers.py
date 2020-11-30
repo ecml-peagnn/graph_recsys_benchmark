@@ -330,7 +330,7 @@ class BaseSolver(object):
                     del model, optimizer, loss, loss_per_batch, rec_metrics, train_dataloader
                     clearcache()
 
-            if model.__class__.__name__[:3] == 'PEA' and self.train_args['metapath_test']:
+            if self.dataset_args['model'][:3] == 'PEA' and self.train_args['metapath_test']:
                 run = 1
                 if self.dataset_args['dataset'] == 'Movielens':
                     epoch = 30
@@ -389,6 +389,7 @@ class BaseSolver(object):
                             AUC[0]
                         )
                     )
+                    instantwrite(logger_file)
 
             print(
                 'Overall HR@5: {:.4f}, HR@10: {:.4f}, HR@15: {:.4f}, HR@20: {:.4f}, '
