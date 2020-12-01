@@ -74,7 +74,6 @@ The basic skeleton of our source code will look like this :
 │   └── **/*.py
 ├── images
 │   └── **/*.png
-├── .gitignore
 ├── license.txt
 ├── README.md
 ├── requirements.txt
