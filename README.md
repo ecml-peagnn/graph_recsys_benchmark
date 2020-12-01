@@ -25,7 +25,7 @@ The performances of PEAGNN variants and baselines are presented below:
 ## Requirements and Installation
 * Python 3.6
 * [PyTorch](http://pytorch.org/) 1.5.1
-* [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) (1.5.0)
+* [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) 1.5.0
 * Install all dependencies run
 ```
 pip3 install -r requirements.txt
@@ -98,7 +98,7 @@ The code is based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geom
 ### Download the datasets
 #### MovieLens dataset
 
-Dataset will be downloaded during experiment execution and saved in ``graph_recsys_benchmark/checkpoint/data`` folder. No need to explicity download the dataset. Weights of trained Movielens-small can be found dataset [here](experiments/checkpoint/weights/Movielenslatest-small).
+Dataset will be downloaded during experiment execution and saved in ``graph_recsys_benchmark/checkpoint/data`` folder. No need to explicity download the dataset. Weights of trained Movielens-small dataset can be found [here](experiments/checkpoint/weights/Movielenslatest-small).
 
 #### Yelp dataset
 
