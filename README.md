@@ -35,6 +35,52 @@ pip3 install -r requirements.txt
 python3 setup.py install
 ```
 
+## Directory structure
+
+The basic skeleton of our source code will look like this :
+```bash
+graph_recsys_benchmark
+├── datasets
+│   └── Yelp
+│      └──  yelp_dataset.tar
+├── experiments
+│   ├── checkpoint
+│   │   ├── data
+│   │   │   ├── Movielenslatest-small
+│   │   │   ├── Movielenslatest-25m
+│   │   │   └── Yelp
+│   │   ├── loggers
+│   │   │   ├── Movielenslatest-small
+│   │   │   ├── Movielenslatest-25m
+│   │   │   └── Yelp
+│   │   └── weights
+│   │       ├── Movielenslatest-small
+│   │       ├── Movielenslatest-25m
+│   │       └── Yelp
+│   ├── scripts
+│   │   ├── **/*.ps1
+│   └── **/*.py
+├── graph_recsys_benchmark
+│   ├── datasets
+│   │   ├── **/*.py
+│   ├── models
+│   │   ├── **/*.py
+│   ├── nn
+│   │   ├── **/*.py
+│   ├── parser
+│   │   ├── **/*.py
+│   ├── utils
+│   │   ├── **/*.py
+│   └── **/*.py
+├── images
+│   └── **/*.png
+├── .gitignore
+├── license
+├── README.md
+├── requirements
+└── setup.py
+```
+
 ## Description of the Code
 The code is based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) documentation. 
 
@@ -57,7 +103,6 @@ Dataset will be downloaded during experiment execution and saved in ``graph_recs
 
 Download the dataset via this [link](https://www.yelp.com/dataset/download) and save ``yelp_dataset.tar``  in the ``datasets/Yelp`` folder.
 Like MovieLens dataset, the extracted raw files will be saved in ``graph_recsys_benchmark/checkpoint/data`` folder during execution.
-
 
 ## Running the Code
 
