@@ -103,7 +103,7 @@ Dataset will be downloaded during experiment execution and saved in [``experimen
 #### Yelp dataset
 
 Download the dataset via this [link](https://www.yelp.com/dataset/download) and save ``yelp_dataset.tar``  in the ``datasets/Yelp`` folder.
-Like MovieLens dataset, the extracted raw files will be saved in ``experiments/checkpoint/data`` folder during execution.
+Like MovieLens dataset, the extracted raw files will be saved in [``experiments/checkpoint/data``](experiments/checkpoint/data) folder during execution.
 
 ## Running the Code
 
