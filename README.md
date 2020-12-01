@@ -98,7 +98,7 @@ The code is based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geom
 ### Download the datasets
 #### MovieLens dataset
 
-Dataset will be downloaded during experiment execution and saved in ``graph_recsys_benchmark/checkpoint/data`` folder. No need to explicity download the dataset. 
+Dataset will be downloaded during experiment execution and saved in ``graph_recsys_benchmark/checkpoint/data`` folder. No need to explicity download the dataset. Weights of trained Movielens-small can be found dataset [here](experiments/checkpoint/weights/Movielenslatest-small).
 
 #### Yelp dataset
 
