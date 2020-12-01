@@ -24,7 +24,7 @@ The performances of PEAGNN variants and baselines are presented below:
 
 ## Requirements and Installation
 * Python 3.6
-* [PyTorch](http://pytorch.org/) 1.5.0
+* [PyTorch](http://pytorch.org/) 1.5.1
 * [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) (1.5.0)
 * Install all dependencies run
 ```
@@ -75,22 +75,23 @@ graph_recsys_benchmark
 ├── images
 │   └── **/*.png
 ├── .gitignore
-├── license
+├── license.txt
 ├── README.md
-├── requirements
+├── requirements.txt
 └── setup.py
 ```
 
 ## Description of the Code
 The code is based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) documentation. 
 
-- `experiments`: contain experiment files for PEAGNN and baseline models
-- `experiments/scripts`: scripts to reproduce the results for each dataset
-- `datasets`: creates Heterogenous Information network for the datasets
-- `models`: PEAGNN and baseline models 
-- `nn`: contains convolutional networks for GNN based models
-- `parser`: functions to parse the raw dataset files
-- `utils`: functions to save, load models and compute evaluation metrics
+- [`experiments`](experiments): contain experiment files for PEAGNN and baseline models
+- [`checkpoint`](experiments/checkpoint): contain processed data, logs and model weights
+- [`scripts`](experiments/scripts): scripts to reproduce the results for each dataset
+- [`datasets`](graph_recsys_benchmark/datasets): creates Heterogenous Information network for the datasets
+- [`models`](graph_recsys_benchmark/models): creates PEAGNN and baseline models 
+- [`nn`](graph_recsys_benchmark/nn): contains convolutional networks for GNN based models
+- [`parser`](graph_recsys_benchmark/parser): functions to parse the raw dataset files
+- [`utils`](graph_recsys_benchmark/utils): functions to save, load models and compute evaluation metrics
 
 ## Running the experiments 
 
