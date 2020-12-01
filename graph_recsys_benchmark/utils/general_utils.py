@@ -343,7 +343,7 @@ def update_pea_graph_input(dataset_args, train_args, dataset):
             meta_path_edge_indicis_9 = [torch.flip(tag2item_edge_index, dims=[0]), tag2user_edge_index]
 
             meta_path_edge_indicis_10 = [torch.flip(user2item_edge_index, dims=[0]), user2item_edge_index]
-            meta_path_edge_indicis_11 = [torch.flip(tag2user_edge_index, dims=[0]), user2item_edge_index]
+            meta_path_edge_indicis_11 = [tag2user_edge_index, user2item_edge_index]
             meta_path_edge_indicis_12 = [torch.flip(tag2item_edge_index, dims=[0]), tag2item_edge_index]
             meta_path_edge_indicis_13 = [torch.flip(tag2user_edge_index, dims=[0]), tag2item_edge_index]
 
