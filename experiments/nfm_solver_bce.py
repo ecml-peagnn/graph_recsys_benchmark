@@ -84,8 +84,8 @@ train_args = {
     'weight_decay': args.weight_decay,  'device': device,
     'lr': args.lr,
     'num_workers': args.num_workers,
-    'weights_folder': os.path.join(weights_folder, str(model_args)),
-    'logger_folder': os.path.join(logger_folder, str(model_args)),
+    'weights_folder': os.path.join(weights_folder, str(model_args)[:255]),
+    'logger_folder': os.path.join(logger_folder, str(model_args)[:255]),
     'save_epochs': [int(i) for i in args.save_epochs.split(',')], 'save_every_epoch': args.save_every_epoch
 }
 print('dataset params: {}'.format(dataset_args))
