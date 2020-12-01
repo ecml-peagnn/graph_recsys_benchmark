@@ -64,22 +64,22 @@ Like MovieLens dataset, the extracted raw files will be saved in ``graph_recsys_
 For training and testing PEAGNN and baseline models, pass the appropriate arguments to the ``experiments`` files.
 To reproduce the benchmark results for particular dataset, use the arguments as mentioned in ``experiments/scripts`` folder.
 
-For instance, for training PEAGAT model on MovieLens-25M dataset run the following command:
+For instance, for training PEAGAT model on MovieLens-small dataset run the following command:
 
 ```
-python3 peagat_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26 --metapath_test=false
+python3 peagat_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --num_feat_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=1024 --save_every_epoch=26 --metapath_test=false
 ```
 
-For instance, for training PEAGAT model with entity awareness on MovieLens-25M dataset run the following command:
+For instance, for training PEAGAT model with entity awareness on MovieLens-small dataset run the following command:
 
 ```
-python3 peagat_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26 --metapath_test=true
+python3 peagat_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --num_feat_core=10 --sampling_strategy=unseen --entity_aware=true --dropout=0 --emb_dim=64 --repr_dim=16 --hidden_size=64 --meta_path_steps=2,2,2,2,2,2,2,2,2 --entity_aware_coff=0.1 --init_eval=true --gpu_idx=0 --runs=5 --epochs=30 --batch_size=1024 --save_every_epoch=26 --metapath_test=true
 ```
 
-For training other baselines e.g. KGAT on MovieLens-25M dataset run the following command:
+For training other baselines e.g. KGAT on MovieLens-small dataset run the following command:
 
 ```
-python3 kgat_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
+python3 kgat_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num_core=10 --num_feat_core=10 --sampling_strategy=unseen --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=5 --epochs=30 --batch_size=1024 --save_every_epoch=26
 ```
 
 
