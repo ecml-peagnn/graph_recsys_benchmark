@@ -1,5 +1,5 @@
 # Metapath- and Entity-aware Graph Neural Network for Recommendation
-## Code is available.
+## Code is available
 
 ## Introduction
 
