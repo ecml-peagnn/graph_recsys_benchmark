@@ -2,7 +2,7 @@ import torch
 from torch.nn import Parameter
 import torch.nn.functional as F
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.utils import remove_self_loops, softmax
+from torch_geometric.utils import remove_self_loops
 
 from torch_geometric.nn.inits import glorot, zeros
 
@@ -10,11 +10,8 @@ from torch_geometric.nn.inits import glorot, zeros
 class KGATConv(MessagePassing):
     def __init__(
             self, in_channels, out_channels,
-            proj_mat, relation_embedding,
             negative_slope=0.2, bias=True, **kwargs):
         super(KGATConv, self).__init__(aggr='add', **kwargs)
-        self.proj_mat, self.relation_embedding = proj_mat, relation_embedding
-
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.negative_slope = negative_slope

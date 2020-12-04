@@ -1,11 +1,6 @@
-import re
 import pandas as pd
-import numpy as np
 import os
 import json
-import itertools
-from collections import Counter
-from torch_geometric.data import extract_tar
 
 
 def parse_yelp(dir):
