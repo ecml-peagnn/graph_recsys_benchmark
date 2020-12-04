@@ -129,14 +129,3 @@ python3 kgat_solver_bpr.py --dataset=Movielens --dataset_name=latest-small --num
 
 # Pre-Trained Models available for download
 The pre-trained models for all three datasets used in this paper can be accessed via this [link](https://drive.google.com/drive/folders/1Y9sTnS_TXk3d8Hv5_I061w-iA3lmdU0e?usp=sharing).
-
-
-
-
-
-
-
-
-
-
-
