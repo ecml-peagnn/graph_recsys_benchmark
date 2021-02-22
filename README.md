@@ -13,7 +13,7 @@ A natural solution of capturing the inter- and intra-relations between content f
 
 ## PEAGNN Framework 
 
-![framework](images/framework.png)
+![framework](framework.png)
 
 We propose Meta Path- and Entity-Aware Graph Neural Network (PEAGNN), a unified GNN framework tailored for recommendation tasks, which is capable of exploiting the rich semantics in metapaths. PEAGNN trains multilayer GNNs to perform metapath-aware information aggregation on collaborative subgraphs, h-hop subgraphs around the target user-item pairs. After the attentive fusion of aggregated information from different metapaths, a graph-level representation is then extracted for matching score prediction. To leverage the local structure of collaborative subgraphs, we present entity-awareness that regularizes node embedding with the presence of features in a contrastive manner. Further analysis indicates that trained PEAGNN automatically derives meaningful metapath combinations from the given metapaths.
 
