@@ -25,7 +25,17 @@ The performances of PEAGNN variants and baselines are presented below:
 ## Requirements and Installation
 * Python 3.6
 * [PyTorch](http://pytorch.org/) 1.5.0
+```
+pip3 install torch==1.5.0 torchvision==0.6.0
+```  
 * [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) (1.5.0)
+```
+pip3 install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.5.0+${CUDA}.html
+pip3 install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.5.0+${CUDA}.html
+pip3 install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.5.0+${CUDA}.html
+pip3 install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.5.0+${CUDA}.html
+pip3 install torch-geometric
+```
 * Install all dependencies run
 ```
 pip3 install -r requirements.txt
