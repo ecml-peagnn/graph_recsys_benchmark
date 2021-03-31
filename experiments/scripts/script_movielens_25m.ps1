@@ -27,6 +27,11 @@ python3 kgcn_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 
 # KGAT
 python3 kgat_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
 
+# LGC
+python3 lgc_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=16 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
+
+# MultiGCCF
+python3 multi_gccf_solver_bpr.py --dataset=Movielens --dataset_name=25m --num_core=10 --num_feat_core=10 --sampling_strategy=random --entity_aware=false --dropout=0.1 --emb_dim=64 --hidden_size=64 --repr_dim=16 --entity_aware_coff=0.1 --init_eval=false --gpu_idx=0 --runs=5 --epochs=30 --batch_size=4096 --save_every_epoch=26
 
 # PEAGCN
 # --entity_aware=false

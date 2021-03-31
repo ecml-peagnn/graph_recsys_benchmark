@@ -28,7 +28,7 @@ parser.add_argument('--entity_aware', type=str, default='false', help='')
 # Model params
 parser.add_argument('--dropout', type=float, default=0.2, help='')
 parser.add_argument('--emb_dim', type=int, default=32, help='')		#64(for others), 32(only for 25m)
-parser.add_argument('--hidden_size', type=int, default=16, help='')     #64(for others), 16(only for 25m)
+parser.add_argument('--hidden_size', type=int, default=8, help='')     #16(for others), 8(only for 25m)
 parser.add_argument('--entity_aware_coff', type=float, default=0.1, help='')
 
 # Train params
@@ -37,7 +37,7 @@ parser.add_argument('--num_negative_samples', type=int, default=4, help='')
 parser.add_argument('--num_neg_candidates', type=int, default=99, help='')
 
 parser.add_argument('--device', type=str, default='cuda', help='')
-parser.add_argument('--gpu_idx', type=str, default='2', help='')
+parser.add_argument('--gpu_idx', type=str, default='0', help='')
 parser.add_argument('--runs', type=int, default=5, help='')             #5(for MovieLens), 3(for Yelp)
 parser.add_argument('--epochs', type=int, default=30, help='')           #30(for MovieLens), 20(for Yelp)
 parser.add_argument('--batch_size', type=int, default=1024, help='')    #1024(for others), 4096(only for 25m)
